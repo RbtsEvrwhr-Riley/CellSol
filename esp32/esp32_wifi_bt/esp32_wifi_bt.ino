@@ -5,7 +5,7 @@
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.22"
+#define VERSIONSTRING "0.23"
 
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
 #define LORA32V2 // Heltec LORA32 V2 (White board)
@@ -30,7 +30,7 @@
 
 //#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
 //#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
-//#define DHCP // DHCP on if defined; will ignore IP address setting fields if DHCP is on.
+#define DHCP // DHCP on if defined; will ignore IP address setting fields if DHCP is on. ON BY DEFAULT.
 
 //#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
 
@@ -49,6 +49,7 @@
 
 // these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
 // the upstream router will have to either open port 80 to this, or do a redirect.
+// These should be ignored in dhcp mode
 #define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
@@ -133,7 +134,7 @@
 #include "btt/cat.h"
 #endif
 
-#ifdef YOU_ARE_EATING_RECURSION
+#ifdef YOU_ARE_EATING_RECURSION // TODO: add to design document
 #include "btt/src.h"
 #endif
 
@@ -158,11 +159,11 @@ const byte DNS_PORT = 53;
 #include <esp_wifi.h>
 #include "BluetoothSerial.h"
 
-//Libraries for LoRa
+//Libraries for LoRa - TODO: where do we get them?
 #include <SPI.h>
 #include <LoRa.h>
 
-// watchdog
+// watchdog - TODO: where do we get them?
 #include <esp_task_wdt.h>
 #define WDT_TIMEOUT 4 // in seconds
 
@@ -345,7 +346,7 @@ String fourhex(int num1, int num2)
 
 
 IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
-IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using. TODO add DHCP
+IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using IF DHCP IS NOT CONFIGURED.
 IPAddress Client_Gateway(GATEWAY_IP_ADDR);// this is the IP address OF THE ROUTER
 IPAddress Client_Subnet(GATEWAY_SUBNET);// usually 255,255,255,0 or 255,255,0,0
 IPAddress lwc(255, 255, 255, 255); // ip address of current client
@@ -1757,9 +1758,9 @@ void ConnectToUpstreamWifi(int pausetime)
 #ifdef WIFI_IS_HYBRID
   WiFi.mode(WIFI_MODE_APSTA);
   BasicWhileDelay(pausetime);
-#ifndef DHCP
+#ifndef DHCP // WIFI_IS_HYBRID
   WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
-#endif
+#endif // WIFI_IS_HYBRID
   BasicWhileDelay(pausetime);
   WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
   BasicWhileDelay(pausetime);
@@ -1769,15 +1770,16 @@ void ConnectToUpstreamWifi(int pausetime)
     WiFi.begin(WIFI_UPSTREAM_AP, WIFI_UPSTREAM_PWD);
   BasicWhileDelay(pausetime);
   WiFi.softAP(string2char(ssid), NULL, (1 + (derpme % 12)), false, 8); // the derpme thing is to set a channel
-#else
+#else // !WIFI_IS_HYBRID
   WiFi.mode(WIFI_MODE_STA);
   BasicWhileDelay(pausetime);
-#ifndef DHCP
+#endif // END WIFI_IS_HYBRID
+
+#ifndef DHCP // WIFI_IS_CLIENT
   WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
 #endif
   BasicWhileDelay(pausetime);
   WiFi.begin(WIFI_UPSTREAM_AP, WIFI_UPSTREAM_PWD);
-#endif
   BasicWhileDelay(pausetime);
   long i = 0;
   led(false);
@@ -1795,7 +1797,9 @@ void ConnectToUpstreamWifi(int pausetime)
   dodisplay = true;
   BasicWhileDelay(pausetime);
   server.begin();
-  CurrentlyConnecting = false;
+  CurrentlyConnecting = false;  
+  Client_Gateway = WiFi.gatewayIP();
+  Client_Subnet = WiFi.subnetMask();  
 }
 #endif
 
@@ -1896,7 +1900,7 @@ void HighPowerSetup(bool echo)
 
   // reset these
   AP_IP = IPAddress(192, 168, derpme, 1);
-  Client_IP = IPAddress(CLIENT_IP_ADDR);
+  Client_IP = WiFi.localIP();
   IP = AP_IP;
   ipstring = IP.toString();
   ipstring_a = AP_IP.toString();
@@ -1996,7 +2000,7 @@ void send_string_by_itself (String st)
   client.println("Content-type:text/plain");
   client.println("Connection: close");
   client.println();
-  client.println(st);
+  client.println(encodeHtml(st));
   client.println();
 }
 void send_redirect_to_main(bool doip)
@@ -2036,7 +2040,7 @@ void send_ok_response()
 }
 
 #ifdef HELPLINK
-void send_help_page()
+void send_help_page() // TODO: change this to a properly compressed HTML include and actually finish it.
 {
   PetTheWatchdog();
   send_ok_response();
@@ -2075,8 +2079,8 @@ void sendstrings()
   for (byte i = 10; i > 0; i--)
   {
     PetTheWatchdog();
-    //    client.println("<small><small>RX(" + String(i - 1) + "):</small></small>" + string_rx[i - 1] + "<br>");
-    client.println("<small><small>RX(" + TimeAgoString(pseudoseconds - timestamp_rx[i - 1]) + "):</small></small>" + string_rx[i - 1] + "<br>");
+    //    client.println("<small><small>RX(" + String(i - 1) + "):</small></small>" + encodeHtml(string_rx[i - 1]) + "<br>");
+    client.println("<small><small>RX(" + TimeAgoString(pseudoseconds - timestamp_rx[i - 1]) + "):</small></small>" + encodeHtml(string_rx[i - 1]) + "<br>");
   }
 }
 bool LoginPageRequested(String url)
@@ -2500,4 +2504,14 @@ void loop() {
   {
     DoBtSteps();
   }
+}
+
+String encodeHtml(String text)
+{
+  text.replace("&", "&amp;");  
+  text.replace("\"", "&#034;");
+  text.replace("'", "&#039;");
+  text.replace("<", "&lt;");
+  text.replace(">", "&gt;");  
+  return text;
 }
