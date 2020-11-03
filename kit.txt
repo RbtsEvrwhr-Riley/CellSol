@@ -1,0 +1,9 @@
+
+parts for the arduino/bluetooth repeater
+
+
+https://es.aliexpress.com/item/1005001580502361.html?spm=a2g0o.productlist.0.0.7eb47e3eEZIBK6&algo_pvid=fb79a3be-e708-4eb2-98bf-7c01adc16360&algo_expid=fb79a3be-e708-4eb2-98bf-7c01adc16360-0&btsid=0bb0622f16032364823726290ed073&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_ solar/usb charger
+
+https://es.aliexpress.com/item/33006101437.html?spm=a2g0o.productlist.0.0.536f3cd44jKKbg&algo_pvid=7cba21ae-0100-48d0-ba7b-39f06e673ef2&algo_expid=7cba21ae-0100-48d0-ba7b-39f06e673ef2-1&btsid=0bb0623616032362371013525ed646&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_ radio + arduino
+
+https://es.aliexpress.com/item/4001108594498.html?spm=a2g0o.productlist.0.0.6d8c3444nX0wAM&algo_pvid=ba6e5adf-57bf-42d2-b06a-a2e331f37e71&algo_expid=ba6e5adf-57bf-42d2-b06a-a2e331f37e71-0&btsid=0bb0622d16032366418858646e9640&ws_ab_test=searchweb0_0,searchweb201602_,searchweb201603_ bluetooth

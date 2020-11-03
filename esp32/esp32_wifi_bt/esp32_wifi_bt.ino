@@ -1,11 +1,12 @@
 /*********
-  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s) by spiritplumber. Intended to be used to allow for comms after a natural disaster.
+  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s). It is intended to be used for infrastructure-independent comms during or after a disaster.
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
-  Written by Riley August (HTML, CSS), and spiritplumber (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration
+  Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.
+  Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.23"
+#define VERSIONSTRING "0.24"
 
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
 #define LORA32V2 // Heltec LORA32 V2 (White board)
@@ -25,12 +26,10 @@
 // The last three modes use more power than standard mode!
 // switching between wifi and bluetooth is done at startup with the normal mode, not here; push the button immediately after a reset.
 // if more than one is uncommented, lowest line wins.
-//#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected.
+#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full.
 //#define BT_ENABLE_FOR_AP // Uncomment this to also enable Bluetooth when the pylon is running as an access point. THIS WILL EAT UP A LOT OF POWER! Only enable if you're using a big battery and a big panel, or have line power.
-
 //#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
 //#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
-#define DHCP // DHCP on if defined; will ignore IP address setting fields if DHCP is on. ON BY DEFAULT.
 
 //#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
 
@@ -44,22 +43,22 @@
 
 #define PROVIDE_APK // make bluetooth terminal apk available?
 #define THE_INTERNET_IS_MADE_OF_CATS // load cat picture as an example of embedded file?
-//#define YOU_ARE_EATING_RECURSION // embed source zip in source for the glory of recursion?
-#define HELPLINK  // if undefined, do not add help page
+#define YOU_ARE_EATING_RECURSION // embed source zip in source for the glory of recursion?
+#define SERVE_FAQ_PAGE  // if undefined, do not add help page
 
 // these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
 // the upstream router will have to either open port 80 to this, or do a redirect.
-// These should be ignored in dhcp mode
 #define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
 #define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
 #define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
+#define DHCP // DHCP on if defined; will ignore IP address setting fields above in that case.
 
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across power cycles. if not, use battery level to get a bit of noise in the ID (mostly to avoid creepy people hashing it to figure out where you are).
 #define DO_NOT_LOG_SYSTEM_PACKETS // Don't display system packets to avoid spamming out human messages (example: UTC fix)
 
-
+//#define DEBUG_OPTION_PAGE // if you don't know what this is, don't use it.
 
 // this affects wifi range. obviously it will affect power consumption. it does not affect lora range. for line powered stuff, it'll be turned up to 11. For default, keep it commented out.
 #define WIFI_POWER_LEVEL 4 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
@@ -134,7 +133,7 @@
 #include "btt/cat.h"
 #endif
 
-#ifdef YOU_ARE_EATING_RECURSION // TODO: add to design document
+#ifdef YOU_ARE_EATING_RECURSION
 #include "btt/src.h"
 #endif
 
@@ -159,11 +158,11 @@ const byte DNS_PORT = 53;
 #include <esp_wifi.h>
 #include "BluetoothSerial.h"
 
-//Libraries for LoRa - TODO: where do we get them?
+//Libraries for LoRa
 #include <SPI.h>
 #include <LoRa.h>
 
-// watchdog - TODO: where do we get them?
+// watchdog
 #include <esp_task_wdt.h>
 #define WDT_TIMEOUT 4 // in seconds
 
@@ -223,7 +222,7 @@ const byte DNS_PORT = 53;
 #undef THE_INTERNET_IS_MADE_OF_CATS
 #undef PROVIDE_APK
 #undef TUTORIALSTRINGS
-#undef HELPLINK
+#undef SERVE_FAQ_PAGE
 #define USER_BUTTON_PIN 38
 #undef USER_LED_PIN
 #undef EXT_PWR_PIN
@@ -346,7 +345,7 @@ String fourhex(int num1, int num2)
 
 
 IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
-IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using IF DHCP IS NOT CONFIGURED.
+IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using.
 IPAddress Client_Gateway(GATEWAY_IP_ADDR);// this is the IP address OF THE ROUTER
 IPAddress Client_Subnet(GATEWAY_SUBNET);// usually 255,255,255,0 or 255,255,0,0
 IPAddress lwc(255, 255, 255, 255); // ip address of current client
@@ -403,8 +402,28 @@ void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion i
 
 String status_string()
 {
-  return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + ",");
+  return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") );
 }
+/*
+  String decodeHtml(String text)
+  {
+  text.replace("&amp;", "&");
+  text.replace("&#034;", "\"");
+  text.replace("&#039;","'");
+  text.replace("&lt;","<");
+  text.replace("&gt;",">");
+  return text;
+  }
+  String encodeHtml(String text)
+  {
+  text.replace("&", "&amp;");
+  text.replace("\"", "&#034;");
+  text.replace("'", "&#039;");
+  text.replace("<", "&lt;");
+  text.replace(">", "&gt;");
+  return text;
+  }
+*/
 
 void ResetDisplayViaPin()
 {
@@ -478,8 +497,8 @@ String string_rx[10];
 long timestamp_rx[10];
 String TimeAgoString(long secs) // keep it simple for display
 {
-  if (secs < 0)
-    return "";
+  if (secs == pseudoseconds || secs < 0)
+    return "?";
   if (secs < 60)
     return String(secs) + "s";
   if (secs < 3600)
@@ -519,9 +538,6 @@ char receivedChars[MAXPKTSIZE]; // an array to store the received data
 char receivedChar2[MAXPKTSIZE]; // an array to store the received data
 int rssi; // last packat received rssi
 
-
-
-
 static char RTC_NOINIT_ATTR byteme[10][MAXPKTSIZE]; // save last x sentences in here for posterity
 
 void TryStoreSentences()
@@ -534,7 +550,6 @@ void TryRetrieveSentences()
   for (byte i = 0; i < 10; i++)
     string_rx[i] = String(byteme[i]);
 }
-
 
 BluetoothSerial ESP_BT;
 
@@ -568,9 +583,6 @@ inline int hexValue(char c) {
   return 0;
 }
 
-
-
-
 char* string2char(String command) {
   if (command.length() != 0) {
     char *p = const_cast<char*>(command.c_str());
@@ -584,7 +596,6 @@ void led(boolean onoff)
   digitalWrite(USER_LED_PIN, onoff);
 #endif
 }
-
 
 long disptimeout = 0;
 bool display_on_ping = false;
@@ -669,13 +680,14 @@ void DoDisplayIfItExists()
       {
         display.println(ipstring_b);
       }
-      display.setCursor(0, 9);
-      display.println(string_rx[2].substring(0, 42));
-      display.setCursor(0, 27);
-      display.println(string_rx[1].substring(0, 42));
-      display.setCursor(0, 45);
-      display.println(string_rx[0].substring(0, 42));
-      //display.print(LoRaData);
+      // print the last 3 lines we got, or at least the first 42 characters of each since it's what will fit.
+      for (int i=2;i>-1;i--)
+      {
+      display.setCursor(0, 45-(i*18));
+      tempstring=string_rx[i];
+      tempstring.replace("&lt;","<");
+      display.println(tempstring.substring(0, 42));
+      }
       display.display();
     }
     dodisplaybuf = false;
@@ -684,12 +696,17 @@ void DoDisplayIfItExists()
 #endif
 }
 
+
+
 // moves old strings out
 void cyclestrings(String newone)
 {
   newone.replace('\r', ' ');
-  newone.replace('\n', ' ');
+  newone.replace('\n', ' ');//0xE2 0x80 0x8B
+  newone.replace("<", "&lt;"); // prevent script injection; doing it here once is more efficient than doing it repeatedly.
+  newone.replace("  ", " ");
   newone.trim();
+
 #ifdef COMMUNITY_MEMORY_SIZE
   for (int i = COMMUNITY_MEMORY_SIZE; i > 1; i--)
   {
@@ -713,7 +730,6 @@ void cyclestrings(String newone)
   display_on_ping = true;
 #endif
 }
-
 
 #define ANTISPAMTIME 3 // in (pseudo) seconds. for radio
 #define ANTISPAM_TIME_SERIAL 1 // for serial
@@ -871,9 +887,11 @@ void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout, bool strea
           for (int i = 10; i > 0; i--)
           {
             PetTheWatchdog();
+            tempstring=string_rx[i-1];
+            tempstring.replace(";lt","<");
 
-            if (string_rx[i - 1].length() > 0)
-              st.println(string_rx[i - 1]);
+            if (tempstring.length() > 0)
+              st.println(tempstring);
           }
         }
       }
@@ -918,7 +936,7 @@ bool FilterIncomingLoRa() {
   if (LoRaData.startsWith(lasttagimade)) // failed rebroadcast attempt, so filter out
     return false;
 
-#ifndef GPS_SERIAL_1 // if we already have our own gps, use it.
+#ifndef GPS_SERIAL_1 // if we already have our own gps, use it. otherwise do this
   if (LoRaData.charAt(3) == '0' and LoRaData.charAt(5) == 'U' and LoRaData.charAt(6) == 'T' and LoRaData.charAt(7) == 'C' and LoRaData.charAt(8) == ':') // Do a bunch of checks to make sure we're getting a good packet
   {
     if (LoRaData.charAt(9) == '1' or LoRaData.charAt(9) == '2')
@@ -993,12 +1011,15 @@ void SeeIfAnythingOnRadio() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
     //received a packet
-    rssi = LoRa.packetRssi();
-    //put the filter here so that it also evaluates garbage packets, in the hope of reducing said garbage later.
+
 #ifdef SEND_TWICE
     RSSI_2 = RSSI_1;
     RSSI_1 = RSSI_0;
     RSSI_0 = rssi;
+#endif
+    rssi = LoRa.packetRssi();
+    //put the filter here so that it also evaluates garbage packets, in the hope of reducing said garbage later. the logic is that if i'm away from someone, they are away from me, and they may benefit from erxtra loudness.
+#ifdef SEND_TWICE
     if (RSSI_2 < RSSI_TRE_LO or RSSI_1 < RSSI_TRE_LO or RSSI_0 < RSSI_TRE_LO or rssi < RSSI_TRE_LO)
       broadcast_twice = true;
     else if (RSSI_2 > RSSI_TRE_HI and RSSI_1 > RSSI_TRE_HI and RSSI_0 > RSSI_TRE_HI and rssi > RSSI_TRE_HI)
@@ -1122,6 +1143,7 @@ void SendSerialIfReady()
       {
 #ifdef REPEATER_ONLY
 #else
+#ifdef DEBUG_OPTION_PAGE
         if (String(receivedChars).startsWith(enablecomstring "#"))
         {
           Serial.println(":SYS:Entering power state FULL");
@@ -1138,6 +1160,7 @@ void SendSerialIfReady()
           SleepLowBatt();
         }
         else
+#endif
 #endif
         {
           Serial.println(":SYS:Serial port TX enabled");
@@ -1164,13 +1187,9 @@ void SendSerialIfReady()
     hextag = fourhex(derpme, spare_id_nibble + 15);
     lasttagimade = hextag;
     String serstr = String(receivedChars);
-    serstr.replace('\n', ' ');
-    serstr.replace('\r', ' ');
-    serstr.replace("  ", " ");
-    serstr.trim();
     charcounter = 0;
 #ifdef GPS_SERIAL_1
-    if (serstr == "UTC")
+    if (serstr.startsWith("UTC:"))
       serstr = fourhex(derpme, spare_id_nibble + 0) + TAG_END_SYMBOL + "UTC:" + String(UTC_Seconds);
     else
 #endif
@@ -1211,13 +1230,9 @@ void SendSerialIfReady()
     hextag = fourhex(derpme, spare_id_nibble + 14);
     lasttagimade = hextag;
     String serstr = String(receivedChar2);
-    serstr.replace('\n', ' ');
-    serstr.replace('\r', ' ');
-    serstr.replace("  ", " ");
-    serstr.trim();
     charcounte2 = 0;
 #ifdef GPS_SERIAL_1
-    if (serstr == "UTC")
+    if (serstr.startsWith("UTC:"))
       serstr = fourhex(derpme, spare_id_nibble + 0) + TAG_END_SYMBOL + "UTC:" + String(UTC_Seconds);
     else
 #endif
@@ -1758,9 +1773,9 @@ void ConnectToUpstreamWifi(int pausetime)
 #ifdef WIFI_IS_HYBRID
   WiFi.mode(WIFI_MODE_APSTA);
   BasicWhileDelay(pausetime);
-#ifndef DHCP // WIFI_IS_HYBRID
+#ifndef DHCP
   WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
-#endif // WIFI_IS_HYBRID
+#endif
   BasicWhileDelay(pausetime);
   WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
   BasicWhileDelay(pausetime);
@@ -1770,16 +1785,15 @@ void ConnectToUpstreamWifi(int pausetime)
     WiFi.begin(WIFI_UPSTREAM_AP, WIFI_UPSTREAM_PWD);
   BasicWhileDelay(pausetime);
   WiFi.softAP(string2char(ssid), NULL, (1 + (derpme % 12)), false, 8); // the derpme thing is to set a channel
-#else // !WIFI_IS_HYBRID
+#else
   WiFi.mode(WIFI_MODE_STA);
   BasicWhileDelay(pausetime);
-#endif // END WIFI_IS_HYBRID
-
-#ifndef DHCP // WIFI_IS_CLIENT
+#ifndef DHCP
   WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
 #endif
   BasicWhileDelay(pausetime);
   WiFi.begin(WIFI_UPSTREAM_AP, WIFI_UPSTREAM_PWD);
+#endif
   BasicWhileDelay(pausetime);
   long i = 0;
   led(false);
@@ -1792,14 +1806,16 @@ void ConnectToUpstreamWifi(int pausetime)
     led(false);
     BasicWhileDelay(pausetime);
   }
+#ifdef DHCP
+  Client_IP = WiFi.localIP();
+#endif
+
   LastReconnect = millis();
   ipstring = ipstring_a;//AP_IP.toString();//"Gateway";//Client_IP.toString()+"G";
   dodisplay = true;
   BasicWhileDelay(pausetime);
   server.begin();
-  CurrentlyConnecting = false;  
-  Client_Gateway = WiFi.gatewayIP();
-  Client_Subnet = WiFi.subnetMask();  
+  CurrentlyConnecting = false;
 }
 #endif
 
@@ -1900,7 +1916,12 @@ void HighPowerSetup(bool echo)
 
   // reset these
   AP_IP = IPAddress(192, 168, derpme, 1);
+  Client_IP = IPAddress(CLIENT_IP_ADDR);
+#ifdef DHCP
   Client_IP = WiFi.localIP();
+#else
+  Client_IP = IPAddress(CLIENT_IP_ADDR);
+#endif
   IP = AP_IP;
   ipstring = IP.toString();
   ipstring_a = AP_IP.toString();
@@ -1939,7 +1960,11 @@ void HighPowerSetup(bool echo)
 #else
       string_rx[2] = ":SYS: This unit talks to upstream wifi.";
 #endif
+#ifdef DHCP
+      string_rx[1] = "(D)Client IP address:" + Client_IP.toString();
+#else
       string_rx[1] = "Client IP address:   " + Client_IP.toString();
+#endif
       string_rx[0] = "Upstream router:     " + Client_Gateway.toString();
 #else
 #ifdef BT_ENABLE_FOR_AP
@@ -2000,7 +2025,8 @@ void send_string_by_itself (String st)
   client.println("Content-type:text/plain");
   client.println("Connection: close");
   client.println();
-  client.println(encodeHtml(st));
+  //  client.println(encodeHtml(st));
+  client.println(st);
   client.println();
 }
 void send_redirect_to_main(bool doip)
@@ -2039,479 +2065,479 @@ void send_ok_response()
   client.println();
 }
 
-#ifdef HELPLINK
-void send_help_page() // TODO: change this to a properly compressed HTML include and actually finish it.
+#ifdef SERVE_FAQ_PAGE
+void send_faq_page()
 {
-  PetTheWatchdog();
   send_ok_response();
   send_html_header();
   client.println( "<body>CellSol WiFi Pylon " VERSIONSTRING " Help<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
-                  "<br>By using the chat in the main page, you will be able to communicate with people who are in range of the CellSol network, or people who are using CellSol gateways."
-                  "<br>Each message is sent out to neighboring pylons, which can be a few kilometers apart, and rebroadcast. There is no routing; every pylon gets everything. You can consider this system akin to a single IRC/Discord/Twitch chat channel, except it will work when nothing else will."
-                  "<br>The tag in front of your message is a pseudonymous identifier: it is used to tell people apart. It is four hex digits. (Sorry, no nicknames)."
-                  "<br>It is free to use and does not depend on any infrastructure, each pylon is self-contained: just deploy a few of them in an area and you are good to go."
-                  "<br>Any phone with a Bluetooth chat app (Android APK can be downloaded from this very pylon, iPhone or others will have to use their own) can also use the Bluetooth pylons or pocket nodes. They require very little power to operate."
-                  "<br>This is a lot like existing LoRa mesh chat systems, except that it's intended to leave repeaters in place."
-#ifdef REQUIRE_TAG_FOR_REBROADCAST
-                  "<br>It will honor other mesh network systems by repeating their packets too, as long as they start with a xxxx: tag in front."
+                  "<p>By using the chat in the main page, you will be able to communicate with people who are in range of the CellSol network, or people who are using CellSol gateways."
+                  "<p>Each message is sent out to neighboring pylons, which can be a few kilometers apart, and rebroadcast."
+                  "<p>You can consider this system akin to a single IRC/Discord/Twitch chat channel, except it will work when the internet at large will not."
+                  "<p>The tag in front of your message is a pseudonymous identifier: it is used to tell people apart. It is four hex digits. (Sorry, no nicknames)."
+                  "<p>CellSol is free to use and does not depend on any infrastructure, each pylon is self-contained: just deploy a few of them in an area and you are good to go."
+                  "<p>Any phone with a Bluetooth chat app (Android APK can be downloaded from this very pylon, iPhone or others will have to use their own) can also use the Bluetooth pylons or pocket nodes. They require very little power to operate."
+                  "<p>This is a lot like existing LoRa mesh chat systems, except that it's intended to leave repeaters in place."
+#ifdef REQUIRE_TAG_FOR_REBROADCAST_STRICT
 #else
-                  "<br>It will honor other mesh network systems by repeating their packets too!"
+#ifdef REQUIRE_TAG_FOR_REBROADCAST
+                  "<p>It will honor other mesh network systems by repeating their packets too, as long as they start with a xxxx: tag in front."
+#else
+                  "<p>It will honor other mesh network systems by repeating their packets too!"
 #endif
-                  "<br>The mesh topology prioritizes redundancy over speed or cleanliness, so you may occasionally get a garbled message: we try to display those in case their meaning can be understood despite the garbling."
-                  "<br>The best use for a standalone repeater is somewhere with no traffic. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone. The best use for a WiFi pylon such as this one is somewhere that has a hardened internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
-                  "<br>If you are on Bluetooth or serial, typing ,,, on a line by itself will dump the pylon's status and last received strings (in case your phone loses them). Our app does this automatically on reconnect. This lets you use any Bluetooth (or serial) terminal, nice if your phone is from 2006."
-                  "<br>The default configuration lets you switch this device from wifi to bluetooth by pushing the PROG button right after a reset. Other configurations have bluetooth on by default so it's not an issue."
-                  "<br>The modeflip configuration will only advertise itself as an access point for a few seconds each minute, but will stay on if you connect to it. This is done to save power."
-                  "<br>The cellsol pylons (either flavor) will work on any 3.6 or 3.7v batteries, or any USB power banks, or anything that delivers 3.5 to 6 volts, really."
-                  "<br>Geolocation services are currently not available by default but if you have gps nothing prevents you from copying/pasting coordinates of course."
-                  "<br>The project is open source and open schematic, but we can't host those on the device itself. Although that would be cool. Should we do that?"
-                  "<br>There is no encryption for these messages (to make it easier for other systems to read). This is intended to be used in emergencies so that's really not a concern."
-                  "<br>There is a large orange cat in my shop and I have no idea why."
-
-                  "<p>Someone whose first language is English, please write a better help file that can be understood by regular people, I am too familiar with the architecture.</p><a href=\"/\">Go back</a></body></html>");
+#endif
+                  "<p>The mesh topology prioritizes redundancy over speed or cleanliness, so you may occasionally get a garbled message: we try to display those in case their meaning can be understood despite the garbling."
+                  "<p>The best use for a standalone repeater is somewhere between areas with traffic, on a road for example. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone."
+                  "<p>The best use for a WiFi pylon such as this one is somewhere that has a hardened internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
+                  "<p>If you are on a Bluetooth or serial CellSol pylon, typing ,,, on a line by itself will dump the pylon's status and last received strings (in case your phone loses them). Our app does this automatically on reconnect. This lets you use any terminal app."
+#ifdef MODEFLIP
+                  "<p>This pylon will turn on its WiFi once a minute to check for clients, and be a repeater the rest of the time, in order to save power."
+#else
+#ifdef BT_ENABLE_FOR_AP
+                  "<p>This pylon can be accessed both from WiFi and Bluetooth. Please note that this drains the battery fairly quickly."
+#else
+                  "<p>This pylon is in WiFi mode right now. You can switch to Bluetooth mode by pushing the PROG button right after a reset and keeping it pushed until the screen says Bluetooth."
+#endif
+#endif
+                  "<p>The CellSol pylons (any version of them) will work on any 3.6 or 3.7v batteries, or any USB power banks, or anything that delivers 3.5 to 6 volts, really."
+#ifdef YOU_ARE_EATING_RECURSION
+                  "<p>The project is open source and open schematic. You can get a copy of the source right from here! <a href=\"/src.zip\"> Source code </a>."
+#else
+                  "<p>The project is open source and open schematic. You can download everything from <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a> or from a pylon that carries it (This one doesn't have enough memory to)."
+#endif
+                  "<p>Please note that CellSol does not store your location or identity data, but also please note that there is no encryption for these messages (to make it easier for other systems to interoperate with). This is intended to be used during or after natural disasters, so that should really not be a concern."
+                  "<p><a href=\"/\">Go back</a></body></html>");
   PetTheWatchdog();
   client.println();
 }
 #endif
 
-void sendstrings()
-{
-  for (byte i = 10; i > 0; i--)
+                  void sendstrings()
   {
-    PetTheWatchdog();
-    //    client.println("<small><small>RX(" + String(i - 1) + "):</small></small>" + encodeHtml(string_rx[i - 1]) + "<br>");
-    client.println("<small><small>RX(" + TimeAgoString(pseudoseconds - timestamp_rx[i - 1]) + "):</small></small>" + encodeHtml(string_rx[i - 1]) + "<br>");
-  }
-}
-bool LoginPageRequested(String url)
-{
-  if (url.startsWith("/redirect"))
-    return true;
-  if (url.startsWith("/connecttest.txt"))
-    return true;
-  if (url.startsWith("/ncsi.txt"))
-    return true;
-  if (url.startsWith("/hotspot.txt"))
-    return true;
-  if (url.startsWith("/success.txt"))
-    return true;
-  if (url.startsWith("/generate_204"))
-    return true;
-  if (url.startsWith("/hotspot-detect.html"))
-    return true;
-
-  return false;
-
-}
-
-void ServeWebPagesAsNecessary()
-{
-  dnsServer.processNextRequest();
-
-  // Do wifi things here
-  client = server.available();   // Listen for incoming clients
-
-#ifdef WIFI_IS_CLIENT
-  if (client == false)
-  {
-    if (millis() > (LastReconnect + RECONNECT_EVERY))
+    for (byte i = 10; i > 0; i--)
     {
-      ConnectToUpstreamWifi(100);
+      PetTheWatchdog();
+      client.println("<small><small>RX(" + TimeAgoString(pseudoseconds - timestamp_rx[i - 1]) + "):</small></small>" + (string_rx[i - 1]) + "<br>");
+      //    client.println("<small><small>RX(" + TimeAgoString(pseudoseconds - timestamp_rx[i - 1]) + "):</small></small>" + encodeHtml(string_rx[i - 1]) + "<br>");
     }
   }
-#endif
-  if (client) {
-    //  Serial.print("2");
-    currentlyserving = true;
-    //      Serial.println(String(client)); // says 1
-#ifdef WIFI_IS_CLIENT
-    LastReconnect = millis();
-#endif
-    unsigned long connect_timeout = millis()+3000;
-    while (client.connected()) {            // loop while the client's connected
-      // does not get this far outside lan for some reason
-      if (client.available() == false)
-      {
-        //  Serial.print("3");
-        DoBasicSteps();
-        dnsServer.processNextRequest();
-        if (millis() > connect_timeout)
-        {
-          client.stop();
-          break;
-        }
+  bool LoginPageRequested(String url)
+  {
+    if (url.startsWith("/redirect"))
+      return true;
+    if (url.startsWith("/connecttest.txt"))
+      return true;
+    if (url.startsWith("/ncsi.txt"))
+      return true;
+    if (url.startsWith("/hotspot.txt"))
+      return true;
+    if (url.startsWith("/success.txt"))
+      return true;
+    if (url.startsWith("/generate_204"))
+      return true;
+    if (url.startsWith("/hotspot-detect.html"))
+      return true;
 
+    return false;
+
+  }
+
+  void ServeWebPagesAsNecessary()
+  {
+    dnsServer.processNextRequest();
+
+    // Do wifi things here
+    client = server.available();   // Listen for incoming clients
+
+#ifdef WIFI_IS_CLIENT
+    if (client == false)
+    {
+      if (millis() > (LastReconnect + RECONNECT_EVERY))
+      {
+        ConnectToUpstreamWifi(100);
       }
-      char c, c1, c2;
-      if (client.available()) // if there's bytes to read from the client,
-      {
-        //  Serial.print("4");
-        PetTheWatchdog();
-        c2 = c1;
-        c1 = c;
-        c = client.read();
-
-        if (header.length() < (MAXPKTSIZEP + 30)) // prevent buffer overflows, and keeps strings a reasonable size.
-          header += c;
-
-        //        Serial.print(c1);
-
-        // detect two newlines
-        if ((c == 10 and c1 == 10) or (c == 13 and c1 == 13) or (c == 10 and c1 == 13 and c2 == 10)) {              // if the byte is a newline character
-          PetTheWatchdog();
-
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-
-          //Serial.print(header);
-
-          long derp = header.indexOf("Host: ");
-          hoststring = header.substring(derp + 6);
-          hoststring = hoststring.substring(0, hoststring.indexOf('\n') - 1) + "/";
-
-          String whattoget = header.substring(4, header.indexOf(" HTTP/"));
-
-          //Serial.print(hoststring);
-
-          lwc = client.remoteIP();
-          if (lwc[2] == AP_IP[2] && lwc[1] == AP_IP[1] && lwc[0] == AP_IP[0])
-          {
-            IP = AP_IP;
-            client_on_lan = true;
-          }
-          else
-          {
-            IP = Client_IP;
-            client_on_lan = false;
-          }
-          //              Serial.println(":SYS:IP " + ipstring_a + " " + ipstring_c + " " + ipstring + " " + lwc.toString());
-
-          ipstring = IP.toString();
-
-          LastReconnect = millis(); // we're talking, so obviously there's no need to reconnect!
-
-          //Serial.print(hextag);
-          //Serial.print(String(lwc));
-          //Serial.println("Header:" + header);
-
-
-
-          // naive, and cheap, method for serving multiple pages. if someone better at HTML than me can do autorefresh of the chat contents, that'd be awesome.
-          if (whattoget.equals("/favicon.ico"))
-          {
-            client.println("HTTP/1.1 204 No Content\r\n");
-            //                client.println();// we're not actually sending anything
-          }
-#ifdef HELPLINK
-          else if (whattoget.equals("/help.html")) // can  be done for other emergency files here
-          {
-            send_help_page();
-          }
+    }
 #endif
-#ifdef COMMUNITY_MEMORY_SIZE
-          else if (whattoget.startsWith("/last") and (whattoget.endsWith(".txt")))
-          {
-            int i = whattoget.charAt(5) - '0';
-            if (i > -1 and i < 10)
-              send_string_by_itself(string_rx[i]);
-            else
-              send_string_by_itself("");
-          }
-          else if (whattoget.equals("/mem.html")) // can  be done for other emergency files here
-          {
-            //Serial.println("Regular page (default)");
-            send_ok_response();
-
-            // Display the HTML web page
-            // General purpose html header
-
-            send_html_header();
-            client.println( "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
-            client.print(ipstring_a);
-            client.println("<div style=\"max-width:100%;\"><p><small>");
-            for (int i = COMMUNITY_MEMORY_SIZE - 1; i > -1; i--)
-            {
-              PetTheWatchdog();
-              client.print("<br><small><small>RX(");
-              client.print(i + 9);
-              client.print("):</small></small>");
-              client.println(communitymemory[i]);
-            }
-            client.print("<br>");
-            sendstrings();
-            client.println("</small></p><a href=\"http://" + hoststring + "\">Return to main</a></div></body></html>");
-            client.println();
-          }
-#endif
-#ifdef THE_INTERNET_IS_MADE_OF_CATS
-          else if (whattoget.equals("/cat.jpg")) // can  be done for other emergency files here
-          {
-            SendBinaryFile("image/jpeg", cat_jpg, cat_jpg_size);
-          }
-#endif
-#ifdef YOU_ARE_EATING_RECURSION
-          else if (whattoget.equals("/src.zip")) // can  be done for other emergency files here
-          {
-            SendBinaryFile("application/octet-stream", src_zip, src_zip_size);
-          }
-#endif
-#ifdef PROVIDE_APK
-          else if (whattoget.equals("/btt.apk")) // can  be done for other emergency files here
-          {
-            SendBinaryFile("application/octet-stream", btt_apk, btt_apk_size);
-          }
-#endif
-          else if (whattoget.equals("/chat.html")) // chat iframe
-          {
-            send_ok_response();
-            send_html_header(REFRESH_CHAT_EVERY);
-            if (UTC_Seconds)
-              client.println("<body><small><small><small>UTC Time Update:" + UTC_String(UTC_Seconds) + "<br></small></small>");
-            else
-              client.print("<body><small>");
-            sendstrings();
-            client.println("</small></body></html>");
-          }
-#ifdef TX_IFRAME
-          else if (whattoget.equals("/answerform.html")) // answer form iframe
-          {
-            send_form_iframe();
-          }
-#endif
-          else if (whattoget.startsWith("/get"))
-          {
-
-            if (whattoget.equals("/get?refresh=")) // exception is needed to make sure that the refresh button works properly
-            {
-              send_redirect_to_main(true);
-            }
-            else
-            {
-
-              // do external outputs
-              gotstring = header.substring(header.indexOf("input1="));
-              gotstring = gotstring.substring(0, gotstring.indexOf("HTTP/1.1"));
-              gotstring = gotstring.substring(7, gotstring.indexOf("&refresh="));//HTTP/1.1")); //input1= is 7 characters
-              if (gotstring.length() > (MAXPKTSIZE + 5)) // prevent intentional spam on arrival. the other input methods already do this
-              {
-                gotstring = "(>maxsize)" + gotstring.substring(0, 20) + "..."; // give a preview of what was sent, in case it's important and got thru even if it should not have
-              }
-              if (gotstring.length() > MAXPKTSIZEM) // prevent accidental spam // do not flood the lora
-              {
-                gotstring = gotstring.substring(0, MAXPKTSIZEM);
-              }
-              gotstring.replace('\r', ' ');
-              gotstring.replace('\n', ' ');
-              gotstring.trim();
-              if (gotstring.length() > 1) // don't send empty strings or strings with just
-              {
-                char tempme[MAXPKTSIZE]; // slightly more efficient
-                gotstring.toCharArray(tempme, MAXPKTSIZE);
-                decode_in_place(tempme);
-                gotstring = String(tempme);
-                gotstring.trim();
-                String hextag_temp;
-                last_web_caller = client.remoteIP()[3];
+    if (client) {
+      //  Serial.print("2");
+      currentlyserving = true;
+      //      Serial.println(String(client)); // says 1
 #ifdef WIFI_IS_CLIENT
-                lwc = client.remoteIP();
-                hextag_temp = fourhex(lwc[0] ^ lwc[3], lwc[1] ^ lwc[2]); // should be unique enough, but mix it up so that we don't accidentally reveal someone's ip
-#else
-                if (last_web_caller < 16)
-                  last_web_caller = last_web_caller + spare_id_nibble; // do SOMETHING with the third digit
-                hextag_temp = fourhex(derpme, last_web_caller);
+      LastReconnect = millis();
 #endif
-                lasttagimade = hextag_temp;
-
-#ifdef GPS_SERIAL_1
-                if (gotstring == "UTC")
-                  gotstring = fourhex(derpme, spare_id_nibble + 0) + TAG_END_SYMBOL + "UTC:" + String(UTC_Seconds);
-#endif
-
-                gotstring = hextag_temp + TAG_END_SYMBOL + gotstring;
-
-                if (string_rx[0].equals(gotstring) == false) // prevents sending it out twice if it's the last thing that went out
-                {
-                  Serial.println(gotstring);
-#ifdef BT_ENABLE_FOR_AP
-                  ESP_BT.println(gotstring);
-#endif
-
-
-                  //Send LoRa packet to receiver. Will need to make sure we don't send duplicates.
-
-                  LoraSendAndUpdate(gotstring);
-                  cyclestrings(gotstring);
-                }
-
-                gotstring = "";
-
-              }
-#ifdef TX_IFRAME
-              send_form_iframe();
-#else
-              send_redirect_to_main(true);
-#endif
-            }
-          }
-          else if (whattoget.startsWith("/option!")) // semi hidden option stuff! Yay! Any more that we need? I don't want to make it possible to turn this off or switch modes remotely because that's easy to abuse.
+      unsigned long connect_timeout = millis() + 3000;
+      while (client.connected()) {            // loop while the client's connected
+        // does not get this far outside lan for some reason
+        if (client.available() == false)
+        {
+          //  Serial.print("3");
+          DoBasicSteps();
+          dnsServer.processNextRequest();
+          if (millis() > connect_timeout)
           {
-            char option = whattoget.charAt(8);
-            if (option == 'C') // center text
-            {
-              centertext = true;
-              TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_A;
-            }
-            if (option == 'J') // justify text
-            {
-              centertext = false;
-              TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_B;
-            }
-            if (option == 'S') // turn serial port off (in case of spam or errors coming from it)(turn back on with the enable string)
-            {
-              enablecomport = false;
-            }
-            if (option == 'T') // reset pseudoseconds timer
-            {
-              pseudoseconds = 0;
-            }
-            if (option == 'D') // force display on
-            {
-              display_on_ping = true;
-            }
-            if (option == 'd') // force display off
-            {
-              display_on_ping = false;
-            }
-            if (option == 'B') // force sending (broadcasting) twice on
-            {
-              broadcast_twice = true;
-            }
-            if (option == 'b') // force sending (broadcasting) twice off
-            {
-              broadcast_twice = false;
-            }
-            send_ok_response();
-            send_html_header(0);
-            client.print("<body>CellSol WiFi Pylon " VERSIONSTRING " Option: <b>");
-            client.print(option);
-            client.println("</b><br>Redirecting to main</body></html>");
-            client.println();
+            client.stop();
+            break;
           }
-          else if (whattoget.equals("/") or whattoget.startsWith("/index.html"))
-          {
-            //Serial.println("Regular page (default)");
-            send_ok_response();
-            // Display the HTML web page
-            // General purpose html header
 
-            send_html_header();
-            client.println("<script>"
-                           "function resizeIframe(obj) {"
-                           "    obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';"
-                           //"    obj.style.width = obj.contentWindow.document.documentElement.scrollWidth + 'px';"
-                           "  }"
-                           "</script>"
-                           "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
-            client.print(ipstring_a);
-            client.println("<br>"
+        }
+        char c, c1, c2;
+        if (client.available()) // if there's bytes to read from the client,
+        {
+          //  Serial.print("4");
+          PetTheWatchdog();
+          c2 = c1;
+          c1 = c;
+          c = client.read();
+
+          if (header.length() < (MAXPKTSIZEP + 30)) // prevent buffer overflows, and keeps strings a reasonable size.
+            header += c;
+
+          //        Serial.print(c1);
+
+          // detect two newlines
+          if ((c == 10 and c1 == 10) or (c == 13 and c1 == 13) or (c == 10 and c1 == 13 and c2 == 10)) {              // if the byte is a newline character
+            PetTheWatchdog();
+
+            // if the current line is blank, you got two newline characters in a row.
+            // that's the end of the client HTTP request, so send a response:
+
+            //Serial.print(header);
+
+            long derp = header.indexOf("Host: ");
+            hoststring = header.substring(derp + 6);
+            hoststring = hoststring.substring(0, hoststring.indexOf('\n') - 1) + "/";
+
+            String whattoget = header.substring(4, header.indexOf(" HTTP/"));
+
+            //Serial.print(hoststring);
+
+            lwc = client.remoteIP();
+            if (lwc[2] == AP_IP[2] && lwc[1] == AP_IP[1] && lwc[0] == AP_IP[0])
+            {
+              IP = AP_IP;
+              client_on_lan = true;
+            }
+            else
+            {
+              IP = Client_IP;
+              client_on_lan = false;
+            }
+            //              Serial.println(":SYS:IP " + ipstring_a + " " + ipstring_c + " " + ipstring + " " + lwc.toString());
+
+            ipstring = IP.toString();
+
+            LastReconnect = millis(); // we're talking, so obviously there's no need to reconnect!
+
+            //Serial.print(hextag);
+            //Serial.print(String(lwc));
+            //Serial.println("Header:" + header);
+
+
+
+            // naive, and cheap, method for serving multiple pages. if someone better at HTML than me can do autorefresh of the chat contents, that'd be awesome.
+            if (whattoget.equals("/favicon.ico"))
+            {
+              client.println("HTTP/1.1 204 No Content\r\n");
+              //                client.println();// we're not actually sending anything
+            }
+#ifdef SERVE_FAQ_PAGE
+            else if (whattoget.equals("/faq.html")) // can  be done for other emergency files here
+            {
+              send_faq_page();
+            }
+#endif
+            else if (whattoget.startsWith("/last") and (whattoget.endsWith(".txt")))
+            {
+              int i = whattoget.charAt(5) - '0';
+              if (i > -1 and i < 10)
+                send_string_by_itself(string_rx[i]);
+              else
+                send_string_by_itself("");
+            }
 #ifdef COMMUNITY_MEMORY_SIZE
-                           "<a href=\"http://" + hoststring + "mem.html\">Older messages</a> "
-#endif
-#ifdef THE_INTERNET_IS_MADE_OF_CATS
-                           "<a href=\"http://" + hoststring + "cat.jpg\">Cat picture</a> "
-#endif
-#ifdef HELPLINK
-                           "<a href=\"http://" + hoststring + "help.html\">Help page</a> "
-#endif
-                           "<br>"
-                           "<div style=\"max-width:100%;\">"
-                           "<iframe id=\"chatin\" src=\"/chat.html\" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this);\"style=\"width:100%;\" /></iframe>"
-#ifdef TX_IFRAME
-                           "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
-#else
-                           "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form><br>"
-#endif
-                          );
-            /*
-              "<iframe id=\"chatin\" src=\"/chat.html\" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this);\"style=\"width:100%;\" />");
-              // in case iframe doesn't work
-              sendstrings();
-              client.println("</iframe>"
-              "<br>"
-              "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:5em;\" />"
-              // in case iframe doesn't work, it displays this
-              "<form action=\"/get\"> Your message: <input type=\"text\" maxlength=\"50\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form>"
-              "</iframe>");
-            */
-            client.println("<form action=\"/get\"><input type=\"submit\" value=\"Refresh this page (in case of errors, etc.)\"><input type=\"hidden\" size=\"1\" maxlength=\"1\" name=\"refresh\"><form>");
-            client.print  ("<br><small>CellSol is a serverless relay chat for enabling communication between pylons in case of cell phone network disruption.<br>"
-                           "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
-#ifdef PROVIDE_APK
-                           "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
-#else
-                           "<a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
-#endif
-            client.print(status_string());
-#ifdef YOU_ARE_EATING_RECURSION
-            client.print("<a href=\"http://" + hoststring + "src.zip\" target=\"_blank\">Source code</a> ");
-#endif
-
-            if (pseudoseconds % 2)
-              client.println("<small> Deus Nolens Exitus</body></html>");
-            else
-              client.println("<small> Vigilo Confido</body></html>");
-
-
-            // The HTTP response ends with another blank line
-            client.println();
-          }
-          else // we were asked a page that we don't have. redirect to main
-          {
-            if (LoginPageRequested(whattoget))
+            else if (whattoget.equals("/mem.html")) // can  be done for other emergency files here
             {
-              send_redirect_to_main(true);
-            }
-            else
-            {
+              //Serial.println("Regular page (default)");
               send_ok_response();
-              send_html_header(0);
-              client.println("<body>CellSol WiFi Pylon " VERSIONSTRING " " PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main</body></html> ");
+
+              // Display the HTML web page
+              // General purpose html header
+
+              send_html_header();
+              client.println( "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
+              client.print(ipstring_a);
+              client.println("<div style=\"max-width:100%;\"><p><small>");
+              for (int i = COMMUNITY_MEMORY_SIZE - 1; i > -1; i--)
+              {
+                PetTheWatchdog();
+                client.print("<br><small><small>RX");
+                //              client.print(i + 9);
+                client.print(":</small></small>");
+                //              client.println(encodeHtml(communitymemory[i]));
+                client.println(communitymemory[i]);
+              }
+              client.print("<br>");
+              sendstrings();
+              client.println("</small></p><a href=\"http://" + hoststring + "\">Return to main</a></div></body></html>");
               client.println();
             }
+#endif
+#ifdef THE_INTERNET_IS_MADE_OF_CATS
+            else if (whattoget.equals("/cat.jpg")) // can  be done for other emergency files here
+            {
+              SendBinaryFile("image/jpeg", cat_jpg, cat_jpg_size);
+            }
+#endif
+#ifdef YOU_ARE_EATING_RECURSION
+            else if (whattoget.equals("/src.zip")) // can  be done for other emergency files here
+            {
+              SendBinaryFile("application/octet-stream", src_zip, src_zip_size);
+            }
+#endif
+#ifdef PROVIDE_APK
+            else if (whattoget.equals("/btt.apk")) // can  be done for other emergency files here
+            {
+              SendBinaryFile("application/octet-stream", btt_apk, btt_apk_size);
+            }
+#endif
+            else if (whattoget.equals("/chat.html")) // chat iframe
+            {
+              send_ok_response();
+              send_html_header(REFRESH_CHAT_EVERY);
+              if (UTC_Seconds)
+                client.println("<body><small><small><small>UTC Time Update:" + UTC_String(UTC_Seconds) + "<br></small></small>");
+              else
+                client.print("<body><small>");
+              sendstrings();
+              client.println("</small></body></html>");
+            }
+#ifdef TX_IFRAME
+            else if (whattoget.equals("/answerform.html")) // answer form iframe
+            {
+              send_form_iframe();
+            }
+#endif
+            else if (whattoget.startsWith("/get"))
+            {
+
+              if (whattoget.equals("/get?refresh=")) // exception is needed to make sure that the refresh button works properly
+              {
+                send_redirect_to_main(true);
+              }
+              else
+              {
+
+                // do external outputs
+                gotstring = header.substring(header.indexOf("input1="));
+                gotstring = gotstring.substring(0, gotstring.indexOf("HTTP/1.1"));
+                gotstring = gotstring.substring(7, gotstring.indexOf("&refresh="));//HTTP/1.1")); //input1= is 7 characters
+                if (gotstring.length() > (MAXPKTSIZE + 5)) // prevent intentional spam on arrival. the other input methods already do this
+                {
+                  gotstring = "(>maxsize)" + gotstring.substring(0, 20) + "..."; // give a preview of what was sent, in case it's important and got thru even if it should not have
+                }
+                if (gotstring.length() > MAXPKTSIZEM) // prevent accidental spam // do not flood the lora
+                {
+                  gotstring = gotstring.substring(0, MAXPKTSIZEM);
+                }
+                if (gotstring.length() > 1) // don't send empty strings or strings with just
+                {
+                  char tempme[MAXPKTSIZE]; // slightly more efficient
+                  gotstring.toCharArray(tempme, MAXPKTSIZE);
+                  decode_in_place(tempme);
+                  gotstring = String(tempme);
+                  gotstring.trim();
+                  String hextag_temp;
+                  last_web_caller = client.remoteIP()[3];
+#ifdef WIFI_IS_CLIENT
+                  lwc = client.remoteIP();
+                  hextag_temp = fourhex(lwc[0] ^ lwc[3], lwc[1] ^ lwc[2]); // should be unique enough, but mix it up so that we don't accidentally reveal someone's ip
+#else
+                  if (last_web_caller < 16)
+                    last_web_caller = last_web_caller + spare_id_nibble; // do SOMETHING with the third digit
+                  hextag_temp = fourhex(derpme, last_web_caller);
+#endif
+                  lasttagimade = hextag_temp;
+
+#ifdef GPS_SERIAL_1
+                  if (gotstring.startsWith("UTC:"))
+                    gotstring = fourhex(derpme, spare_id_nibble + 0) + TAG_END_SYMBOL + "UTC:" + String(UTC_Seconds);
+#endif
+
+                  gotstring = hextag_temp + TAG_END_SYMBOL + gotstring;
+
+                  if (string_rx[0].equals(gotstring) == false) // prevents sending it out twice if it's the last thing that went out
+                  {
+                    Serial.println(gotstring);
+#ifdef BT_ENABLE_FOR_AP
+                    ESP_BT.println(gotstring);
+#endif
+
+
+                    //Send LoRa packet to receiver. Will need to make sure we don't send duplicates.
+
+                    LoraSendAndUpdate(gotstring);
+                    cyclestrings(gotstring);
+                  }
+
+                  gotstring = "";
+
+                }
+#ifdef TX_IFRAME
+                send_form_iframe();
+#else
+                send_redirect_to_main(true);
+#endif
+              }
+            }
+#ifdef DEBUG_OPTIONS_PAGE
+            else if (whattoget.startsWith("/option!")) // semi hidden option stuff! Yay! Any more that we need? I don't want to make it possible to turn this off or switch modes remotely because that's easy to abuse.
+            {
+              char option = whattoget.charAt(8);
+              if (option == 'C') // center text
+              {
+                centertext = true;
+                TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_A;
+              }
+              if (option == 'J') // justify text
+              {
+                centertext = false;
+                TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_B;
+              }
+              if (option == 'S') // turn serial port off (in case of spam or errors coming from it)(turn back on with the enable string)
+              {
+                enablecomport = false;
+              }
+              if (option == 'T') // reset pseudoseconds timer
+              {
+                pseudoseconds = 0;
+              }
+              if (option == 'D') // force display on
+              {
+                display_on_ping = true;
+              }
+              if (option == 'd') // force display off
+              {
+                display_on_ping = false;
+              }
+              if (option == 'B') // force sending (broadcasting) twice on
+              {
+                broadcast_twice = true;
+              }
+              if (option == 'b') // force sending (broadcasting) twice off
+              {
+                broadcast_twice = false;
+              }
+              send_ok_response();
+              send_html_header(0);
+              client.print("<body>CellSol WiFi Pylon " VERSIONSTRING " Option: <b>");
+              client.print(option);
+              client.println("</b><br>Redirecting to main</body></html>");
+              client.println();
+            }
+#endif
+            else if (whattoget.equals("/") or whattoget.startsWith("/index.html"))
+            {
+              //Serial.println("Regular page (default)");
+              send_ok_response();
+              // Display the HTML web page
+              // General purpose html header
+
+              send_html_header();
+              client.println("<script>"
+                             "function resizeIframe(obj) {"
+                             "    obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';"
+                             //"    obj.style.width = obj.contentWindow.document.documentElement.scrollWidth + 'px';"
+                             "  }"
+                             "</script>"
+                             "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
+              client.print(ipstring_a);
+              client.println("<br>"
+#ifdef COMMUNITY_MEMORY_SIZE
+                             "<a href=\"http://" + hoststring + "mem.html\">Older messages</a> "
+#endif
+#ifdef THE_INTERNET_IS_MADE_OF_CATS
+                             "<a href=\"http://" + hoststring + "cat.jpg\">Cat picture</a> "
+#endif
+#ifdef SERVE_FAQ_PAGE
+                             "<a href=\"http://" + hoststring + "faq.html\">FAQ page</a> "
+#endif
+                             "<br>"
+                             "<div style=\"max-width:100%;\">"
+                             "<iframe id=\"chatin\" src=\"/chat.html\" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this);\"style=\"width:100%;\" /></iframe>"
+#ifdef TX_IFRAME
+                             "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
+#else
+                             "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form><br>"
+#endif
+                            );
+              /*
+                "<iframe id=\"chatin\" src=\"/chat.html\" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this);\"style=\"width:100%;\" />");
+                // in case iframe doesn't work
+                sendstrings();
+                client.println("</iframe>"
+                "<br>"
+                "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:5em;\" />"
+                // in case iframe doesn't work, it displays this
+                "<form action=\"/get\"> Your message: <input type=\"text\" maxlength=\"50\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form>"
+                "</iframe>");
+              */
+              client.println("<form action=\"/get\"><input type=\"submit\" value=\"Refresh this page (in case of errors, etc.)\"><input type=\"hidden\" size=\"1\" maxlength=\"1\" name=\"refresh\"><form>");
+              client.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
+                             "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
+#ifdef PROVIDE_APK
+                             "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
+#else
+                             "<a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
+#endif
+              client.print(status_string());
+#ifdef YOU_ARE_EATING_RECURSION
+              client.print("The source code for all platforms is available <a href=\"http://" + hoststring + "src.zip\" target=\"_blank\">here.</a>");
+#endif
+
+              if (pseudoseconds % 2)
+                client.println("<small> Deus Nolens Exitus</body></html>");
+              else
+                client.println("<small> Vigilo Confido</body></html>");
+
+
+              // The HTTP response ends with another blank line
+              client.println();
+            }
+            else // we were asked a page that we don't have. redirect to main
+            {
+              if (LoginPageRequested(whattoget))
+              {
+                send_redirect_to_main(true);
+              }
+              else
+              {
+                send_ok_response();
+                send_html_header(0);
+                client.println("<body>CellSol WiFi Pylon " VERSIONSTRING " " PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main</body></html> ");
+                client.println();
+              }
+            }
+            header = "";
+            break;
           }
-          header = "";
-          break;
         }
       }
+      // Clear the header variable
+      header = "";
+      client.stop();
+      DoBasicSteps();
+      currentlyserving = false;
     }
-    // Clear the header variable
-    header = "";
-    client.stop();
-    DoBasicSteps();
-    currentlyserving = false;
   }
-}
 
-void loop() {
-
-
-  if (wifimode)
-  {
-    DoWifiSteps();
-    ServeWebPagesAsNecessary();
+  void loop() {
+    if (wifimode)
+    {
+      DoWifiSteps();
+      ServeWebPagesAsNecessary();
+    }
+    else
+    {
+      DoBtSteps();
+    }
   }
-  else
-  {
-    DoBtSteps();
-  }
-}
-
-String encodeHtml(String text)
-{
-  text.replace("&", "&amp;");  
-  text.replace("\"", "&#034;");
-  text.replace("'", "&#039;");
-  text.replace("<", "&lt;");
-  text.replace(">", "&gt;");  
-  return text;
-}

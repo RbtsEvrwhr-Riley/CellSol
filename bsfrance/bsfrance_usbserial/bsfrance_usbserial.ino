@@ -4,7 +4,7 @@
   Written by Riley August (HTML, CSS), and spiritplumber (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration
 *********/
 
-#define VERSIONSTRING "0.20pre"
+#define VERSIONSTRING "0.24"
 
 //  Actual running speed is 1Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
@@ -17,6 +17,7 @@
 #define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
 
+#define DO_NOT_LOG_SYSTEM_PACKETS
 
 //Libraries for LoRa
 #include <SPI.h>
@@ -74,6 +75,7 @@ char receivedChar2[MAXPKTSIZE]; // an array to store the received data
 int rssi; // last packat received rss
 
 unsigned long pseudoseconds = 0;
+long UTC_Seconds = -1;
 unsigned long psm = 0;
 void PetTheWatchdog() {
   if (millis() > psm)
@@ -86,6 +88,7 @@ void PetTheWatchdog() {
 
 
 String hextag = "XXXX:"; // usually the last two IP octets; gives pseudonimity to sender
+String hextag2 = "XXXX:"; // usually the last two IP octets; gives pseudonimity to sender
 String fourhex(int num)
 {
   if (num < 0x10)
@@ -138,8 +141,8 @@ void(* resetFunc) (void) = 0;//declare reset function at address 0
 void setup() {
 
   setClockPrescaler(3); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
-  Serial.begin(76800);  // actually 9600
-  Serial1.begin(76800); // actually 9600
+  Serial.begin(76800);  // actually 9600 // uses USB pins
+  Serial1.begin(76800); // actually 9600 // uses pins 0 and 1
 
   LastWeGot.reserve(RECALLSIZE + 6);
   LoRaData.reserve(MAXPKTSIZE + 6);
@@ -147,9 +150,11 @@ void setup() {
   vcc = readVcc();
 
 #ifdef USE_BATTERY_NOISE_FOR_ID
-  hextag = fourhex(UniqueID8[6] * 256 + ((UniqueID8[7] & 15) + ((UniqueID8[7] + vcc) & 240))) + TAG_END_SYMBOL; // alter it slightly each time the note is powered on to allow proper pseudonimity // never changes, so run it at setup and leave it alone.
+  hextag = fourhex(UniqueID8[6] * 256 + ((UniqueID8[7] & 14) + ((UniqueID8[7] + vcc) & 240))) + TAG_END_SYMBOL; // alter it slightly each time the note is powered on to allow proper pseudonimity // never changes, so run it at setup and leave it alone.
+  hextag2 = fourhex(UniqueID8[6] * 256 + ((UniqueID8[7] & 15 | 1) + ((UniqueID8[7] + vcc) & 240))) + TAG_END_SYMBOL; // alter it slightly each time the note is powered on to allow proper pseudonimity // never changes, so run it at setup and leave it alone.
 #else
-  hextag = fourhex(UniqueID8[6] * 256 + UniqueID8[7]) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
+  hextag = fourhex(UniqueID8[6] * 256 + (UniqueID8[7] & 254)) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
+  hextag2 = fourhex(UniqueID8[6] * 256 + (UniqueID8[7] | 1)) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
 #endif
 
 
@@ -220,7 +225,7 @@ void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
       if (LastWeGot.length() > 0)
       {
         if (recalldots)
-          st.print(F("....."));
+          st.print(F("..."));
         st.println(LastWeGot);
       }
     }
@@ -344,6 +349,29 @@ bool FilterIncomingLoRa() {
   TimeToForget(); // erase lastthing... after a fixed time; prevents broadcast storms
   if (chk == LastThingISentViaLora_0 or chk == LastThingISentViaLora_1 or chk == LastThingISentViaLora_2 or chk == LastThingISentViaLora_3)
     return false;
+
+  if (LoRaData.charAt(3) == '0' and LoRaData.charAt(5) == 'U' and LoRaData.charAt(6) == 'T' and LoRaData.charAt(7) == 'C' and LoRaData.charAt(8) == ':') // Do a bunch of checks to make sure we're getting a good packet
+  {
+    if (LoRaData.charAt(9) == '1' or LoRaData.charAt(9) == '2')
+    {
+      if (LoRaData.charAt(14) > 47 && LoRaData.charAt(14) < 58)
+      {
+        UTC_Seconds = (LoRaData.charAt(9)  - '0') * 100000 + // display fix type
+                      (LoRaData.charAt(10) - '0') * 10000 +
+                      (LoRaData.charAt(11) - '0') * 1000 +
+                      (LoRaData.charAt(12) - '0') * 100 +
+                      (LoRaData.charAt(13) - '0') * 10 +
+                      (LoRaData.charAt(14) - '0') * 1;
+
+#ifdef DO_NOT_LOG_SYSTEM_PACKETS
+        LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
+        return false; // send here, but don't cycle strings or output to serial(s)
+#endif
+      }
+    }
+  }
+
+  
   byte i = 0;
   byte testbyte = 0;
   for (i = 0; i < LoRaData.length(); i++)
@@ -441,7 +469,7 @@ bool SendSerialIfReady()
   if (readytosen2 and (pseudoseconds > antispam_timestam2))
   {
     //Send LoRa packet to receiver
-    sendstr = hextag + receivedChar2;
+    sendstr = hextag2 + receivedChar2;
     sendstr.replace('\n', ' ');
     sendstr.replace('\r', ' ');
     sendstr.replace("  ", " ");

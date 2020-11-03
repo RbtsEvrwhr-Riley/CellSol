@@ -4,14 +4,21 @@
   Written by Riley August (HTML, CSS), and spiritplumber (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration
 *********/
 
-#define VERSIONSTRING "0.20pre"
+#define VERSIONSTRING "0.24"
 
 //  Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
 //#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will eat the most anyway.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
 
-#define RECALLSIZE 400 // how many bytes to save
-#define PRETTY_MEM_CYCLING // trim to nearest sentence start? (if not, trim to oldest character)
+#define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
+#define RECALL_STRAY_CHARS // trim to packet, or keep last packet that went away?
+#define CONDENSE_TAGS // if it's the same person messaging more than once, condense messages in memory
+
+#define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
+#define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
+#define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
+
+#define DO_NOT_LOG_SYSTEM_PACKETS
 
 //Libraries for LoRa
 #include <SPI.h>
@@ -46,7 +53,8 @@ byte charcounter = 0;
 boolean readytosend = false;
 
 String LoRaData = ""; // god this is lazy. change to character array please
-String LastWeGot =""; // god this is lazy. change to character array please
+String LastWeGot = ""; // god this is lazy. change to character array please
+String sendstr = "";
 
 long LastThingISentViaLora_3 = 0; // this is now a checksum
 long LastThingISentViaLora_2 = 0; // this is now a checksum
@@ -58,23 +66,27 @@ long LTISVL_1_time = 0;
 long LTISVL_0_time = 0;
 
 
+bool broadcast_twice = false;
+
 #define MAXPKTSIZE 200
 char receivedChars[MAXPKTSIZE]; // an array to store the received data
 int rssi; // last packat received rss
 
-long pseudoseconds= 0;
+unsigned long pseudoseconds = 0;
+long UTC_Seconds = -1;
+
 unsigned long psm = 0;
 void PetTheWatchdog() {
-  if (millis()>psm)
+  if (millis() > psm)
   {
-  wdt_reset();
-    #ifdef GO_A_LOT_SLOWER
-    psm = psm+62; // 1000/16
-    #else
-    psm = psm+250;// 1000/4
-    #endif
+    wdt_reset();
+#ifdef GO_A_LOT_SLOWER
+    psm = psm + 62; // 1000/16
+#else
+    psm = psm + 250; // 1000/4
+#endif
     pseudoseconds++;
-//    Serial.println(pseudoseconds);
+    //    Serial.println(pseudoseconds);
   }
 }
 
@@ -91,6 +103,18 @@ String fourhex(int num)
   return String(num % 65536, HEX);
 }
 
+
+
+inline void mydelay(int num) __attribute__((always_inline));
+void mydelay(int num)
+{
+#ifdef GO_A_LOT_SLOWER
+  delay((num / 4) | 1);
+#else
+  delay(num);
+#endif
+}
+
 // This is currently unused, but we may want to use it in order to get battery level. The arduino pylon is very cheap to run, so we shouldn't have to worry about it. Even so...
 long readVcc() {
   // Read 1.1V reference against AVcc
@@ -103,7 +127,7 @@ long readVcc() {
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
 #endif
 
-  delay(2); // Wait for Vref to settle
+  mydelay(2); // Wait for Vref to settle
   ADCSRA |= _BV(ADSC); // Start conversion
   while (bit_is_set(ADCSRA, ADSC)); // measuring
 
@@ -120,10 +144,13 @@ int vcc = 0;
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
+
 void setup() {
 
+  LastWeGot.reserve(RECALLSIZE + 6);
+  LoRaData.reserve(MAXPKTSIZE + 6);
+  sendstr.reserve(MAXPKTSIZE + 6);
   vcc = readVcc();
-
 
 #ifdef USE_BATTERY_NOISE_FOR_ID
   hextag = fourhex(UniqueID8[6] * 256 + ((UniqueID8[7] & 15) + ((UniqueID8[7] + vcc) & 240))) + TAG_END_SYMBOL; // alter it slightly each time the note is powered on to allow proper pseudonimity // never changes, so run it at setup and leave it alone.
@@ -131,24 +158,22 @@ void setup() {
   hextag = fourhex(UniqueID8[6] * 256 + UniqueID8[7]) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
 #endif
 
-  String vccstr = ":SYS: TAG:" + hextag + " VCC:" + String(vcc) + ": VER:" VERSIONSTRING ": CLK";
-
   // we want to run this at 0.5Mhz regardless if we are starting at 8 or 16.
 #ifdef GO_A_LOT_SLOWER
 #ifdef F_CPU
 #if (F_CPU==16000000)
   setClockPrescaler(5); //0 == 16Mhz 1 == 8Mhz 2==4Mhz 3==2Mhz etc
   Serial.begin(76800); // actually 2400
-  Serial.println(vccstr + " 16>0.5");
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 16>0.5"));
 #else
   setClockPrescaler(4); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 2400
-  Serial.println(vccstr + "8>0.5");
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" "8>0.5"));
 #endif
 #else // assume 8Mhz
   setClockPrescaler(4); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 2400
-  Serial.println(vccstr + " 8>0.5");
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>0.5"));
 #endif
 #else
   // we want to run this at 2Mhz regardless if we are starting at 8 or 16.
@@ -156,16 +181,16 @@ void setup() {
 #if (F_CPU==16000000)
   setClockPrescaler(3); //0 == 16Mhz 1 == 8Mhz 2==4Mhz 3==2Mhz etc
   Serial.begin(76800); // actually 9600
-  Serial.println(vccstr + " 16>2");
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 16>2"));
 #else
   setClockPrescaler(2); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 9600
-  Serial.println(vccstr + " 8>2");
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
 #endif
 #else // assume 8Mhz
   setClockPrescaler(2); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 9600
-  Serial.println(vccstr + " 8>2");
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
 #endif
 #endif
 
@@ -180,9 +205,9 @@ void setup() {
 
   // stuff broke
   if (!LoRa.begin(BAND)) {
-    Serial.println("Starting LoRa failed! Resetting.");
+    Serial.println(F("Starting LoRa failed! Resetting."));
     wdt_disable();
-    delay(200);
+    mydelay(200);
     resetFunc(); //call reset
   }
 
@@ -194,39 +219,51 @@ void setup() {
 
 #ifdef ANNOUNCE
 #ifdef GO_A_LOT_SLOWER
-  LoraSendAndUpdate("RPT UP(2400)\r\n");
+  LoraSendAndUpdate(F("RPT UP(2400)\r\n"));
 #else
-  LoraSendAndUpdate("RPT UP(9600)\r\n");
+  LoraSendAndUpdate(F("RPT UP(9600)\r\n"));
 #endif
 #endif
 
 }
 
+bool recalldots = false;
+
 void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
 {
   while (st.available() > 0)
   {
-    buf[cnt] = st.read();
-    if ((++cnt >= MAXPKTSIZE) or (cnt > 1 and buf[cnt - 1] == 13))
+    buf[cnt++] = st.read();
+    if (cnt > MAXPKTSIZE)
+    {
+      sendout = true;
+      return;
+    }
+    if ((cnt > 1 and buf[cnt - 1] == 13))
     {
       sendout = true;
     }
 
+    // eat ascii 255s that that show up
+    if ((buf[0]<6 or buf[0]>127) and cnt == 1)
+      cnt = 0;
 
-    if (buf[0]==',' and buf[2]==',' and (buf[1]==',' or buf[1]=='.') and (buf[3]==13 or buf[3]==10)) // special: send status string and memory
+    if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.') and (buf[3] == 13 or buf[3] == 10)) // special: send status string and memory
     {
       cnt = 0;
       buf[0] = 0;
       buf[1] = 0;
       buf[2] = 0;
       sendout = false;
-      st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + ": VER:" VERSIONSTRING ": MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
-      if (LastWeGot.length()>0)
+      st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " VER:" VERSIONSTRING " UPT"+(broadcast_twice?";":":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
+      if (LastWeGot.length() > 0)
       {
-      st.println(LastWeGot);
+        if (recalldots)
+          st.print(F("....."));
+        st.println(LastWeGot);
       }
     }
-    if (buf[0] == 10 or buf[0] == 13 or buf[1] == 10 or buf[1] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
+    if (buf[0] == 10 or buf[0] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
     {
       cnt = 0;
       buf[0] = 0;
@@ -238,36 +275,46 @@ void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
 
 int LastToAddChk0 = 0;
 int LastToAddChk1 = 0;
-void AddToLastAndPrune(String st) {
+String lasttag = "xxxx:";
+void AddToLastAndPrune(String st) { // warning: may modify st
   LastToAddChk1 = LastToAddChk0;
   LastToAddChk0 = LongChecksum(st);
   if (LastToAddChk0 == LastToAddChk1)
     return;
-  int mylen = st.length() + 2;
-  int biglen = LastWeGot.length()-1;
-  if (biglen == -1)
-    LastWeGot = "" + st;
+  bool addenter = true;
+#ifdef CONDENSE_TAGS
+  if (st.startsWith(lasttag)) // condense tags
+  {
+    st.remove(0, 5);
+    addenter = false;
+  }
   else
   {
-    LastWeGot.replace("\r\n\r\n", "\r\n");
-
-#ifdef PRETTY_MEM_CYCLING
-    while ((biglen + mylen) > RECALLSIZE)
-    {
-      LastWeGot = LastWeGot.substring(LastWeGot.indexOf('\n')+1, biglen);
-      biglen = LastWeGot.length()-1;
-    }
-#else
-    if ((biglen + mylen) > RECALLSIZE)
-    {
-      LastWeGot = LastWeGot.substring(mylen, biglen);
-    }
-#endif
-    LastWeGot = LastWeGot + "\r\n" + st;
+    lasttag = st.substring(0, 4);
   }
+#endif
+
+  if ((LastWeGot.length() + st.length() + 2) > RECALLSIZE)
+  {
+    LastWeGot.remove(0, st.length());
+#ifdef RECALL_STRAY_CHARS
+    recalldots = true;
+#else
+    LastWeGot.remove(0, LastWeGot.indexOf('\n')); // uncomment me for
+#endif
+  }
+  if (addenter)
+    LastWeGot = LastWeGot + "\r\n" + st;
+  else
+    LastWeGot = LastWeGot + "~ " + st;
   LastWeGot.trim();
 }
 
+#ifdef SEND_TWICE
+int RSSI_0=RSSI_TRE_HI;//start neutral
+int RSSI_1=RSSI_TRE_HI;//start neutral
+int RSSI_2=RSSI_TRE_HI;//start neutral
+#endif
 
 void SeeIfAnythingOnRadio() {
   //see if there's anything on the radio, and if there is, be ready to send it
@@ -275,19 +322,34 @@ void SeeIfAnythingOnRadio() {
   if (packetSize) {
     //received a packet
     rssi = LoRa.packetRssi();
+//put the filter here so that it also evaluates garbage packets, in the hope of reducing said garbage later.
+#ifdef SEND_TWICE
+  RSSI_2 = RSSI_1;
+  RSSI_1 = RSSI_0;
+  RSSI_0 = rssi;
+  if (RSSI_2 < RSSI_TRE_LO or RSSI_1 < RSSI_TRE_LO or RSSI_0 < RSSI_TRE_LO or rssi < RSSI_TRE_LO)
+    broadcast_twice = true;
+  else if (RSSI_2 > RSSI_TRE_HI and RSSI_1 > RSSI_TRE_HI and RSSI_0 > RSSI_TRE_HI and rssi > RSSI_TRE_HI)
+    broadcast_twice = false;
+#endif
+
     //read packet
     while (LoRa.available()) {
       LoRaData = LoRa.readString();
       LoRaData.trim();
       if (FilterIncomingLoRa())//(LoRaData.length() > 1) and (LoRaData.substring(1).equals(LastThingISentViaLora_0.substring(1)) == false))
       {
+        
 #ifdef SHOW_RSSI
-        Serial.println("W" + String(rssi) + ":" + LoRaData);
+        if (rssi < -99)
+          Serial.println(String(rssi) + ":" + LoRaData);
+        else
+          Serial.println(" " + String(rssi) + ":" + LoRaData);
 #else
         Serial.println(LoRaData);
 #endif
         if (LoRaData.startsWith(":SYS:") == false) // avoid spamming
-            LoraSendAndUpdate(LoRaData);
+          LoraSendAndUpdate(LoRaData);
         AddToLastAndPrune(LoRaData);
       }
     }
@@ -305,7 +367,7 @@ bool FilterIncomingLoRa() {
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
   if (LoRaData.length() < 5) // too short
     return false;
-  if (LoRaData.charAt(0)==hextag.charAt(0) && LoRaData.charAt(1)==hextag.charAt(1) && LoRaData.charAt(2)==hextag.charAt(2))
+  if (LoRaData.charAt(0) == hextag.charAt(0) && LoRaData.charAt(1) == hextag.charAt(1) && LoRaData.charAt(2) == hextag.charAt(2))
     return false; // stop broadcast storms
 #ifdef REQUIRE_TAG_FOR_REBROADCAST_STRICT
   if (IsHex(LoRaData.charAt(0)) == false || IsHex(LoRaData.charAt(1)) == false || IsHex(LoRaData.charAt(2)) == false || IsHex(LoRaData.charAt(3)) == false)
@@ -321,6 +383,29 @@ bool FilterIncomingLoRa() {
   TimeToForget(); // erase lastthing... after a fixed time; prevents broadcast storms
   if (chk == LastThingISentViaLora_0 or chk == LastThingISentViaLora_1 or chk == LastThingISentViaLora_2 or chk == LastThingISentViaLora_3)
     return false;
+
+  if (LoRaData.charAt(3) == '0' and LoRaData.charAt(5) == 'U' and LoRaData.charAt(6) == 'T' and LoRaData.charAt(7) == 'C' and LoRaData.charAt(8) == ':') // Do a bunch of checks to make sure we're getting a good packet
+  {
+    if (LoRaData.charAt(9) == '1' or LoRaData.charAt(9) == '2')
+    {
+      if (LoRaData.charAt(14) > 47 && LoRaData.charAt(14) < 58)
+      {
+        UTC_Seconds = (LoRaData.charAt(9)  - '0') * 100000 + // display fix type
+                      (LoRaData.charAt(10) - '0') * 10000 +
+                      (LoRaData.charAt(11) - '0') * 1000 +
+                      (LoRaData.charAt(12) - '0') * 100 +
+                      (LoRaData.charAt(13) - '0') * 10 +
+                      (LoRaData.charAt(14) - '0') * 1;
+
+#ifdef DO_NOT_LOG_SYSTEM_PACKETS
+        LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
+        return false; // send here, but don't cycle strings or output to serial(s)
+#endif
+      }
+    }
+  }
+
+    
   byte i = 0;
   byte testbyte = 0;
   for (i = 0; i < LoRaData.length(); i++)
@@ -337,35 +422,40 @@ bool FilterIncomingLoRa() {
 }
 
 
-#define ANTISPAMTIME 3 // in (pseudo) seconds
+#define ANTISPAMTIME 3 // in (pseudo) seconds. for radio
+#define ANTISPAM_TIME_SERIAL 1 // for serial
 void TimeToForget()
 {
   PetTheWatchdog();
-  LastThingISentViaLora_3 = ((pseudoseconds - LTISVL_3_time) > ANTISPAMTIME)? 0 :LastThingISentViaLora_3;
-  LastThingISentViaLora_2 = ((pseudoseconds - LTISVL_2_time) > ANTISPAMTIME)? 0 :LastThingISentViaLora_2;
-  LastThingISentViaLora_1 = ((pseudoseconds - LTISVL_1_time) > ANTISPAMTIME)? 0 :LastThingISentViaLora_1;
-  LastThingISentViaLora_0 = ((pseudoseconds - LTISVL_0_time) > ANTISPAMTIME)? 0 :LastThingISentViaLora_0;
-
+  LastThingISentViaLora_3 = ((pseudoseconds - LTISVL_3_time) > ANTISPAMTIME) ? 0 : LastThingISentViaLora_3;
+  LastThingISentViaLora_2 = ((pseudoseconds - LTISVL_2_time) > ANTISPAMTIME) ? 0 : LastThingISentViaLora_2;
+  LastThingISentViaLora_1 = ((pseudoseconds - LTISVL_1_time) > ANTISPAMTIME) ? 0 : LastThingISentViaLora_1;
+  LastThingISentViaLora_0 = ((pseudoseconds - LTISVL_0_time) > ANTISPAMTIME) ? 0 : LastThingISentViaLora_0;
 }
+
+unsigned long antispam_timestamp = 0;
 void LoraSendAndUpdate(String whattosend)
 {
-  LoRa.beginPacket();
-  LoRa.print(whattosend);
-  LoRa.endPacket();
   PetTheWatchdog();
-  LTISVL_3_time=LTISVL_2_time;
-  LTISVL_2_time=LTISVL_1_time;
-  LTISVL_1_time=LTISVL_0_time;
-  LTISVL_0_time=pseudoseconds;
+
+  LTISVL_3_time = LTISVL_2_time;
+  LTISVL_2_time = LTISVL_1_time;
+  LTISVL_1_time = LTISVL_0_time;
+  LTISVL_0_time = pseudoseconds;
   LastThingISentViaLora_3 = LastThingISentViaLora_2;
   LastThingISentViaLora_2 = LastThingISentViaLora_1;
   LastThingISentViaLora_1 = LastThingISentViaLora_0;
   LastThingISentViaLora_0 = LongChecksum(whattosend);
-  #ifdef SEND_TWICE
   LoRa.beginPacket();
   LoRa.print(whattosend);
   LoRa.endPacket();
-  #endif
+  if (broadcast_twice)
+  {
+    mydelay(pseudoseconds & 7);
+    LoRa.beginPacket();
+    LoRa.print(whattosend);
+    LoRa.endPacket();
+  }
 }
 
 // important: this should be copy/pasted exactly between hardware types.
@@ -375,23 +465,26 @@ long LongChecksum(String str)
     return -1;
   long ret = 0;
   for (byte i = 1; i < str.length() - 1; i++) // skip the first and last characters to allow for a bit of extra noise
-  { 
-    int c=str.charAt(i);
-    if (c>31 && c<128) // ignore invalid characters and also crlfs
-      ret = ret + ((c*i)&65535); // mildly weird, but it catches transpositions, so sending "east" and "tase" isn't the same
+  {
+    int c = str.charAt(i);
+    if (c > 31 && c < 128) // ignore invalid characters and also crlfs
+      ret = ret + ((c * i) & 16777215); // mildly weird, but it catches transpositions, so sending "east" and "tase" isn't the same. 16777215 is $00FFFFFF
   }
   return ret;
 }
 
-String sendstr="";
 bool SendSerialIfReady()
 {
   // do actual sending; stay in send mode for as little as possible; this should be followed by the receive function; stagger these
-  if (readytosend)
+  if (readytosend and (pseudoseconds > antispam_timestamp))
   {
     //Send LoRa packet to receiver
-    sendstr=hextag+receivedChars;
+    sendstr = hextag + receivedChars;
+    sendstr.replace('\n', ' ');
+    sendstr.replace('\r', ' ');
+    sendstr.replace("  ", " ");
     sendstr.trim();
+
     LoraSendAndUpdate(sendstr);
     AddToLastAndPrune(sendstr);
     readytosend = false;
@@ -400,6 +493,7 @@ bool SendSerialIfReady()
     {
       receivedChars[i] = 0;
     }
+    antispam_timestamp = pseudoseconds + ANTISPAM_TIME_SERIAL;
     return true;
   }
   return false;
@@ -407,7 +501,19 @@ bool SendSerialIfReady()
 
 int numloops = 0;
 
+/*
+  // free RAM check for debugging. SRAM for ATmega328p = 2048Kb.
+  int availableMemory() {
+    // Use 1024 with ATmega168
+    int size = 2048;
+    byte *buf;
+    while ((buf = (byte *) malloc(--size)) == NULL);
+        free(buf);
+    return size;
+  }
+*/
 void loop() {
+  //Serial.println(availableMemory());
   PetTheWatchdog();
   SeeIfAnythingOnRadio();
   ReadFromStream(Serial, receivedChars, charcounter, readytosend); // add other streams as needed.
@@ -415,7 +521,7 @@ void loop() {
   {
     LowPower.idle(SLEEP_30MS, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF, SPI_OFF, USART0_OFF, TWI_OFF); // multiply sleep times by 4. safe to turn UART off for a bit since we just sent a message so it's unlikely we will be sending another one so soon
   }
-  
+
   if (++numloops > 10000)
   {
     vcc = readVcc();
@@ -423,10 +529,6 @@ void loop() {
   }
   else
   {
-#ifdef GO_A_LOT_SLOWER
-    delay(1); // actually 16
-#else
-    delay(4); // actually 16
-#endif
+    mydelay(4); // actually 16
   }
 }

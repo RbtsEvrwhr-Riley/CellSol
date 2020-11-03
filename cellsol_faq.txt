@@ -1,0 +1,82 @@
+CellSol FAQ
+
+* What is this?
+It's a means of emergency communication based upon solar-powered "pylons" consisting of a transceiver, a Bluetooth serial adapter, and a WiFi access point.
+
+* Is it a mesh network?
+Not quite. Each pylon is also a repeater, but there is no user level routing. It's more like a single Discord or IRC channel, everyone can read what everyone else types. There's no private messaging. We may implement channels and user level routing in the future.
+
+* Is it encrypted?
+No. The idea is to make it easy to talk. Not encrypting it makes it easier for people to build their own nodes. You can encrypt the content of your own message if you like.
+
+* What's the difference between this and other text systems designed for hikers?
+It's intended to also have permanently affixed pylons that can act as repeaters and can be accessed by any device with WiFi or Bluetooth. It's open source and you are encouraged to build your own. It has its own memory so that you can turn your phone off and still get messages.
+
+* Can I carry a pylon around? Will that interfere with pre-positioned pylons?
+You can (in fact, please do!) and it will not interfere. Bluetooth pylons will work with any phone that has Bluetooth (Android, iOS, even old Blackberries). The CellSol circuit will let you send and receive message, and you will act as a repeater, extending the range and reliability of the network near you.
+
+* What's the range for each pylon?
+Absolute worst case scenario, 500 meters (using a piece of chicken wire as an antenna). Best case scenario, a few kilometers.
+
+* Can this link to the wider internet?
+Yes. A pylon configured as a gateway can be accessed by the wider internet. This is useful if, say, you're doing field research, your base camp has a net connection, and you don't want to give a satellite phone to everyone.
+
+* Why the name?
+It stands for Cellular-Solar. It's from a 1990s sci fi story. We liked it.
+
+*Is this LoRaWAN?
+No, it's intentionally set on a slightly different radio channel from LoRaWAN specifically so that it doesn't interfere with it (and vice versa). But it uses the LoRa encoding, so if you want to make it LoRaWAN compatible, you can.
+
+*What are the four characters in front of my message?
+That's your identifier; it's like a nickname in a chat. It's autocalculated in a way that it doesn't give away your information, such as your phone's hardware address, while making sure other people can't pretend to be you or cause confusion as to who's talking.
+
+*How do I connect via WiFi?
+If you see an access point called "CellSol" and then an IP address (four numbers), just connect to it, there's no password. You will be taken to the chat page in a few moments. If you are not, open a browser and type in the four numbers you saw, connected by dots like you saw them.
+
+*How do I connect via Bluetooth?
+Some CellSol access points will identify themselves as CellSollBT and a number; some won't. Download either our chat app, or ANY Bluetooth terminal, then connect to the access point like you would to a regular bluetooth device, then you can use the terminal window as a chat window. You can download the CellSol app from any WiFi CellSol pylon if the internet is already down, or from the CellSol website, or from Google Play. If you have an iPhone or other non-Android phone, you can use ANY bluetooth terminal or bluetooth chat app. Type three commas (,,,) in a row and if you are connected correctly, you will get a status message and a summary of the last few messages that the pylon has received.
+
+*How do I connect via serial port?
+Just use a TTL serial port adapter (Parallax PropPlug, FTDI adapter for Arduino, etc). The baud rate is 9600 in most cases. If that does not work, try 2400. Type three commas (,,,) in a row and if you are wired correctly, you will get a status message and a summary of the last few messages that the pylon has received.
+
+*Can I power the CellSol circuit from my USB-C phone?
+Yes! But we don't recommend doing that in WiFi mode for the ESP32 circuit. Switch to Bluetooth mode or use one of the other circuits.
+
+*I have an ESP32 CellSol circuit. How do I switch modes?
+To switch to Bluetooth, press RESET and then immediately after press PROG, and keep it pressed until the display lights up and says CellSolBT. To switch back to WiFi, press RESET and leave PROG alone.
+
+*I have an Arduino CellSol circuit. How do I switch modes?
+The Arduino only supports Bluetooth and serial mode, there's no need to switch.
+
+* What is the message size limit?
+180 characters. You can send messages every 2 seconds.
+
+* Can someone locate me if I use CellSol?
+Not unless they have a radio direction finder. CellSol does not transmit location or identity. If you do want someone to find you, you can send them your GPS coordinates.
+
+* Can I send images or video? Can I send links?
+No, the system is optimized for range and low power consumption, not bandwidth. The goal is to be able to coordinate beetween field researchers, or explain and provide immediate needs in an emergency situation. You can send a link, but since the system is designed to be used where there's no internet, it may not do much good.
+
+* Is there a connection limit?
+The identifier is 4 bytes, and there are a few reserved values, so the effective limit is about 32000 users per CellSol mesh, after which you will start seeing duplicate identifiers (The messaging system will still work, however).
+
+* I want to save my USB battery for my phone. What else can I power a CellSol pylon with?
+A lot of things! It's very tolerant when it comes to voltages. See the assembly instructions for a partial list.
+
+* Why do the pylons sometimes disappear from the WiFi access point list?
+They're trying to save power by only advertising their presence some of the time. Wait a minute (60 seconds) and they'll be back, if they are operational. They only do this if nobody is connected.
+
+* How do I help this project?
+You must construct additional pylons. Then, give them to friends and/or deploy them in places where they can see each other! If it's not your property, be sure to ask permission.
+
+* Will this interfere with other radios?
+The 433Mhz version may interfere with some old garage door openers, but that is unlikely. The 915Mhz version will not.
+
+* Do I need a permit to set up a pylon?
+No. They use too little power for that (which is why they are text only... no free lunch!). This is true worldwide, as far as we can tell, with a few exceptions (near a radio telescope, etc). If you can set up a wifi router, you can set up a CellSol pylon.
+
+* Can I connect a solar panel and a USB charger at the same time?
+Maybe. Specifically, you can, BUT only if the USB charger is a wall-charger. Do not charge a CellSol pylon from a computer or phone/tablet if you also have a solar panel connected!
+
+* What is Aaron Swartz Day?
+Please see https://www.aaronswartzday.org/about/
