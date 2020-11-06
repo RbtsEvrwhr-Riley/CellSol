@@ -1,0 +1,9 @@
+# Usual suspects
+.vscode/
+*.swp
+.bak
+public/
+scripts/
+releases/
+build/
+*/_gen/

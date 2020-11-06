@@ -1,0 +1,1 @@
+Much like the ESP32, we will put our firmware here when the GitHub repo is ready for public access.
