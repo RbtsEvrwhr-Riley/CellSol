@@ -4,7 +4,7 @@ Instructions by Kay Borri of Robots Everywhere. Many thanks.
 
 These instructions assume you do not need help flashing the Arduino module using the [firmware](../firmware)
 
-For instructions on what batteries and charging circuits can be added, look at [power](power)
+For instructions on what batteries and charging circuits can be added, look at [power supplies](../../power)
 
 ## Soldering the Repeater Pylon
 

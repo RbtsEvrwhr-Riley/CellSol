@@ -9,6 +9,6 @@ We plan to be releasing our proof of concept to the general public in December 2
 
 Welcome to CellSol!
 
-![Diagram of CellSol mesh network](cellsol_meshdiagram.png)
+![CellSol Logo - Large](media/cellsol_large_236.png)
 
 {{< include file="about-cellsol/our-mission.md" markdown="true">}}

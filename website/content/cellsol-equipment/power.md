@@ -1,5 +1,5 @@
 ---
-title: Power Circuits
+title: Power Supplies
 ---
 
 # POWERING THE NODE

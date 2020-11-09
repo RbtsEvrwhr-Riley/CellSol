@@ -26,7 +26,7 @@ disablePathToLower = true
 
   # (Optional, default static/brand.svg) Set the path to a logo for the Geekdoc
   # relative to your 'static/' folder.
-  # geekdocLogo = "cellsol-logo.png"
+   geekdocLogo = "media/cellsol_small_590.png"
 
   # (Optional, default false) Render menu from data file im 'data/menu/main.yaml'.
   geekdocMenuBundle = false
