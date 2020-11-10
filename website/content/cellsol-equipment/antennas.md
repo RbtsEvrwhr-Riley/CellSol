@@ -24,7 +24,24 @@ REMINDER: the wire leading to the antenna is also an antenna, ensure it is eithe
 
 Linx makes a 915MHz monopole as well; https://linxtechnologies.com/wp/product/pw-series-antennas/ along with other manufacturers.
 
-## Without a Ground Plane
+### 3D Printed Antenna Stand & Cutter
+
+Kay designed a 3D printable antenna stand that also doubles as a ruler to measure the right length of wire to use for the best reception.
+
+Our LoRa network uses 915MZ as its frequency. Different frequencies will use different lengths of wire on our antenna ruler/stand. 
+You can use the ruler to measure exactly the right length of wire for your antenna, before you cut it.
+
+1. Print out our antennae stand/ruler for frequency wire length tool
+
+2. Use the tool to measure the desired length of wire for your antennae, and cut it
+
+3. Slide the wire through the antennae stand
+
+4. Connect the antennae to your LoRa repeater or Wifi Router
+
+Be careful where you place your repeater, as the antenna itself can shadow the solar panel and interfere with it's ability to capture power from the sun.
+
+## Without a Ground Plane (Dipoles)
 
 When you do not have a ground plane you should be using a dipole antenna. The stock antenna on the Heltec and TTGO LoRa32s (and many other cheap LoRa antennas) are
 actually WiFi antennas - tuned at 915MHz - with a broad frequency range. The 866MHz version is the same as the North American 915MHz one, so all models work in all regions.
