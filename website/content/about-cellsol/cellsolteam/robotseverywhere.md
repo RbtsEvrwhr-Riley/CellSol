@@ -7,3 +7,5 @@ and manufacturing solutions for the public and private sectors, as well as the m
 the many crises plaguing the year 2020, Robots Everywhere has chosen this time to help develop launch CellSol to allow people to come together in the future.
 
 They can be found at [www.robots-everywhere.com](https://www.robots-everywhere.com).
+
+![Robots Everywhere logo](../re_logo_name_small.png)

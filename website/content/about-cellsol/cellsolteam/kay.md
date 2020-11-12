@@ -17,3 +17,5 @@ communications.
 
 When not trying to change the world through innovative technology, Kay enjoys exploring, both real places and virtual, by swimming, sailing, and cycling. Kay is also a prolific writer of fantasy and science
 fiction; some of their work can be found at the [Emlia Foundation Website](https://emlia.org/pmwiki/pub/web/VeryDifferentPlaces.VeryDifferentPlaces.html), as well as the famous 4chan "Left Beyond Quest" series.
+
+![Kay Borri being awesome](../kay_profile.jpg)

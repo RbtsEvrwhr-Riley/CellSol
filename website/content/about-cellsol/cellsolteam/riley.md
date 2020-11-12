@@ -8,3 +8,5 @@ architect, project manager, and test planner. Outside of software automation, Ri
 all across the CellSol project, and even designed this website.
 
 Outside of the shop, Riley likes to ride his bicycle, and test his skills against the world in online games like League of Legends.
+
+![Riley August, unusually wearing a suit](../riley_profile.jpg)
