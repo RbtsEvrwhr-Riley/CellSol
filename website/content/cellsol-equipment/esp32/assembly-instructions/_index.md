@@ -1,13 +1,20 @@
-# CellSol ESP32 Pocket Pylon Setup
+# CellSol ESP32 WiFi Pylon Setup
+
+The WiFi pylon setup does not require soldering or any electronics expertise, though being able to solder the battery connection will improve the robustness of the device and make it more weatherproof.
+
+{{< toc >}}
 
 ## What You Will Need
 * A Heltec Lora32 or Lora32v2 module
 * The Arduino software, available [here](https://www.arduino.cc/en/Main/Software)
 * A USB cable
 * Our CellSol ESP32 Pocket Pylon firmware, available on this GitHub repository
-* A battery for the Lora32 - 1S LiPo or other 3.3-4V source. See [Powering the Node](power)
+* Battery holder
+* 1.2V batteries (the bigger the better) OR, any 3.6 or 3.7 volt battery (li-ion, lipo, etc.) See [Powering the Node](power)
+* Battery connector for the Lora32 module (should come with the Lora32)
 * A solar panel to charge the battery (optional, USB may also be used for charging if the pylon is connected to mains)
 * A case for your Lora32, antenna, and battery - see this website for case designs (coming soon)
+* Some means of connecting wires together; soldering is ideal, but a roll of tape will work in an emergency.
 
 ## Step 1: Setting Up the Arduino Software
 
@@ -78,10 +85,69 @@ Most of these options are turned on and off by commenting (making the line begin
 |WIFI_UPSTREAM_AP|The access point name to be connected to if in IS_CLIENT or IS_HYBRID mode.|Network name in double quotes, like "RobotsEverywhere_24"|
 |WIFI_UPSTREAM_PWD|The password to the access point to connect to in client or hybrid mode|Password in double quotes, like "derpderp"|
 
-## Step 4: Assembling the Power System
+## Step 4: Assembling the Hardware
 
-See [Powering the Node](power) for information on what batteries and charging equipment can be safely connected.
+These instructions assume that you don't have any tools. If you have a soldering iron and wire cutters and better tape and/or heat shrink, you should clearly use them, but if you can do that, you don't really need these instructions...
 
-## Step 5: Assemble the Case
+1. This is what you need to assemble the full kit, in an emergency:
+* ESP32 module with antenna
+* Tape roll and/or double sided tape. Electrical tape or heatshrink tubing can be used to improve the build.
+* USB solar panel
+* Battery holder
+* 1.2V batteries (the bigger the better) OR, any 3.6 or 3.7 volt battery (li-ion, lipo, etc.)
+
+![What you need to assemble an ESP32 WiFi Pylon](photos/1.jpg)
+
+2. First thing first: check that the esp32 module is undamaged.
+![First thing first: check that the esp32 module is in good shape.](photos/2.jpg)
+
+3. Connect the antenna - you'll have to carefully push down the U.FL connector.
+![Connect the antenna - you'll have to carefully push down the UFL connector.](photos/3.jpg)
+
+4. Strip the wires for the battery case. You can use the tape roll if you have nothing better. 1.5cm or half an inch is sufficient.
+![Strip the wires for the battery case. You can use the tape roll if you have nothing better. 1.5cm or half an inch is sufficient.](photos/4.jpg)
+
+5. This should be your end result.
+![This should be your end result.](photos/5.jpg)
+
+6. Do the same with the wires that came with the esp32 module.
+![Do the same with the wires that came with the esp32 module.](photos/6.jpg)
+
+7. This should be your end result.
+![This should be your end result.](photos/7.jpg)
+
+8. You have to connect these red to red and black to black.
+![You have to connect these red to red and black to black.](photos/8.jpg)
+
+9. Twist the wires together, bending them backwards afterward. If you can solder, solder these wires together.
+![Twist the wires together, bending them backwards afterward.](photos/9.jpg)
+
+10. Using the tape, cover one wire (Doing black here). Make sure you cover it fully. 
+![Using the tape, cover one wire (Doing black here). Make sure you cover it fully. ](photos/10.jpg)
+
+11. Using the tape, cover the other. Make sure you cover it fully. Leave some tape hanging.
+![Using the tape, cover the other. Make sure you cover it fully. Leave some tape hanging.](photos/11.jpg)
+
+12. Use the tape you left hanging earlier to wrap around your connection. It doesn't look pretty, but it will hold for a long time.
+![Use the tape you left hanging earlier to wrap around your connection. It doesn't look pretty, but it will hold for a long time.](photos/12.jpg)
+
+13. Now you can put the batteries in. Mind your polarity! Put the little connector in its socket on the bottom of the esp32 module.
+![Now you can put the batteries in. Mind your polarity! Put the little connector in its socket on the bottom of the esp32 module.](photos/13.jpg)
+
+
+14. Connect the USB solar panel to the USB connector on the esp32. You're done!
+![Connect the USB solar panel to the USB connector on the esp32. You're done!](photos/14.jpg)
+
+15. If you have a different battery, same principle up until step 13 -- be sure to connect red to red and black to black.
+![If you have a different battery, same principle up until step 13 -- be sure to connect red to red and black to black.](photos/15.jpg)
+
+16. If you have a USB powerbank, connect it between the ESP32 and the solar panel.
+![If you have a USB powerbank, connect it between the ESP32 and the solar panel.](photos/16.jpg)
+
+## Step 5: Assembling the Power System
+
+See [Powering the Node](power) for information on what batteries and charging equipment can be safely connected, if they do not match the above instructions.
+
+## Step 6: Assemble the Case
 
 This is TBD, case design is a work in progress.
