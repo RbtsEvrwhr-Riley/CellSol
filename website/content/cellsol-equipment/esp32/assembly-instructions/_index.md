@@ -146,7 +146,7 @@ These instructions assume that you don't have any tools. If you have a soldering
 
 ## Step 5: Assembling the Power System
 
-See [Powering the Node](power) for information on what batteries and charging equipment can be safely connected, if they do not match the above instructions.
+See [Powering the Node](../../power) for information on what batteries and charging equipment can be safely connected, if they do not match the above instructions.
 
 ## Step 6: Assemble the Case
 

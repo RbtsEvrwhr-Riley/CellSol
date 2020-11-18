@@ -10,7 +10,8 @@ title: Antennas
 
 Most of our data for LoRa antennas have come from the results of Mark Zachmann on his blog here: https://medium.com/home-wireless/testing-lora-antennas-at-915mhz-6d6b41ac8f1d
 
-We have only been the 85mm copper wire and stock LoRa32 antennas ourselves so far. Please reach out to us if you are testing other antennas!
+We have only been the 85mm copper wire and stock LoRa32 antennas ourselves so far. Please [reach out to us](mailto:cellsol@robots-everywhere.com) if you are testing other antennas! We would love
+to hear from you, and see your network implementations.
 
 ## With a Ground Plane (Monopoles)
 
@@ -20,7 +21,8 @@ it will resonate on the frequency you are trying to receive, making your ground 
 
 For a short-wire monopole antenna, 85mm of copper wire will work; our tests used standard 20 gauge stranded wire from our shop spools. 
 
-REMINDER: the wire leading to the antenna is also an antenna, ensure it is either too short or more likely too long to resonate at 915MHz. If it is around 8cm in length, THIS IS VERY BAD as it will resonate!
+REMINDER: the wire leading to the antenna is also an antenna, ensure it is either too short or more likely too long to resonate at 915MHz. If the antenna is near 8cm in length, it will reasonate, causing
+a lot of noise, possibly disabling the connection entirely.
 
 Linx makes a 915MHz monopole as well; https://linxtechnologies.com/wp/product/pw-series-antennas/ along with other manufacturers.
 

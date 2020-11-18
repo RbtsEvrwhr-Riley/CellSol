@@ -34,11 +34,11 @@ These instructions assume that you know how to solder. This project can be attem
 
 ![Stick the LoRa module on top of the circuit board, then solder it in place.](photos/6.jpg)
 
-7) Use the headers and the rest of the leads to prepare the battery charger circuit and the Arduino. Don't fill IN+ and IN- yet. Again, you can skip some of the holes.
+7) Use the headers and the rest of the leads to prepare the battery charger circuit and the Arduino. Don't fill IN+ and IN- yet. Again, if you want to save header materials you can skip unused holes. 
 
-![Use the headers and the rest of the leads to prepare the battery charger circuit and the Arduino. Don't fill IN+ and IN- yet. Again, you can skip some of the holes.](photos/7.jpg)
+![Use the headers and the rest of the leads to prepare the battery charger circuit and the Arduino. Don't fill IN+ and IN- yet.](photos/7.jpg)
 
-8) A different angle showing what holes you have to populate. Your Arduino may look a bit different.
+8) A different angle showing what holes you have to populate. Your Arduino may look a bit different. Refer to your Arduino's datasheet.
 
 ![A different angle showing what holes you have to populate. Your Arduino may look a bit different.](photos/8.jpg)
 
@@ -54,9 +54,9 @@ These instructions assume that you know how to solder. This project can be attem
 
 ![Solder the voltage regulator in place (its part number should be on top).](photos/11.jpg)
 
-12) Solder the GND pin on the LoRa module to the circuit board, this gives it a ground plane. If you can, you'll want to take that to actual ground. If you want to make a dipole instead, you can, just do the same thing on this pin as for the antenna pin.
+12) Solder the GND pin on the LoRa module to the circuit board, this will act as a rudimentary RF ground plane. If you can, you'll want to connect that to earth ground. Otherwise, use a dipole antenna.
 
-![Solder the GND pin on the LoRa module to the circuit board, this gives it a ground plane. If you can, you'll want to take that to actual ground. If you want to make a dipole instead, you can, just do the same thing on this pin as for the antenna pin.](photos/12.jpg)
+![Solder the GND pin on the LoRa module to the circuit board, this will act as a rudimentary RF ground plane. If you can, you'll want to connect that to earth ground. Otherwise, use a dipole antenna.](photos/12.jpg)
 
 13) Insert the battery charger circuit, it should stick out a bit, then solder it.
 

@@ -18,8 +18,8 @@ low bandwidth operation.
 ## Datalogging and Instrumentation
 
 Humans aren't the only users that have a place on the CellSol network. Going forward into 2021, documentation for writing firmware for autonomous instruments and integrating them into the CellSol network
-will be provided. Bandwidth is, of course, a serious consideration, and restricting the resource usage of dataloggers on the main mesh, or even implementing a quality-of-service (QoS) system may be
-required. How individual mesh networks are used will significantly determine how they need to regulate datalogger traffic, so further discussion is definitely needed before a design is decided upon.
+will be provided. Bandwidth is, of course, a serious consideration (LoRa transmits and receives data ten thousand times slower than 4G cellular), and restricting the resource usage of dataloggers on the main mesh, or even implementing a quality-of-service (QoS) system
+to slow down certain traffic types over others may be required. How individual mesh networks are used will significantly determine how they need to regulate datalogger traffic, so further discussion is definitely needed before a design is decided upon.
 
 One way we expect to support these dataloggers early into 2021 is to expose a webservice endpoint from WiFi pylons, so that HTTP requests can be used to send and receive messages instead of just refreshing
 the entire chat page as a browser does.
@@ -28,4 +28,4 @@ the entire chat page as a browser does.
 
 By using standard client software (web browsers, IRC clients) endpoint security becomes much easier to achieve, but eventually CellSol may need some bandwidth-preservation security implementations. Spam
 bots, redirect bots, and other denial of service attacks are effective given CellSol's low overall throughput, and low overhead software systems to prevent them will need to be designed as adoption
-increases, especially if we are to rely on the system during a social crisis such as the Black Lives Matter protests of 2020.
+increases, especially if we are to rely on the system during a social crisis such as the widespread American protests in 2020.
