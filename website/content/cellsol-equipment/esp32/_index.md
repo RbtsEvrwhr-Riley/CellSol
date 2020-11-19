@@ -6,3 +6,5 @@ The ESP32 WiFi Pylon is an easy to assemble, WiFi capable CellSol pylon. It can 
 and serves a simple proof-of-concept chat app that broadcasts along the LoRa network.
 
 It uses the Heltec Lora32 or Lora32V2 microcontroller board as its base.
+
+![A CellSol ESP32 WiFi Pylon, Assembled, No Case](esp32pylon_assembled.jpg)

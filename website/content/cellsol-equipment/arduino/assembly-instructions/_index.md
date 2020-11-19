@@ -6,6 +6,8 @@ These instructions assume you do not need help flashing the Arduino module using
 
 For instructions on what batteries and charging circuits can be added, look at [power supplies](../../power)
 
+For more information refer to the [Schematic](../schematics) and [Bill of Materials](../bom)
+
 ## Soldering the Repeater Pylon
 
 These instructions assume that you know how to solder. This project can be attempted by a beginner even though it has some small solder joints.

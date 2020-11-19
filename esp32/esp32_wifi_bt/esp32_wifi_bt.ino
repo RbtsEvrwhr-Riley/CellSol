@@ -2052,7 +2052,7 @@ void send_form_iframe()
   send_ok_response();
   send_html_header();
   client.println("<body>"
-                 "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form>"
+                 "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Send\"><form>"
                  "</body></html>");
 }
 #endif
@@ -2070,14 +2070,24 @@ void send_faq_page()
 {
   send_ok_response();
   send_html_header();
-  client.println( "<body>CellSol WiFi Pylon " VERSIONSTRING " Help<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
+  client.println( "<style> html{text-align: start;}</style>"
+                  "<body><h1>CellSol WiFi Pylon " VERSIONSTRING " Help</h1>"
+                  "<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
+                  "<h2>About the Chat<h2>"
                   "<p>By using the chat in the main page, you will be able to communicate with people who are in range of the CellSol network, or people who are using CellSol gateways."
                   "<p>Each message is sent out to neighboring pylons, which can be a few kilometers apart, and rebroadcast."
                   "<p>You can consider this system akin to a single IRC/Discord/Twitch chat channel, except it will work when the internet at large will not."
-                  "<p>The tag in front of your message is a pseudonymous identifier: it is used to tell people apart. It is four hex digits. (Sorry, no nicknames)."
+                  "<p>Any phone with a Bluetooth chat app (Android APK can be downloaded from this very pylon, iPhone or others will have to use their own) can also use the Bluetooth pylons or pocket nodes. They require very little power to operate."                  
+                  "<p>Please note that CellSol does not store your location or identity data, but also please note that there is no encryption for these messages (to make it easier for other systems to interoperate with). This is intended to be used during or after natural disasters, so that should really not be a concern."
+                  "<h3>Identifying Users</h3>"
+                  "<p>The tag in front of your message is a pseudonymous identifier: it is used to tell people apart. It is four hex digits. (Sorry, no nicknames). Example: 0abc."
+                  "<h2>About the Network</h2>"
                   "<p>CellSol is free to use and does not depend on any infrastructure, each pylon is self-contained: just deploy a few of them in an area and you are good to go."
-                  "<p>Any phone with a Bluetooth chat app (Android APK can be downloaded from this very pylon, iPhone or others will have to use their own) can also use the Bluetooth pylons or pocket nodes. They require very little power to operate."
-                  "<p>This is a lot like existing LoRa mesh chat systems, except that it's intended to leave repeaters in place."
+                  "<p>This is a lot like existing LoRa mesh chat systems, except that it's intended to leave repeaters in place."                  
+                  "<p>The mesh topology prioritizes redundancy over speed or cleanliness, so you may occasionally get a garbled message: we try to display those in case their meaning can be understood despite the garbling."
+                  "<p>The best use for a standalone repeater is somewhere between areas with traffic, on a road for example. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone."
+                  "<p>The best use for a WiFi pylonis somewhere that has a stable internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
+                  "<h2>About This Pylon</h2>"
 #ifdef REQUIRE_TAG_FOR_REBROADCAST_STRICT
 #else
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
@@ -2086,9 +2096,6 @@ void send_faq_page()
                   "<p>It will honor other mesh network systems by repeating their packets too!"
 #endif
 #endif
-                  "<p>The mesh topology prioritizes redundancy over speed or cleanliness, so you may occasionally get a garbled message: we try to display those in case their meaning can be understood despite the garbling."
-                  "<p>The best use for a standalone repeater is somewhere between areas with traffic, on a road for example. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone."
-                  "<p>The best use for a WiFi pylon such as this one is somewhere that has a hardened internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
                   "<p>If you are on a Bluetooth or serial CellSol pylon, typing ,,, on a line by itself will dump the pylon's status and last received strings (in case your phone loses them). Our app does this automatically on reconnect. This lets you use any terminal app."
 #ifdef MODEFLIP
                   "<p>This pylon will turn on its WiFi once a minute to check for clients, and be a repeater the rest of the time, in order to save power."
@@ -2100,12 +2107,12 @@ void send_faq_page()
 #endif
 #endif
                   "<p>The CellSol pylons (any version of them) will work on any 3.6 or 3.7v batteries, or any USB power banks, or anything that delivers 3.5 to 6 volts, really."
+                  "<h2> About the Project</h2>"
 #ifdef YOU_ARE_EATING_RECURSION
                   "<p>The project is open source and open schematic. You can get a copy of the source right from here! <a href=\"/src.zip\"> Source code </a>."
 #else
                   "<p>The project is open source and open schematic. You can download everything from <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a> or from a pylon that carries it (This one doesn't have enough memory to)."
 #endif
-                  "<p>Please note that CellSol does not store your location or identity data, but also please note that there is no encryption for these messages (to make it easier for other systems to interoperate with). This is intended to be used during or after natural disasters, so that should really not be a concern."
                   "<p><a href=\"/\">Go back</a></body></html>");
   PetTheWatchdog();
   client.println();
@@ -2467,7 +2474,7 @@ void send_faq_page()
 #ifdef TX_IFRAME
                              "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
 #else
-                             "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form><br>"
+                             "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Send\"><form><br>"
 #endif
                             );
               /*

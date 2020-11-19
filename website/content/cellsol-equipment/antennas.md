@@ -4,6 +4,11 @@ title: Antennas
 
 {{< toc >}}
 
+# Antenna Concepts
+
+If you're not familiar with antenna design, [this site](http://www.antenna-theory.com/) can be a good resource. You don't need to know any antenna theory to choose an antenna for your pylon,
+but it's useful knowledge!
+
 # Small Antennas (<10cm)
 
 900MHz wifi antennas will often serve "okay" at both 866MHz for european LoRa and 915MHz for North American, but the performance in either case will be less than ideal.
@@ -30,7 +35,7 @@ Linx makes a 915MHz monopole as well; https://linxtechnologies.com/wp/product/pw
 
 Kay designed a 3D printable antenna stand that also doubles as a ruler to measure the right length of wire to use for the best reception.
 
-Our LoRa network uses 915MZ as its frequency. Different frequencies will use different lengths of wire on our antenna ruler/stand. 
+Our LoRa network uses 915MHz as its frequency. Different frequencies will use different lengths of wire on our antenna ruler/stand. 
 You can use the ruler to measure exactly the right length of wire for your antenna, before you cut it.
 
 1. Print out our antennae stand/ruler for frequency wire length tool
