@@ -6,5 +6,5 @@ cd public
 "C:\Program Files\7-Zip\7z.exe" a -tzip -r ..\cellsolpublic.zip * 
 cd ..
 rd /s /q .\public
-start .\public.zip
+start .\cellsolpublic.zip
 pause
