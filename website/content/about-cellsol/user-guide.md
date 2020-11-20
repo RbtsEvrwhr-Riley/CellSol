@@ -22,7 +22,7 @@ Please note that CellSol does not store your location or identity data, but also
 
 ## Identifying Users
 
-The tag in front of your message is a pseudonymous identifier: it is used to tell people apart. It is four hex digits. (Sorry, no nicknames).
+The tag in front of your message is a pseudonymous identifier used to tell people apart. It is four hex digits. We chose to remove nicknames, to simplify the data. You can always add one to your message.
 
 ![CellSol Web Interface with Help Highlights](../help_graphic.png)
 

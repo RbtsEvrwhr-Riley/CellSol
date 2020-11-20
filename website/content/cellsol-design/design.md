@@ -28,7 +28,7 @@ A node also provides a gateway from other devices (via BLE or WiFi) INTO and OUT
 
 # Hardware
 
-The RF standard we are using is [LoRa](https://www.semtech.com/lora/what-is-lora) which is an 866MHz(EU) and 915MHz(North America and most other regions) standard.
+The RF standard we are using is [LoRa](https://www.semtech.com/lora/what-is-lora) which is an 866MHz (EU) and 915MHz (North America and most other regions) standard.
 
 The hardware is deliberately as simple as possible so that it can be made out of readily available parts in the field. The most specialized components are for the radio - the Semtech Sx1276 and a 915MHz
 antenna. That said, any LoRa chip will work, and monopole antennas can be made from short lengths of wire. See our [antennas page](../cellsol-equipment/antennas/).
@@ -37,8 +37,8 @@ The [Heltec Lora32](https://heltec.org/project/wifi-lora-32/) and Arduino Nano(h
 
 ## Hardware Philosophy
 
-For the different types of devices, identical hardware is used for the repeater/transmitter parts. Whether you are making a WiFi pocket pylon, or a repeater, or a fixed pylon to place on top of a building,
-using an ESP32, Arduino, or even a future design with a more powerful computer. The power systems are also designed to scale in the same way.
+For the different types of devices, identical hardware is used for the repeater/transmitter parts, whether you are making a WiFi pocket pylon, or a repeater, or a fixed pylon to place on top of a building,
+using an ESP32, Arduino, or even a future design with a more powerful computer. The power systems are also designed to scale in the same way, with the same power supply options being interchangeable across the whole architecture.
 
 Any device on the CellSol network is able to receive and rebroadcast messages.
 

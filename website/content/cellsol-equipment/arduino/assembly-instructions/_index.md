@@ -60,6 +60,8 @@ These instructions assume that you know how to solder. This project can be attem
 
 ![Solder the GND pin on the LoRa module to the circuit board, this will act as a rudimentary RF ground plane. If you can, you'll want to connect that to earth ground. Otherwise, use a dipole antenna.](photos/12.jpg)
 
+12.5) The arduino node can have a dipole antenna by simply having one wire go up from the ANT pin, one wire go down from the GND pin next to it (they're 1mm apart to not interfere) and use a rigid piece of nonconductive material (plastic) to keep them opposite each other. Wires should be 85mm in length.
+
 13) Insert the battery charger circuit, it should stick out a bit, then solder it.
 
 ![Insert the battery charger circuit, it should stick out a bit, then solder it.](photos/13.jpg)
