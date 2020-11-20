@@ -1,7 +1,8 @@
-A waterproof case for the ESP32 WiFi Pylon is in development.
+We currently have two case designs for the ESP32 WiFi Pylon developed.
 
-In the meantime, there are many Lora32 cases on Thingiverse that will hold a battery and your antenna. Here is our recommendation for now.
+These are not very weather resistant; we recommend using them for pocket pylons, or for indoor use, and applying a gasket and transparent screen protector film on the
+exposed ports. Layer sealant, such as silicone paint or epoxy, may also help the weather resistance of this case. We recommend waterproof project boxes for outdoor use.
 
-https://www.thingiverse.com/thing:4313377 - TTGO model, this may work for the Heltec as well - by dioniss4ever
+https://www.thingiverse.com/thing:4660205 - Small case for just the LoRa32 and a battery
 
-We are currently working on adaptations of this for our packages, as well as having USB port support for the solar panel. We will also have a gasket design and guidelines for waterproofing.
+https://www.thingiverse.com/thing:4660207 - Large case that can take a bigger battery box, as well as have some room for instruments or other stuff
