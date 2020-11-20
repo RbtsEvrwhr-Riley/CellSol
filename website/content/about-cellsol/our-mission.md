@@ -1,11 +1,12 @@
 ## Introduction
-What if the internet and cell phone towers went down for more than a few hours - or during an emergency situation when no communication for several hours could mean lives lost?
+What if the internet and cell phone towers went down for more than a few hours - or during an emergency situation? No communication could lead to lost lives.
 
 ## Project
 
 The end goal of the project is to have a widespread network able to handle low-bandwidth traffic (text, compressed images) for a large number of users, to fill gaps when the larger Internet is unavailable.
-In the event of an emergency, the CellSol network can be used as a knowledge base, as well as a rally point, giving people a tool to use to coordinate and organize even if other communication systems go
-down. We intend to scale the design, with long-haul routing capabilities, so that regional networks can intercommunicate and interoperate, allowing for a wider breadth of use cases.
+
+In the event of an emergency, the CellSol network, much like the Internet, can be used as a knowledge base, as well as a rally point, giving people a tool to use to coordinate and organize even if 
+other communication systems go down. We intend to scale the design, with long-haul routing capabilities, so that regional networks can intercommunicate and interoperate, allowing for a wider breadth of use cases.
 
 ## Design Summary
 
