@@ -1,3 +1,8 @@
+---
+publishdate=2019-11-17
+lastmod=2020-11-24
+---
+
 # CellSol ESP32 WiFi Pylon Setup
 
 The WiFi pylon setup does not require soldering or any electronics expertise, though being able to solder the battery connection will improve the robustness of the device and make it more weatherproof.

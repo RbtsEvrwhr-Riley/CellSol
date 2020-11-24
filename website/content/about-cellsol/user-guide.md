@@ -1,3 +1,8 @@
+---
+publishdate=2019-11-17
+lastmod=2020-11-24
+---
+
 # CellSol WiFi Pylon User Guide
 
 This is a short how-to on how to use the CellSol WiFi Pylons. It is also packaged with the pylons themselves.

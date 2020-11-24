@@ -1,3 +1,8 @@
+---
+publishdate=2019-11-17
+lastmod=2020-11-24
+---
+
 # Arduino Repeater Pylon Setup
 
 Instructions by Kay Borri of Robots Everywhere. Many thanks.

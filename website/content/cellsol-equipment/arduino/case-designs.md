@@ -1,3 +1,8 @@
+---
+publishdate=2019-11-17
+lastmod=2020-11-24
+---
+
 Case designs for the Arduino Repeater Pylon are a work in progress.
 
 https://www.thingiverse.com/thing:4660194 - This is our current case design. It has room for a small battery, and exposes the USB port.

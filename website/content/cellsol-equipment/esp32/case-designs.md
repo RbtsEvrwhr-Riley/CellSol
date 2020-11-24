@@ -1,3 +1,8 @@
+---
+publishdate=2019-11-17
+lastmod=2020-11-24
+---
+
 We currently have two case designs for the ESP32 WiFi Pylon developed.
 
 These are not very weather resistant; we recommend using them for pocket pylons, or for indoor use, and applying a gasket and transparent screen protector film on the

@@ -1,5 +1,8 @@
 ---
 title: Robots Everywhere, LLC
+publishdate=2019-11-17
+lastmod=2020-11-24
+
 ---
 
 Robots Everywhere was founded by Kay Borri and Riley August as a robotics consulting firm in 2008. Since then, they have developed many navigation, instrumentation, robotics, 

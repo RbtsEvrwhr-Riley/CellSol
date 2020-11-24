@@ -1,6 +1,9 @@
 ---
 weight: 100
 title: Cellsol FAQ
+publishdate=2019-11-17
+lastmod=2020-11-24
+
 ---
 
 * **What is this?**

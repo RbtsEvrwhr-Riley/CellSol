@@ -1,5 +1,7 @@
 ---
 weight: 10000
+publishdate=2019-11-17
+lastmod=2020-11-24
 ---
 
 Here you can find media assets for promoting the CellSol project.

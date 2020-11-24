@@ -1,6 +1,8 @@
 ---
 title: Riley August
 weight: -9
+publishdate=2019-11-17
+lastmod=2020-11-24
 ---
 
 Riley is the current project manager for the CellSol project, and one of the co-founders of [Robots Everywhere](https://www.robots-everywhere.com), along with Kay Borri. Riley is an experienced software
