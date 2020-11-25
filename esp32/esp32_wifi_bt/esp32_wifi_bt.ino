@@ -8,128 +8,7 @@
 // Firmware version.
 #define VERSIONSTRING "0.25"
 
-// hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
-#define LORA32V2 // Heltec LORA32 V2 (White board)
-//#define TBEAM // TTGO T-Beam (Black board with gps)
-//#define LORA32V1 // Heltec clone (Black board)
-
-// Physical radio band. Choosing the wrong range WILL DAMAGE YOUR RADIO MODULE. Currently set up to stay a little away from the main LoRa and LoRaWAN radio ranges out of politeness.
-//4331E5 for worldwide (restrictions apply)
-
-//8661E5 for Europe
-//9151E5 for North America
-#define BAND 9151E5
-
-// compile time setup stuff. if you aren't sure what these do, leave them alone.
-// the default is that these four are commented out. This gives you the standard wifi access point setup.
-// The first mode saves power but makes the AP invisible 45 seconds out of every minute.
-// The last three modes use more power than standard mode!
-// switching between wifi and bluetooth is done at startup with the normal mode, not here; push the button immediately after a reset.
-// if more than one is uncommented, lowest line wins.
-#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full.
-//#define BT_ENABLE_FOR_AP // Uncomment this to also enable Bluetooth when the pylon is running as an access point. THIS WILL EAT UP A LOT OF POWER! Only enable if you're using a big battery and a big panel, or have line power.
-#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
-//#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
-
-//#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
-
-//#define NODISPLAY // display is absent or should be kept turned off at all times. Saves some power, naturally.
-
-#define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
-#define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
-#define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
-
-#define TUTORIALSTRINGS // On first activation after a poweroff/reset, should we display a mini help on the screen?
-
-#define PROVIDE_APK // make bluetooth terminal apk available?
-#define THE_INTERNET_IS_MADE_OF_CATS // load cat picture as an example of embedded file?
-#define YOU_ARE_EATING_RECURSION // embed source zip in source for the glory of recursion?
-#define SERVE_FAQ_PAGE  // if undefined, do not add help page
-
-// these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
-// the upstream router will have to either open port 80 to this, or do a redirect.
-//#define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
-//#define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
-#define CLIENT_IP_ADDR 10,5,112,55 // client IP address for client or hybrid mode. needs commas instead of periods
-#define GATEWAY_IP_ADDR 10,5,112,239 // router IP address for client or hybrid mode. needs commas instead of periods
-#define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
-//#define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
-//#define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
-#define WIFI_UPSTREAM_AP "RobotsEverywhere" // SSID of the router we're trying to connect to. 
-#define WIFI_UPSTREAM_PWD "Uchr0nia"// password for the router we're trying to connect to. Use "" for none/open.
-
-#define DHCP // DHCP on if defined; will ignore IP address setting fields above in that case.
-
-#define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across power cycles. if not, use battery level to get a bit of noise in the ID (mostly to avoid creepy people hashing it to figure out where you are).
-#define DO_NOT_LOG_SYSTEM_PACKETS // Don't display system packets to avoid spamming out human messages (example: UTC fix)
-
-//#define DEBUG_OPTION_PAGE // if you don't know what this is, don't use it.
-
-// this affects wifi range. obviously it will affect power consumption. it does not affect lora range. for line powered stuff, it'll be turned up to 11. For default, keep it commented out.
-#define WIFI_POWER_LEVEL 4 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
-
-// more timing stuff
-#define SLEEP_TIME 60 // this is in seconds - how long to sleep before waking up and checking power level again? NOT ACCURATE.
-#define DISPLAY_INTERVAL 60 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
-
-//#define TX_IFRAME // use an iframe for the tx form on the page. someone with web knowledge tell me which is nicer please. i think that not using it is actually slightly faster overall. nested iframes (main(tx(rx))) maybe?
-// FUJCK THAT IT BREAKS STUFF
-
-// consequences of the setup above
-#define PYLONTYPE "(AP)"// identifier for how we are running
-#ifdef MODEFLIP
-#define PYLONTYPE "(~AP~)"// identifier for how we are running
-#endif
-#ifdef BT_ENABLE_FOR_AP // if both are uncommented, it'll go to HYBRID Mode.
-#undef MODEFLIP
-#define WIFI_POWER_LEVEL 11 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
-#define PYLONTYPE "(AP+BT)" // identifier for how we are running
-#endif
-#ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
-#define WIFI_IS_CLIENT // if both are uncommented, it'll go to HYBRID Mode.
-#endif
-#ifdef WIFI_IS_CLIENT // if defined, wifi will attach to an existing AP and act as a web gateway. it may be useful to have a way to get OUT of this mode, but that's for another day
-#undef MODEFLIP
-#define DISPLAY_INTERVAL 2000000000// basically leave the screen on, we're on line power anyway. button is now used to force wifi reconnect.
-#define RECONNECT_EVERY 60000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
-#define WIFI_RESET_CYCLES 1000 // after this many cycles, reset upon wifi disconnect/reconnect
-#define SLEEP_TIME 20  // gateway is line powered, so it stays on
-#define BT_ENABLE_FOR_AP // one implies the other
-#define PYLONTYPE "(STA+BT)" // identifier for how we are running
-#endif
-#ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
-#define RECONNECT_EVERY 2000000000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
-#define PYLONTYPE "(AP+STA+BT)"// identifier for how we are running
-#endif
-
-
-// battery stuff
-#define MODEFLIP_BATTERY_FULL 1304 // if modeflip, battery level above this will leave the module running on full. Useful if we are getting good sunlight and the battery is full anyway.
-#define MODEFLIP_BUTTON // user button gets you back into high power mode
-
-#define LPLOOP_BLINK 10000 // eversoly this many cycles (not milliseconds!), blink the led
-#define ADC_INTERVAL 5000 // In milliseconds, how often to read the battery level? NOT ACCURATE.
-#define FULL_BATT 1450 // unused but a good reference. more than this = there probably is no battery
-#define BATT_HIGH_ENOUGH_FOR_FULL_POWER 1200 // above this, allow wifi/bt
-#define BATT_TOO_LOW_FOR_ANYTHING 1065 // below this, don't try to turn on, go back to sleep and wait for better times
-#define BATT_HYSTERESIS_POWER 15 // hysteresis between power state changes
-#define POWER_STATE_CHANGE_ANNOUNCE false //  should the module announce it when it's coming online or going offline? (probably only for debugging)
-#define REFRESH_CHAT_EVERY 3 // seconds
-
-#ifdef REPEATER_ONLY
-#define LPLOOP_BLINK 5000 // every this many cycles (not milliseconds!), blink the led
-#define ADC_INTERVAL 10000 // In milliseconds, how often to read the battery level? NOT ACCURATE.
-#define FULL_BATT 1450 // unused but a good reference. more than this = there probably is no battery
-#define BATT_HIGH_ENOUGH_FOR_FULL_POWER 1500 // above this, allow wifi/bt
-#define BATT_TOO_LOW_FOR_ANYTHING 1065 // below this, don't try to turn on, go back to sleep and wait for better times
-#define BATT_HYSTERESIS_POWER 15 // hysteresis between power state changes
-#define POWER_STATE_CHANGE_ANNOUNCE false //  should the module announce it when it's coming online or going offline? (probably only for debugging)
-#define REFRESH_CHAT_EVERY 42 // doesn't really matter since it neveer gets called
-#define PYLONTYPE "L0WPWR"// identifier for how we are running
-#undef TUTORIALSTRINGS
-#endif
-
-#define TAG_END_SYMBOL ':'
+#include "config.h"
 
 #ifdef PROVIDE_APK
 #include "btt/btt.h"
@@ -143,11 +22,6 @@
 #include "btt/src.h"
 #endif
 
-
-#define REQUIRE_TAG_FOR_REBROADCAST // if defined, require xxxx: tag for rebroadcast.
-//#define REQUIRE_TAG_FOR_REBROADCAST_STRICT // on top of that, the first four characters must be hex digits.
-#define BAD_CHARACTERS_MAX_DIVIDER 10 // 1/x of bad characters before we discard the string
-//#define SHOW_RSSI // if enabled, show RSSI for wireless packets coming in.
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds. Do not change this. Seriously. */
 
@@ -172,69 +46,12 @@ const byte DNS_PORT = 53;
 #include <esp_task_wdt.h>
 #define WDT_TIMEOUT 4 // in seconds
 
-//define the pins used by the LoRa transceiver module. note that these change between ttgo and lora32!
-#define SCK 5
-#define MISO 19
-#define MOSI 27
-#define SS 18
-#define RST 14
-#define DIO0 26
-
 #include "esp32-hal-cpu.h"
 #define CLKFREQ_HI 240 // megahertz when going as fast as possible
 #define CLKFREQ 80 // megahertz when in full mode
 #define CLKFREQ_LOW 20 // megahertz when in repeater mode; can't go any lower, annoyingly
 
-//OLED pins
-#define OLED_SDA 4
-#define OLED_SCL 15
-#define OLED_RST 16
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-
-// Assign output variables to GPIO pins
-#define USER_BUTTON_PIN 0
-#define USER_LED_PIN 25
-#define enablecomstring "COMCHIAVE"
-
-#define EXT_PWR_PIN 21
-#define BATT_ADC 37
-
-#ifdef LORA32V2
-#undef GPS_SERIAL_1 // no gps on the 
-#define EXT_PWR_PIN 21
-#define BATT_ADC 37
-#define SCK 5
-#define MISO 19
-#define MOSI 27
-#define SS 18
-#define RST 14
-#define DIO0 26
-#define USER_BUTTON_PIN 0
-#define USER_LED_PIN 25
-#endif
-
-#ifdef TBEAM
-#define GPS_SERIAL_1 3600 // every this many seconds, send out UTC seconds. Internal is updated as often as they come in
-#define NODISPLAY // force no display since the system doesn't have it
-#define SCK 5
-#define MISO 19
-#define MOSI 27
-#define SS 18
-#define RST 23
-#define DIO0 26
-#undef YOU_ARE_EATING_RECURSION
-#undef THE_INTERNET_IS_MADE_OF_CATS
-#undef PROVIDE_APK
-#undef TUTORIALSTRINGS
-#undef SERVE_FAQ_PAGE
-#define USER_BUTTON_PIN 38
-#undef USER_LED_PIN
-#undef EXT_PWR_PIN
-#undef BATT_ADC
-#endif
-
+#include "pinout.h" // LORA32 Pinout by default, change this file to change the pinout!
 
 #ifndef NODISPLAY
 //Libraries for OLED Display
@@ -250,11 +67,15 @@ static uint64_t chipid; // chip id stuff = ESP.getEfuseMac();
 static uint16_t uptwo; // chip id stuff = (uint16_t)(chipid >> 32);
 static uint32_t dnfor; // chip id stuff  = (uint32_t)(chipid);
 
+
+// Web constants for text align
 #define TEXT_ALIGN_STRING_A "center"
 #define TEXT_ALIGN_STRING_B "justify"
 String TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_A;
 static RTC_NOINIT_ATTR bool centertext = true;// if this, center, otherwise, justify
 
+
+// Wireless UART Configuration
 long LastReconnect = 0;
 int currbatterylevel = 0;
 #define SSIDROOT "CellSol "
@@ -281,16 +102,6 @@ extern const long int src_zip_size;
 extern const unsigned char src_zip[];
 #endif
 
-
-
-
-
-
-/**
-   BATTERY ADC BLOCK: DEFINE THESE TWO PINS TO ENABLE BATTERY LEVEL SENSOR
-   SOME VERSIONS OF THE LORA32 WILL REQUIRE EXT_PWR_PIN 12 HIGH AND BATT_ADC 13
-   DO NOT SET EXT_PWR_PIN LOW ON THESE YOU MAY FRY YOUR ADC CHECK HELTEC DOCUMENTATION
-*/
 
 int batt_delta;
 int battimeout = 0;
