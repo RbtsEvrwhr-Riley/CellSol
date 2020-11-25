@@ -6,7 +6,7 @@
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.24"
+#define VERSIONSTRING "0.25"
 
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
 #define LORA32V2 // Heltec LORA32 V2 (White board)
@@ -28,7 +28,7 @@
 // if more than one is uncommented, lowest line wins.
 #define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full.
 //#define BT_ENABLE_FOR_AP // Uncomment this to also enable Bluetooth when the pylon is running as an access point. THIS WILL EAT UP A LOT OF POWER! Only enable if you're using a big battery and a big panel, or have line power.
-//#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
+#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
 //#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
 
 //#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
@@ -48,11 +48,16 @@
 
 // these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
 // the upstream router will have to either open port 80 to this, or do a redirect.
-#define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
-#define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
+//#define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
+//#define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
+#define CLIENT_IP_ADDR 10,5,112,55 // client IP address for client or hybrid mode. needs commas instead of periods
+#define GATEWAY_IP_ADDR 10,5,112,239 // router IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
-#define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
-#define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
+//#define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
+//#define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
+#define WIFI_UPSTREAM_AP "RobotsEverywhere" // SSID of the router we're trying to connect to. 
+#define WIFI_UPSTREAM_PWD "Uchr0nia"// password for the router we're trying to connect to. Use "" for none/open.
+
 #define DHCP // DHCP on if defined; will ignore IP address setting fields above in that case.
 
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across power cycles. if not, use battery level to get a bit of noise in the ID (mostly to avoid creepy people hashing it to figure out where you are).
@@ -67,7 +72,8 @@
 #define SLEEP_TIME 60 // this is in seconds - how long to sleep before waking up and checking power level again? NOT ACCURATE.
 #define DISPLAY_INTERVAL 60 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
 
-#define TX_IFRAME // use an iframe for the tx form on the page. someone with web knowledge tell me which is nicer please. i think that not using it is actually slightly faster overall. nested iframes (main(tx(rx))) maybe?
+//#define TX_IFRAME // use an iframe for the tx form on the page. someone with web knowledge tell me which is nicer please. i think that not using it is actually slightly faster overall. nested iframes (main(tx(rx))) maybe?
+// FUJCK THAT IT BREAKS STUFF
 
 // consequences of the setup above
 #define PYLONTYPE "(AP)"// identifier for how we are running
@@ -2052,7 +2058,7 @@ void send_form_iframe()
   send_ok_response();
   send_html_header();
   client.println("<body>"
-                 "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Send\"><form>"
+                 "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
                  "</body></html>");
 }
 #endif
@@ -2326,15 +2332,7 @@ void send_faq_page()
 #endif
             else if (whattoget.startsWith("/get"))
             {
-
-              if (whattoget.equals("/get?refresh=")) // exception is needed to make sure that the refresh button works properly
-              {
-                send_redirect_to_main(true);
-              }
-              else
-              {
-
-                // do external outputs
+                // get header value for input1 which should be message
                 gotstring = header.substring(header.indexOf("input1="));
                 gotstring = gotstring.substring(0, gotstring.indexOf("HTTP/1.1"));
                 gotstring = gotstring.substring(7, gotstring.indexOf("&refresh="));//HTTP/1.1")); //input1= is 7 characters
@@ -2394,7 +2392,10 @@ void send_faq_page()
 #else
                 send_redirect_to_main(true);
 #endif
-              }
+            }
+            else if (whattoget.equals("/refresh")) // exception is needed to make sure that the refresh button works properly
+            {
+                send_redirect_to_main(true);
             }
 #ifdef DEBUG_OPTIONS_PAGE
             else if (whattoget.startsWith("/option!")) // semi hidden option stuff! Yay! Any more that we need? I don't want to make it possible to turn this off or switch modes remotely because that's easy to abuse.
@@ -2454,7 +2455,15 @@ void send_faq_page()
                              "function resizeIframe(obj) {"
                              "    obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';"
                              //"    obj.style.width = obj.contentWindow.document.documentElement.scrollWidth + 'px';"
-                             "  }"
+                             "  }\r\n</script>"
+                             
+                             "<script>function sendMsg(){\r\n"                             
+                             "getSend('\\get',document.getElementById('msgfield').value); document.getElementById('msgfield').value=\"\";\r\n"
+                             "}\r\n"
+                             "function getSend(url, input1=null) {\r\n" // we default undefined so that we don't have to explicitly specify it; it just gets passed to the next function
+                             "var xhttp = new XMLHttpRequest();\r\n"
+                             "xhttp.open('GET', url+\"?input1=\" + input1, true); xhttp.send();" // we don't care about the response, we are just dumb sending.                             
+                             "}"                             
                              "</script>"
                              "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
               client.print(ipstring_a);
@@ -2474,7 +2483,7 @@ void send_faq_page()
 #ifdef TX_IFRAME
                              "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
 #else
-                             "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Send\"><form><br>"
+                             "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
 #endif
                             );
               /*
@@ -2488,7 +2497,7 @@ void send_faq_page()
                 "<form action=\"/get\"> Your message: <input type=\"text\" maxlength=\"50\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form>"
                 "</iframe>");
               */
-              client.println("<form action=\"/get\"><input type=\"submit\" value=\"Refresh this page (in case of errors, etc.)\"><input type=\"hidden\" size=\"1\" maxlength=\"1\" name=\"refresh\"><form>");
+              client.println("<button value=\"Refresh this page (in case of errors, etc.)\" onClick=getSend('/refresh')>Refresh this page (in case of errors, etc.)</button>");
               client.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
                              "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
 #ifdef PROVIDE_APK
