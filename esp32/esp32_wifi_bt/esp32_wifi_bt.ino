@@ -3,127 +3,14 @@
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
   Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.
   Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
+  Distributed independently https://www.f3.to/cellsol
+  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.24"
+#define VERSIONSTRING "0.25"
 
-// hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
-#define LORA32V2 // Heltec LORA32 V2 (White board)
-//#define TBEAM // TTGO T-Beam (Black board with gps)
-//#define LORA32V1 // Heltec clone (Black board)
-
-// Physical radio band. Choosing the wrong range WILL DAMAGE YOUR RADIO MODULE. Currently set up to stay a little away from the main LoRa and LoRaWAN radio ranges out of politeness.
-//4331E5 for worldwide (restrictions apply)
-
-//8661E5 for Europe
-//9151E5 for North America
-#define BAND 9151E5
-
-// compile time setup stuff. if you aren't sure what these do, leave them alone.
-// the default is that these four are commented out. This gives you the standard wifi access point setup.
-// The first mode saves power but makes the AP invisible 45 seconds out of every minute.
-// The last three modes use more power than standard mode!
-// switching between wifi and bluetooth is done at startup with the normal mode, not here; push the button immediately after a reset.
-// if more than one is uncommented, lowest line wins.
-#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full.
-//#define BT_ENABLE_FOR_AP // Uncomment this to also enable Bluetooth when the pylon is running as an access point. THIS WILL EAT UP A LOT OF POWER! Only enable if you're using a big battery and a big panel, or have line power.
-//#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
-//#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
-
-//#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
-
-//#define NODISPLAY // display is absent or should be kept turned off at all times. Saves some power, naturally.
-
-#define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
-#define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
-#define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
-
-#define TUTORIALSTRINGS // On first activation after a poweroff/reset, should we display a mini help on the screen?
-
-#define PROVIDE_APK // make bluetooth terminal apk available?
-#define THE_INTERNET_IS_MADE_OF_CATS // load cat picture as an example of embedded file?
-#define YOU_ARE_EATING_RECURSION // embed source zip in source for the glory of recursion?
-#define SERVE_FAQ_PAGE  // if undefined, do not add help page
-
-// these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
-// the upstream router will have to either open port 80 to this, or do a redirect.
-#define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
-#define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
-#define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
-#define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
-#define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
-#define DHCP // DHCP on if defined; will ignore IP address setting fields above in that case.
-
-#define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across power cycles. if not, use battery level to get a bit of noise in the ID (mostly to avoid creepy people hashing it to figure out where you are).
-#define DO_NOT_LOG_SYSTEM_PACKETS // Don't display system packets to avoid spamming out human messages (example: UTC fix)
-
-//#define DEBUG_OPTION_PAGE // if you don't know what this is, don't use it.
-
-// this affects wifi range. obviously it will affect power consumption. it does not affect lora range. for line powered stuff, it'll be turned up to 11. For default, keep it commented out.
-#define WIFI_POWER_LEVEL 4 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
-
-// more timing stuff
-#define SLEEP_TIME 60 // this is in seconds - how long to sleep before waking up and checking power level again? NOT ACCURATE.
-#define DISPLAY_INTERVAL 60 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
-
-#define TX_IFRAME // use an iframe for the tx form on the page. someone with web knowledge tell me which is nicer please. i think that not using it is actually slightly faster overall. nested iframes (main(tx(rx))) maybe?
-
-// consequences of the setup above
-#define PYLONTYPE "(AP)"// identifier for how we are running
-#ifdef MODEFLIP
-#define PYLONTYPE "(~AP~)"// identifier for how we are running
-#endif
-#ifdef BT_ENABLE_FOR_AP // if both are uncommented, it'll go to HYBRID Mode.
-#undef MODEFLIP
-#define WIFI_POWER_LEVEL 11 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
-#define PYLONTYPE "(AP+BT)" // identifier for how we are running
-#endif
-#ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
-#define WIFI_IS_CLIENT // if both are uncommented, it'll go to HYBRID Mode.
-#endif
-#ifdef WIFI_IS_CLIENT // if defined, wifi will attach to an existing AP and act as a web gateway. it may be useful to have a way to get OUT of this mode, but that's for another day
-#undef MODEFLIP
-#define DISPLAY_INTERVAL 2000000000// basically leave the screen on, we're on line power anyway. button is now used to force wifi reconnect.
-#define RECONNECT_EVERY 60000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
-#define WIFI_RESET_CYCLES 1000 // after this many cycles, reset upon wifi disconnect/reconnect
-#define SLEEP_TIME 20  // gateway is line powered, so it stays on
-#define BT_ENABLE_FOR_AP // one implies the other
-#define PYLONTYPE "(STA+BT)" // identifier for how we are running
-#endif
-#ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
-#define RECONNECT_EVERY 2000000000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
-#define PYLONTYPE "(AP+STA+BT)"// identifier for how we are running
-#endif
-
-
-// battery stuff
-#define MODEFLIP_BATTERY_FULL 1304 // if modeflip, battery level above this will leave the module running on full. Useful if we are getting good sunlight and the battery is full anyway.
-#define MODEFLIP_BUTTON // user button gets you back into high power mode
-
-#define LPLOOP_BLINK 10000 // eversoly this many cycles (not milliseconds!), blink the led
-#define ADC_INTERVAL 5000 // In milliseconds, how often to read the battery level? NOT ACCURATE.
-#define FULL_BATT 1450 // unused but a good reference. more than this = there probably is no battery
-#define BATT_HIGH_ENOUGH_FOR_FULL_POWER 1200 // above this, allow wifi/bt
-#define BATT_TOO_LOW_FOR_ANYTHING 1065 // below this, don't try to turn on, go back to sleep and wait for better times
-#define BATT_HYSTERESIS_POWER 15 // hysteresis between power state changes
-#define POWER_STATE_CHANGE_ANNOUNCE false //  should the module announce it when it's coming online or going offline? (probably only for debugging)
-#define REFRESH_CHAT_EVERY 3 // seconds
-
-#ifdef REPEATER_ONLY
-#define LPLOOP_BLINK 5000 // every this many cycles (not milliseconds!), blink the led
-#define ADC_INTERVAL 10000 // In milliseconds, how often to read the battery level? NOT ACCURATE.
-#define FULL_BATT 1450 // unused but a good reference. more than this = there probably is no battery
-#define BATT_HIGH_ENOUGH_FOR_FULL_POWER 1500 // above this, allow wifi/bt
-#define BATT_TOO_LOW_FOR_ANYTHING 1065 // below this, don't try to turn on, go back to sleep and wait for better times
-#define BATT_HYSTERESIS_POWER 15 // hysteresis between power state changes
-#define POWER_STATE_CHANGE_ANNOUNCE false //  should the module announce it when it's coming online or going offline? (probably only for debugging)
-#define REFRESH_CHAT_EVERY 42 // doesn't really matter since it neveer gets called
-#define PYLONTYPE "L0WPWR"// identifier for how we are running
-#undef TUTORIALSTRINGS
-#endif
-
-#define TAG_END_SYMBOL ':'
+#include "config.h"
 
 #ifdef PROVIDE_APK
 #include "btt/btt.h"
@@ -137,11 +24,6 @@
 #include "btt/src.h"
 #endif
 
-
-#define REQUIRE_TAG_FOR_REBROADCAST // if defined, require xxxx: tag for rebroadcast.
-//#define REQUIRE_TAG_FOR_REBROADCAST_STRICT // on top of that, the first four characters must be hex digits.
-#define BAD_CHARACTERS_MAX_DIVIDER 10 // 1/x of bad characters before we discard the string
-//#define SHOW_RSSI // if enabled, show RSSI for wireless packets coming in.
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds. Do not change this. Seriously. */
 
@@ -166,69 +48,12 @@ const byte DNS_PORT = 53;
 #include <esp_task_wdt.h>
 #define WDT_TIMEOUT 4 // in seconds
 
-//define the pins used by the LoRa transceiver module. note that these change between ttgo and lora32!
-#define SCK 5
-#define MISO 19
-#define MOSI 27
-#define SS 18
-#define RST 14
-#define DIO0 26
-
 #include "esp32-hal-cpu.h"
 #define CLKFREQ_HI 240 // megahertz when going as fast as possible
 #define CLKFREQ 80 // megahertz when in full mode
 #define CLKFREQ_LOW 20 // megahertz when in repeater mode; can't go any lower, annoyingly
 
-//OLED pins
-#define OLED_SDA 4
-#define OLED_SCL 15
-#define OLED_RST 16
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-
-// Assign output variables to GPIO pins
-#define USER_BUTTON_PIN 0
-#define USER_LED_PIN 25
-#define enablecomstring "COMCHIAVE"
-
-#define EXT_PWR_PIN 21
-#define BATT_ADC 37
-
-#ifdef LORA32V2
-#undef GPS_SERIAL_1 // no gps on the 
-#define EXT_PWR_PIN 21
-#define BATT_ADC 37
-#define SCK 5
-#define MISO 19
-#define MOSI 27
-#define SS 18
-#define RST 14
-#define DIO0 26
-#define USER_BUTTON_PIN 0
-#define USER_LED_PIN 25
-#endif
-
-#ifdef TBEAM
-#define GPS_SERIAL_1 3600 // every this many seconds, send out UTC seconds. Internal is updated as often as they come in
-#define NODISPLAY // force no display since the system doesn't have it
-#define SCK 5
-#define MISO 19
-#define MOSI 27
-#define SS 18
-#define RST 23
-#define DIO0 26
-#undef YOU_ARE_EATING_RECURSION
-#undef THE_INTERNET_IS_MADE_OF_CATS
-#undef PROVIDE_APK
-#undef TUTORIALSTRINGS
-#undef SERVE_FAQ_PAGE
-#define USER_BUTTON_PIN 38
-#undef USER_LED_PIN
-#undef EXT_PWR_PIN
-#undef BATT_ADC
-#endif
-
+#include "pinout.h" // LORA32 Pinout by default, change this file to change the pinout!
 
 #ifndef NODISPLAY
 //Libraries for OLED Display
@@ -237,31 +62,41 @@ const byte DNS_PORT = 53;
 #include <Adafruit_SSD1306.h>
 #endif
 
-static RTC_NOINIT_ATTR int lastbatterylevel = 0; // try to save battery levels between runs
 
+// LORA32 setup variables
 static bool lowpowerstart = false;
 static uint64_t chipid; // chip id stuff = ESP.getEfuseMac();
 static uint16_t uptwo; // chip id stuff = (uint16_t)(chipid >> 32);
 static uint32_t dnfor; // chip id stuff  = (uint32_t)(chipid);
 
+
+// Web constants for text align, used for website display
 #define TEXT_ALIGN_STRING_A "center"
 #define TEXT_ALIGN_STRING_B "justify"
 String TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_A;
 static RTC_NOINIT_ATTR bool centertext = true;// if this, center, otherwise, justify
 
+
+// Wireless UART Configuration
 long LastReconnect = 0;
 int currbatterylevel = 0;
 #define SSIDROOT "CellSol "
 #define UART_BAUD_RATE 9600
 String ssid = SSIDROOT;
 String tempstring = ""; // internal function use only
+
+bool wifimode = true; // bluetooth or wifi
+
+
+// serial on/off
+boolean enablecomport = false; // set to false for a solderless fix for UART buffer crosstalk hardware issue
+
 // Set web server port number to 80
 WiFiServer server(80);
-
 DNSServer dnsServer;
-
 WiFiClient client;
 
+// WEB SERVICE CONFIGURATION - What files do we want to serve?
 #ifdef PROVIDE_APK
 extern const long int btt_apk_size;
 extern const unsigned char btt_apk[];
@@ -275,20 +110,13 @@ extern const long int src_zip_size;
 extern const unsigned char src_zip[];
 #endif
 
-
-
-
-
-
-/**
-   BATTERY ADC BLOCK: DEFINE THESE TWO PINS TO ENABLE BATTERY LEVEL SENSOR
-   SOME VERSIONS OF THE LORA32 WILL REQUIRE EXT_PWR_PIN 12 HIGH AND BATT_ADC 13
-   DO NOT SET EXT_PWR_PIN LOW ON THESE YOU MAY FRY YOUR ADC CHECK HELTEC DOCUMENTATION
-*/
-
+// BATTERY POWER CONFIGURATION
+static RTC_NOINIT_ATTR int lastbatterylevel = 0; // try to save battery levels between runs
 int batt_delta;
 int battimeout = 0;
 bool low_batt_announce = false;
+
+// SERIAL and IP CONFIGURATION
 int lploops = LPLOOP_BLINK - 10; // give me a blink early so i know we're alive
 bool has_lora_been_initialized = false;
 bool has_serial_been_initialized = false;
@@ -296,13 +124,41 @@ bool has_bluetooth_been_initialized = false;
 bool has_wifi_been_initialized = false;
 bool has_display_been_initialized = false;
 
+// USER TAG CONFIGURATION
 String hextag  = "XXXX"; // usually the last two IP octets; gives pseudonimity to sender
 String lasttagimade = "XXXX"; // last one we made for use in checking
 
+// Temp bytes for IP addresses
 byte derpme = 0; // third number of ip address
 byte spare_id_nibble = 0; // upper nibble; lower nibble always 0
 
 
+//packet counter
+int txcounter = 0;
+int rxcounter = 0;
+byte charcounter = 0;
+boolean readytosend = false;
+byte charcounte2 = 0;
+boolean readytosen2 = false;
+
+// display flags
+boolean dodisplay = false;
+boolean dodisplaybuf = false;
+boolean displayexists = false;
+bool displayenabled = true;
+
+
+#ifndef NODISPLAY
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+#endif
+
+long disptimeout = 0;
+bool display_on_ping = false;
+
+
+/**********************************************
+ * Watchdog block; creates and manages a task watchdog for esp32 to prevent unwanted power off
+ **********************************************/
 unsigned long pseudoseconds = 0;
 unsigned long psm = 0;
 long UTC_Seconds = 0;
@@ -328,7 +184,47 @@ void PetTheWatchdog() {
 #endif
 }
 
+bool is_watchdog_on = false;
+void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion is that we can survive for 5 seconds we hope
+{
+  if (onoff)
+  {
+    esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
+    esp_task_wdt_add(NULL); //add current thread to WDT watch
+  }
+  else
+  {
+    esp_task_wdt_delete(NULL);
+    esp_task_wdt_deinit();
+    esp_task_wdt_delete(NULL);
+    esp_task_wdt_deinit();
+  }
+  is_watchdog_on = onoff;
+  battimeout = millis() + ADC_INTERVAL; // wait to turn the watchdog back on please
+}
 
+/**
+ * END WATCHDOG BLOCK
+ */
+
+
+/*******************************************************************************
+ * TCP/IP Block
+ *******************************************************************************/
+IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
+IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using.
+IPAddress Client_Gateway(GATEWAY_IP_ADDR);// this is the IP address OF THE ROUTER
+IPAddress Client_Subnet(GATEWAY_SUBNET);// usually 255,255,255,0 or 255,255,0,0
+IPAddress lwc(255, 255, 255, 255); // ip address of current client
+IPAddress IP(255, 255, 255, 255); // used to generate webpages
+String ipstring;
+String ipstring_c;
+String ipstring_a;
+String ipstring_b; // used in bluetooth mode
+byte last_web_caller; // last web ip that said something
+bool broadcast_twice = false;
+
+// util method
 String fourhex(int num1, int num2)
 {
   int num = (num1 * 256) + num2;
@@ -342,20 +238,6 @@ String fourhex(int num1, int num2)
     return String(num % 65536, HEX);
   return String(num, HEX);
 }
-
-
-IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
-IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using.
-IPAddress Client_Gateway(GATEWAY_IP_ADDR);// this is the IP address OF THE ROUTER
-IPAddress Client_Subnet(GATEWAY_SUBNET);// usually 255,255,255,0 or 255,255,0,0
-IPAddress lwc(255, 255, 255, 255); // ip address of current client
-IPAddress IP(255, 255, 255, 255); // used to generate webpages
-String ipstring;
-String ipstring_c;
-String ipstring_a;
-String ipstring_b; // used in bluetooth mode
-byte last_web_caller; // last web ip that said something
-bool broadcast_twice = false;
 
 void BuildNicknameTags()
 {
@@ -381,30 +263,12 @@ void BuildNicknameTags()
   ssid = SSIDROOT + ipstring;
   TEXT_ALIGN_STRING = centertext ? TEXT_ALIGN_STRING_A : TEXT_ALIGN_STRING_B;
 }
-bool is_watchdog_on = false;
-void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion is that we can survive for 5 seconds we hope
-{
-  if (onoff)
-  {
-    esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
-    esp_task_wdt_add(NULL); //add current thread to WDT watch
-  }
-  else
-  {
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_deinit();
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_deinit();
-  }
-  is_watchdog_on = onoff;
-  battimeout = millis() + ADC_INTERVAL; // wait to turn the watchdog back on please
-}
-
 String status_string()
 {
   return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") );
 }
 /*
+ * DUMMY METHODS FOR HTML ENCODE/DECODE - TODO: remove this comment as these methods got replaced?
   String decodeHtml(String text)
   {
   text.replace("&amp;", "&");
@@ -425,64 +289,11 @@ String status_string()
   }
 */
 
-void ResetDisplayViaPin()
-{
-#ifndef NODISPLAY
-  //  Wire.end();
-  pinMode(OLED_RST, OUTPUT);
-  digitalWrite(OLED_RST, LOW);
-  for (byte i = 0; i < 20; i++)
-    DoBasicSteps();
-  digitalWrite(OLED_RST, HIGH);
-  has_display_been_initialized = false;
-  Wire.begin(OLED_SDA, OLED_SCL);
-#endif
-}
+ 
+/****************************************************************
+ * LoRa32 Radio block - LoRa, WiFi, and BT
+ */
 
-#ifdef BATT_ADC
-void ReadBatteryADC(bool force)
-{
-  if (force || (millis() > battimeout))
-  {
-    Watchdog(true);
-    if (currbatterylevel > 0)
-      lastbatterylevel = currbatterylevel;
-    currbatterylevel = (analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC)) / 4;
-    if (lastbatterylevel == 0)
-      lastbatterylevel = currbatterylevel;
-    batt_delta = currbatterylevel - lastbatterylevel;
-    if (batt_delta > 100 or batt_delta < -100)
-      batt_delta = 0; // unrealistic, discard.
-    battimeout = millis() + ADC_INTERVAL; // should be less than that since these instructions take time, but meh
-  }
-}
-#else
-void  ReadBatteryADC(bool force)
-{
-  lastbatterylevel = FULL_BATT;
-  currbatterylevel = FULL_BATT;
-  batt_delta = 0;
-}
-#endif
-
-
-#ifndef NODISPLAY
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
-#endif
-
-//packet counter
-int txcounter = 0;
-int rxcounter = 0;
-byte charcounter = 0;
-boolean readytosend = false;
-byte charcounte2 = 0;
-boolean readytosen2 = false;
-boolean dodisplay = false;
-boolean dodisplaybuf = false;
-boolean displayexists = false;
-bool displayenabled = true;
-
-boolean enablecomport = false; // set to false for a solderless fix for UART buffer crosstalk hardware issue
 
 String LoRaData;
 
@@ -519,8 +330,6 @@ long LTISVL_1_time = 0;
 long LTISVL_0_time = 0;
 
 String gotstring = "";
-
-bool wifimode = true; // bluetooth or wifi
 
 
 #ifdef USER_BUTTON_PIN
@@ -589,115 +398,6 @@ char* string2char(String command) {
     return p;
   }
 }
-
-void led(boolean onoff)
-{
-#ifdef USER_LED_PIN
-  digitalWrite(USER_LED_PIN, onoff);
-#endif
-}
-
-long disptimeout = 0;
-bool display_on_ping = false;
-
-void displayonoff(bool onoff)
-{
-#ifdef NODISPLAY
-  displayenabled = false;
-#else
-  if (onoff)
-  {
-    if (has_display_been_initialized == false)
-      InitDisplayTryAll();
-    display.ssd1306_command(SSD1306_DISPLAYON);
-    displayenabled = true;
-  }
-  else
-  {
-    if (has_display_been_initialized)
-    {
-      display.clearDisplay();
-      display.display();
-      display.ssd1306_command(SSD1306_DISPLAYOFF);
-    }
-    displayenabled = false;
-  }
-#endif
-}
-
-#ifdef WIFI_IS_HYBRID
-int displayswitch = 0; // display switch if we are in hybrid mode
-#endif
-void DoDisplayIfItExists()
-{
-#ifndef NODISPLAY
-#ifdef user_button_display
-  if (digitalRead(USER_BUTTON_PIN) == false or display_on_ping == true) // actually button pushed
-#else
-  if (display_on_ping == true)
-#endif
-  {
-    if (has_display_been_initialized == false) // try without hard reset first
-      InitDisplayTryAll();
-    dodisplay = true;
-    displayonoff(true);
-    disptimeout = millis() + DISPLAY_INTERVAL;
-    display_on_ping = false;
-  }
-  if (millis() > (disptimeout))
-  {
-    displayonoff(false);
-    dodisplaybuf = false;
-    dodisplay = false;
-  }
-
-  // either update the entire display, or just the buffer indicator (faster)
-  if (dodisplay) // update entire display
-  {
-
-    if (displayexists and displayenabled)
-    {
-
-      display.clearDisplay();
-      display.setCursor(81, 0);
-      display.print(currbatterylevel);
-      display.setCursor(110, 0);
-      display.print(charcounter);
-      display.setCursor(0, 0);
-      if (wifimode)
-      {
-#ifdef WIFI_IS_CLIENT // getting noise here for some reason
-#ifdef WIFI_IS_HYBRID
-        display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
-#else
-        display.println(ipstring_c);
-#endif
-#else
-        display.println(ipstring_a);
-#endif
-      }
-      else
-      {
-        display.println(ipstring_b);
-      }
-      // print the last 3 lines we got, or at least the first 42 characters of each since it's what will fit.
-      for (int i=2;i>-1;i--)
-      {
-      display.setCursor(0, 45-(i*18));
-      tempstring=string_rx[i];
-      tempstring.replace("&lt;","<");
-      display.println(tempstring.substring(0, 42));
-      }
-      display.display();
-    }
-    dodisplaybuf = false;
-    dodisplay = false;
-  }
-#endif
-}
-
-
-
 // moves old strings out
 void cyclestrings(String newone)
 {
@@ -795,57 +495,6 @@ inline void Stop_LORA()
   }
 }
 
-void SleepLowBatt()
-{
-  tempstring = ":SYS:SLEEP " + String(derpme) + ":" + status_string();
-  Watchdog(false);
-  led(true);
-  if (low_batt_announce)
-  {
-    LoraSendAndUpdate(tempstring);
-    cyclestrings(tempstring);
-  }
-  lastbatterylevel = currbatterylevel;
-  lowpowerstart = true;
-  displayonoff(false);
-  led(false);
-
-  displayonoff(false);
-
-  //display.end();
-  // turn off external devices
-  Serial.println(tempstring);
-  Serial.flush();
-  Stop_LORA();
-  Stop_BT();
-  WiFi.mode(WIFI_OFF);
-  server.stop();
-  dnsServer.stop();
-  TryStoreSentences();
-  esp_deep_sleep_start();
-}
-
-
-
-
-
-
-void UpdateCharCounterIfDisplayExists()
-{
-#ifndef NODISPLAY
-  if (has_display_been_initialized == false)
-    InitDisplayTryAll();
-
-  if ((dodisplay == false) and displayexists and displayenabled and dodisplaybuf)
-  {
-    display.fillRect(110, 0, 45, 11, BLACK); // upperleftx, upperlefty, width, height, color
-    display.setCursor(110, 0);
-    display.print(charcounter);
-    display.display();
-    dodisplaybuf = false;
-  }
-#endif
-}
 
 void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout, bool streamexists, int whichtag)
 {
@@ -1304,67 +953,8 @@ void SendBinaryFile(String contenttype, const unsigned char file[], const long i
   }
   client.flush();
   client.println();
-
-
 }
 
-int countme = 0;
-
-
-bool InitDisplay(bool hardreset)
-{
-#ifndef NODISPLAY
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, hardreset, false)) { // Address 0x3C for 128x32
-    if (has_serial_been_initialized)
-      Serial.println(":SYS:SSD1306 init fail");
-    displayexists = false;
-    has_display_been_initialized = false;
-    return false;
-  }
-  else
-  {
-    display.setTextColor(WHITE);
-    display.setTextSize(1);
-    display.clearDisplay();
-    //    Serial.println(":SYS:SSD1306 init OK");
-    display.display();
-    displayexists = true;
-    dodisplay = true;
-    has_display_been_initialized = true;
-    return true;
-  }
-#endif
-  has_display_been_initialized = false;
-  return false;
-}
-
-void InitDisplayTryAll()
-{
-#ifndef NODISPLAY
-  if (has_display_been_initialized == false)
-    has_display_been_initialized = InitDisplay(false);
-  if (has_display_been_initialized == false)
-    has_display_been_initialized = InitDisplay(true);
-  if (has_display_been_initialized == false)
-  {
-    ResetDisplayViaPin();
-    has_display_been_initialized = InitDisplay(false);
-  }
-  if (has_display_been_initialized == false)
-    has_display_been_initialized = InitDisplay(true);
-#endif
-}
-
-void BlinkMeWhen()
-{
-  if (++lploops > LPLOOP_BLINK)
-  {
-    led(true);
-    DoBasicSteps();
-    lploops = 0;
-    led(false);
-  }
-}
 
 void Start_LORA(bool trydisplay)
 {
@@ -1543,6 +1133,280 @@ void DoRepeaterSteps()
   BlinkMeWhen();
 
 }
+/**
+ * END LORA32 RADIO BLOCK
+ */
+
+
+
+/********************************************
+ * DISPLAY BLOCK: USED FOR HANDLING OLED
+ */
+void ResetDisplayViaPin()
+{
+#ifndef NODISPLAY
+  //  Wire.end();
+  pinMode(OLED_RST, OUTPUT);
+  digitalWrite(OLED_RST, LOW);
+  for (byte i = 0; i < 20; i++)
+    DoBasicSteps();
+  digitalWrite(OLED_RST, HIGH);
+  has_display_been_initialized = false;
+  Wire.begin(OLED_SDA, OLED_SCL);
+#endif
+}
+void led(boolean onoff)
+{
+#ifdef USER_LED_PIN
+  digitalWrite(USER_LED_PIN, onoff);
+#endif
+}
+
+void displayonoff(bool onoff)
+{
+#ifdef NODISPLAY
+  displayenabled = false;
+#else
+  if (onoff)
+  {
+    if (has_display_been_initialized == false)
+      InitDisplayTryAll();
+    display.ssd1306_command(SSD1306_DISPLAYON);
+    displayenabled = true;
+  }
+  else
+  {
+    if (has_display_been_initialized)
+    {
+      display.clearDisplay();
+      display.display();
+      display.ssd1306_command(SSD1306_DISPLAYOFF);
+    }
+    displayenabled = false;
+  }
+#endif
+}
+
+#ifdef WIFI_IS_HYBRID
+int displayswitch = 0; // display switch if we are in hybrid mode
+#endif
+void DoDisplayIfItExists()
+{
+#ifndef NODISPLAY
+#ifdef user_button_display
+  if (digitalRead(USER_BUTTON_PIN) == false or display_on_ping == true) // actually button pushed
+#else
+  if (display_on_ping == true)
+#endif
+  {
+    if (has_display_been_initialized == false) // try without hard reset first
+      InitDisplayTryAll();
+    dodisplay = true;
+    displayonoff(true);
+    disptimeout = millis() + DISPLAY_INTERVAL;
+    display_on_ping = false;
+  }
+  if (millis() > (disptimeout))
+  {
+    displayonoff(false);
+    dodisplaybuf = false;
+    dodisplay = false;
+  }
+
+  // either update the entire display, or just the buffer indicator (faster)
+  if (dodisplay) // update entire display
+  {
+
+    if (displayexists and displayenabled)
+    {
+
+      display.clearDisplay();
+      display.setCursor(81, 0);
+      display.print(currbatterylevel);
+      display.setCursor(110, 0);
+      display.print(charcounter);
+      display.setCursor(0, 0);
+      if (wifimode)
+      {
+#ifdef WIFI_IS_CLIENT // getting noise here for some reason
+#ifdef WIFI_IS_HYBRID
+        display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
+#else
+        display.println(ipstring_c);
+#endif
+#else
+        display.println(ipstring_a);
+#endif
+      }
+      else
+      {
+        display.println(ipstring_b);
+      }
+      // print the last 3 lines we got, or at least the first 42 characters of each since it's what will fit.
+      for (int i=2;i>-1;i--)
+      {
+      display.setCursor(0, 45-(i*18));
+      tempstring=string_rx[i];
+      tempstring.replace("&lt;","<");
+      display.println(tempstring.substring(0, 42));
+      }
+      display.display();
+    }
+    dodisplaybuf = false;
+    dodisplay = false;
+  }
+#endif
+}
+
+void UpdateCharCounterIfDisplayExists()
+{
+#ifndef NODISPLAY
+  if (has_display_been_initialized == false)
+    InitDisplayTryAll();
+
+  if ((dodisplay == false) and displayexists and displayenabled and dodisplaybuf)
+  {
+    display.fillRect(110, 0, 45, 11, BLACK); // upperleftx, upperlefty, width, height, color
+    display.setCursor(110, 0);
+    display.print(charcounter);
+    display.display();
+    dodisplaybuf = false;
+  }
+#endif
+}
+
+
+
+
+int countme = 0;
+
+
+bool InitDisplay(bool hardreset)
+{
+#ifndef NODISPLAY
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, hardreset, false)) { // Address 0x3C for 128x32
+    if (has_serial_been_initialized)
+      Serial.println(":SYS:SSD1306 init fail");
+    displayexists = false;
+    has_display_been_initialized = false;
+    return false;
+  }
+  else
+  {
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+    display.clearDisplay();
+    //    Serial.println(":SYS:SSD1306 init OK");
+    display.display();
+    displayexists = true;
+    dodisplay = true;
+    has_display_been_initialized = true;
+    return true;
+  }
+#endif
+  has_display_been_initialized = false;
+  return false;
+}
+
+void InitDisplayTryAll()
+{
+#ifndef NODISPLAY
+  if (has_display_been_initialized == false)
+    has_display_been_initialized = InitDisplay(false);
+  if (has_display_been_initialized == false)
+    has_display_been_initialized = InitDisplay(true);
+  if (has_display_been_initialized == false)
+  {
+    ResetDisplayViaPin();
+    has_display_been_initialized = InitDisplay(false);
+  }
+  if (has_display_been_initialized == false)
+    has_display_been_initialized = InitDisplay(true);
+#endif
+}
+
+void BlinkMeWhen()
+{
+  if (++lploops > LPLOOP_BLINK)
+  {
+    led(true);
+    DoBasicSteps();
+    lploops = 0;
+    led(false);
+  }
+}
+
+
+/**
+ * END DISPLAY BLOCK
+ */
+
+
+/********************************************
+ * POWER MANAGEMENT BLOCK: USED FOR HANDLING BATTERY AND SLEEP
+ */
+#ifdef BATT_ADC
+void ReadBatteryADC(bool force)
+{
+  if (force || (millis() > battimeout))
+  {
+    Watchdog(true);
+    if (currbatterylevel > 0)
+      lastbatterylevel = currbatterylevel;
+    currbatterylevel = (analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC)) / 4;
+    if (lastbatterylevel == 0)
+      lastbatterylevel = currbatterylevel;
+    batt_delta = currbatterylevel - lastbatterylevel;
+    if (batt_delta > 100 or batt_delta < -100)
+      batt_delta = 0; // unrealistic, discard.
+    battimeout = millis() + ADC_INTERVAL; // should be less than that since these instructions take time, but meh
+  }
+}
+#else
+void  ReadBatteryADC(bool force)
+{
+  lastbatterylevel = FULL_BATT;
+  currbatterylevel = FULL_BATT;
+  batt_delta = 0;
+}
+#endif
+
+void SleepLowBatt()
+{
+  tempstring = ":SYS:SLEEP " + String(derpme) + ":" + status_string();
+  Watchdog(false);
+  led(true);
+  if (low_batt_announce)
+  {
+    LoraSendAndUpdate(tempstring);
+    cyclestrings(tempstring);
+  }
+  lastbatterylevel = currbatterylevel;
+  lowpowerstart = true;
+  displayonoff(false);
+  led(false);
+
+  displayonoff(false);
+
+  //display.end();
+  // turn off external devices
+  Serial.println(tempstring);
+  Serial.flush();
+  Stop_LORA();
+  Stop_BT();
+  WiFi.mode(WIFI_OFF);
+  server.stop();
+  dnsServer.stop();
+  TryStoreSentences();
+  esp_deep_sleep_start();
+}
+
+/**
+ * END POWER MANAGEMENT BLOCK
+ */
+/**
+ * OPERATIONS BLOCK - this is where logic for pylon goes
+ */
 
 void LowPowerLoop()
 {
@@ -1666,6 +1530,9 @@ void DoWifiSteps()
   BlinkMeWhen();
 }
 
+/**
+ * SETUP METHOD - Called first by the ESP32.
+ */
 void setup() {
   setCpuFrequencyMhz(CLKFREQ_LOW);
 
@@ -1997,6 +1864,13 @@ void HighPowerSetup(bool echo)
 
 }
 
+/****************************************************************
+ * WEBSITE SERVING CODE.
+ * This includes a full HTTP server that runs as a serial UART
+ * It is coded and coupled explicitly for performance
+ * K. Borri
+ ****************************************************************/
+
 void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh every x seconds
 {
   PetTheWatchdog();
@@ -2052,7 +1926,7 @@ void send_form_iframe()
   send_ok_response();
   send_html_header();
   client.println("<body>"
-                 "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Send\"><form>"
+                 "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
                  "</body></html>");
 }
 #endif
@@ -2326,15 +2200,7 @@ void send_faq_page()
 #endif
             else if (whattoget.startsWith("/get"))
             {
-
-              if (whattoget.equals("/get?refresh=")) // exception is needed to make sure that the refresh button works properly
-              {
-                send_redirect_to_main(true);
-              }
-              else
-              {
-
-                // do external outputs
+                // get header value for input1 which should be message
                 gotstring = header.substring(header.indexOf("input1="));
                 gotstring = gotstring.substring(0, gotstring.indexOf("HTTP/1.1"));
                 gotstring = gotstring.substring(7, gotstring.indexOf("&refresh="));//HTTP/1.1")); //input1= is 7 characters
@@ -2394,7 +2260,10 @@ void send_faq_page()
 #else
                 send_redirect_to_main(true);
 #endif
-              }
+            }
+            else if (whattoget.equals("/refresh")) // exception is needed to make sure that the refresh button works properly
+            {
+                send_redirect_to_main(true);
             }
 #ifdef DEBUG_OPTIONS_PAGE
             else if (whattoget.startsWith("/option!")) // semi hidden option stuff! Yay! Any more that we need? I don't want to make it possible to turn this off or switch modes remotely because that's easy to abuse.
@@ -2454,7 +2323,15 @@ void send_faq_page()
                              "function resizeIframe(obj) {"
                              "    obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';"
                              //"    obj.style.width = obj.contentWindow.document.documentElement.scrollWidth + 'px';"
-                             "  }"
+                             "  }\r\n</script>"
+                             
+                             "<script>function sendMsg(){\r\n"                             
+                             "getSend('\\get',document.getElementById('msgfield').value); document.getElementById('msgfield').value=\"\";\r\n"
+                             "}\r\n"
+                             "function getSend(url, input1=null) {\r\n" // we default undefined so that we don't have to explicitly specify it; it just gets passed to the next function
+                             "var xhttp = new XMLHttpRequest();\r\n"
+                             "xhttp.open('GET', url+\"?input1=\" + input1, true); xhttp.send();" // we don't care about the response, we are just dumb sending.                             
+                             "}"                             
                              "</script>"
                              "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
               client.print(ipstring_a);
@@ -2474,7 +2351,7 @@ void send_faq_page()
 #ifdef TX_IFRAME
                              "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
 #else
-                             "<form action=\"/get\"> <small><small>TX&gt;</small></small> <input type=\"text\" maxlength=\"160\" name=\"input1\"><input type=\"submit\" value=\"Send\"><form><br>"
+                             "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
 #endif
                             );
               /*
@@ -2488,7 +2365,7 @@ void send_faq_page()
                 "<form action=\"/get\"> Your message: <input type=\"text\" maxlength=\"50\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form>"
                 "</iframe>");
               */
-              client.println("<form action=\"/get\"><input type=\"submit\" value=\"Refresh this page (in case of errors, etc.)\"><input type=\"hidden\" size=\"1\" maxlength=\"1\" name=\"refresh\"><form>");
+              client.println("<button value=\"Refresh this page (in case of errors, etc.)\" onClick=getSend('/refresh')>Refresh this page (in case of errors, etc.)</button>");
               client.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
                              "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
 #ifdef PROVIDE_APK
