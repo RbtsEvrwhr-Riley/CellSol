@@ -26,7 +26,6 @@
 // Assign output variables to GPIO pins
 #define USER_BUTTON_PIN 0
 #define USER_LED_PIN 25
-#define enablecomstring "COMCHIAVE"
 
 #ifdef LORA32V2
 #undef GPS_SERIAL_1 // no gps on the 

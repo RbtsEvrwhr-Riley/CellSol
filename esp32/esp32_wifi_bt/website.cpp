@@ -1,12 +1,15 @@
 // honk
 
-#include "watchdog.cpp"
 #include "config.h"
+#include "esp32display.cpp"
+
+#include "datastreams.cpp"
+#include "esp32radio.cpp"
+
 #include <Arduino.h>
 #include <WiFi.h>
 extern WiFiClient client;
-extern bool dodisplay;
-long timestamp_rx[10];
+
 extern String string_rx[10];
 extern String communitymemory[COMMUNITY_MEMORY_SIZE];
 
@@ -38,6 +41,62 @@ String UTC_String(long secs)
   st = st + String(h) + ":" + String(m) + ":" + String(s);
   return st;
 }
+
+
+
+// the binary file must be imported as a header using bin2c because I don't want a filesystem on this build, it's too much overhead rn
+void SendBinaryFile(String contenttype, const unsigned char file[], const long int filesize)
+{
+  // this obviously should be its own function since we are using it more than once.
+  client.print("HTTP/1.1 200 OK\r\n"
+               "Content-Description: File Transfer\r\n"
+               "Content-type:");
+  client.print(contenttype);
+  client.print("\r\nConnection: close\r\n"
+               "Content-Transfer-Encoding: binary\r\n"
+               "Content-Length: ");
+  client.println(filesize);
+  client.println();
+  char ch;
+  byte stuff[32]; // 32 bytes is a surprisingly good compromise between speed and memory overhead
+  byte j = 0;
+  int i;
+  for (i = 0; i < filesize; i++)
+  {
+    stuff[j] = (byte)file[i];
+    if (++j == 32)
+    {
+      client.write(stuff, 32);
+      j = 0;
+    }
+    if (i == (filesize - 1))
+    {
+      client.write(stuff, j);
+    }
+
+    // attempt slow operation while the data gets sent; other wifi clients will just have to wait and that's all there is to it
+    if (i % 64 == 0)
+    {
+      PetTheWatchdog();
+
+      ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);
+#ifdef BT_ENABLE_FOR_AP
+      ReadFromStream(ESP_BT, receivedChar2, charcounte2, readytosen2, has_bluetooth_been_initialized, 14);
+#endif
+    }
+    if (i % 512 == 0)
+      SeeIfAnythingOnRadio();
+    if (i % 512 == 128)
+      DoDisplayIfItExists();
+    if (i % 512 == 256)
+      UpdateCharCounterIfDisplayExists();
+    if (i % 512 == 384)
+      SendSerialIfReady();
+  }
+  client.flush();
+  client.println();
+}
+
 void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh every x seconds
 {
   PetTheWatchdog();
@@ -243,70 +302,67 @@ extern const long int src_zip_size;
 extern const unsigned char src_zip[];
 #endif
 
-
-extern char receivedChars[MAXPKTSIZE]; // an array to store the received data
-extern char receivedChar2[MAXPKTSIZE]; // an array to store the received data
-extern bool has_serial_been_initialized;
-extern bool has_bluetooth_been_initialized = false;
-extern byte charcounter = 0;
-extern boolean readytosend = false;
-extern byte charcounte2 = 0;
-extern boolean readytosen2 = false;
-// the binary file must be imported as a header using bin2c because I don't want a filesystem on this build, it's too much overhead rn
-void SendBinaryFile(String contenttype, const unsigned char file[], const long int filesize)
-{
-  // this obviously should be its own function since we are using it more than once.
-  client.print("HTTP/1.1 200 OK\r\n"
-               "Content-Description: File Transfer\r\n"
-               "Content-type:");
-  client.print(contenttype);
-  client.print("\r\nConnection: close\r\n"
-               "Content-Transfer-Encoding: binary\r\n"
-               "Content-Length: ");
-  client.println(filesize);
-  client.println();
-  char ch;
-  byte stuff[32]; // 32 bytes is a surprisingly good compromise between speed and memory overhead
-  byte j = 0;
-  int i;
-  for (i = 0; i < filesize; i++)
-  {
-    stuff[j] = (byte)file[i];
-    if (++j == 32)
-    {
-      client.write(stuff, 32);
-      j = 0;
-    }
-    if (i == (filesize - 1))
-    {
-      client.write(stuff, j);
-    }
-
-    // attempt slow operation while the data gets sent; other wifi clients will just have to wait and that's all there is to it
-    if (i % 64 == 0)
-    {
-      PetTheWatchdog();
-
-      ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);
-#ifdef BT_ENABLE_FOR_AP
-      ReadFromStream(ESP_BT, receivedChar2, charcounte2, readytosen2, has_bluetooth_been_initialized, 14);
-#endif
-    }
-    if (i % 512 == 0)
-      SeeIfAnythingOnRadio();
-    if (i % 512 == 128)
-      DoDisplayIfItExists();
-    if (i % 512 == 256)
-      UpdateCharCounterIfDisplayExists();
-    if (i % 512 == 384)
-      SendSerialIfReady();
-  }
-  client.flush();
-  client.println();
+String gotstring = "";
+extern String lasttagimade;
 
 
+inline int hexValue(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  return 0;
 }
 
+
+void decode_in_place(char *s) {
+  char *d = s;
+
+  while (*s) {
+    switch (*s) {
+      case '+': *d++ = ' '; s++; break; // turn + into space
+      case 13: *d++ = ' '; s++; break; // turn CR into space
+      case 10: *d++ = ' '; s++; break; // turn LF into space
+      case '%':
+        s++; if (!*s) break; // handle malformed input
+        *d = hexValue(*s++) << 4;
+        if (!*s) break; // handle malformed input
+        *d |= hexValue(*s++);
+        d ++;
+        break;
+      default:
+        *d++ = *s++; break;
+    }
+  }
+
+  *d = '\0'; // always add the terminator
+}
+extern int batt_delta;
+
+String status_string()
+{
+  return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") );
+}
+
+bool LoginPageRequested(String url)
+{
+  if (url.startsWith("/redirect"))
+    return true;
+  if (url.startsWith("/connecttest.txt"))
+    return true;
+  if (url.startsWith("/ncsi.txt"))
+    return true;
+  if (url.startsWith("/hotspot.txt"))
+    return true;
+  if (url.startsWith("/success.txt"))
+    return true;
+  if (url.startsWith("/generate_204"))
+    return true;
+  if (url.startsWith("/hotspot-detect.html"))
+    return true;
+  return false;
+}
+
+byte last_web_caller; // last web ip that said something
 
 void serveWebSiteRequests(char c)
 {
@@ -598,7 +654,6 @@ void serveWebSiteRequests(char c)
 		  client.println();
 		}
 	  }
-	  header = "";
-	  break;
+	  header = "";	  
 	}
 }

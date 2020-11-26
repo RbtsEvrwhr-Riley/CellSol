@@ -138,3 +138,5 @@
 #define MAXPKTSIZE  200 // lora packet is 255 bytes and we will need some for the header
 #define MAXPKTSIZEP 201 // lora packet is 255 bytes and we will need some for the header
 #define MAXPKTSIZEM 199 // lora packet is 255 bytes and we will need some for the header
+
+#define enablecomstring "COMCHIAVE" // send this to enable the serial com port
