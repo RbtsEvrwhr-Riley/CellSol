@@ -3,6 +3,8 @@
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
   Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.
   Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
+  Distributed independently https://www.f3.to/cellsol
+  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
 *********/
 
 // Firmware version.
@@ -60,15 +62,15 @@ const byte DNS_PORT = 53;
 #include <Adafruit_SSD1306.h>
 #endif
 
-static RTC_NOINIT_ATTR int lastbatterylevel = 0; // try to save battery levels between runs
 
+// LORA32 setup variables
 static bool lowpowerstart = false;
 static uint64_t chipid; // chip id stuff = ESP.getEfuseMac();
 static uint16_t uptwo; // chip id stuff = (uint16_t)(chipid >> 32);
 static uint32_t dnfor; // chip id stuff  = (uint32_t)(chipid);
 
 
-// Web constants for text align
+// Web constants for text align, used for website display
 #define TEXT_ALIGN_STRING_A "center"
 #define TEXT_ALIGN_STRING_B "justify"
 String TEXT_ALIGN_STRING = TEXT_ALIGN_STRING_A;
@@ -82,13 +84,19 @@ int currbatterylevel = 0;
 #define UART_BAUD_RATE 9600
 String ssid = SSIDROOT;
 String tempstring = ""; // internal function use only
+
+bool wifimode = true; // bluetooth or wifi
+
+
+// serial on/off
+boolean enablecomport = false; // set to false for a solderless fix for UART buffer crosstalk hardware issue
+
 // Set web server port number to 80
 WiFiServer server(80);
-
 DNSServer dnsServer;
-
 WiFiClient client;
 
+// WEB SERVICE CONFIGURATION - What files do we want to serve?
 #ifdef PROVIDE_APK
 extern const long int btt_apk_size;
 extern const unsigned char btt_apk[];
@@ -102,10 +110,13 @@ extern const long int src_zip_size;
 extern const unsigned char src_zip[];
 #endif
 
-
+// BATTERY POWER CONFIGURATION
+static RTC_NOINIT_ATTR int lastbatterylevel = 0; // try to save battery levels between runs
 int batt_delta;
 int battimeout = 0;
 bool low_batt_announce = false;
+
+// SERIAL and IP CONFIGURATION
 int lploops = LPLOOP_BLINK - 10; // give me a blink early so i know we're alive
 bool has_lora_been_initialized = false;
 bool has_serial_been_initialized = false;
@@ -113,13 +124,41 @@ bool has_bluetooth_been_initialized = false;
 bool has_wifi_been_initialized = false;
 bool has_display_been_initialized = false;
 
+// USER TAG CONFIGURATION
 String hextag  = "XXXX"; // usually the last two IP octets; gives pseudonimity to sender
 String lasttagimade = "XXXX"; // last one we made for use in checking
 
+// Temp bytes for IP addresses
 byte derpme = 0; // third number of ip address
 byte spare_id_nibble = 0; // upper nibble; lower nibble always 0
 
 
+//packet counter
+int txcounter = 0;
+int rxcounter = 0;
+byte charcounter = 0;
+boolean readytosend = false;
+byte charcounte2 = 0;
+boolean readytosen2 = false;
+
+// display flags
+boolean dodisplay = false;
+boolean dodisplaybuf = false;
+boolean displayexists = false;
+bool displayenabled = true;
+
+
+#ifndef NODISPLAY
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+#endif
+
+long disptimeout = 0;
+bool display_on_ping = false;
+
+
+/**********************************************
+ * Watchdog block; creates and manages a task watchdog for esp32 to prevent unwanted power off
+ **********************************************/
 unsigned long pseudoseconds = 0;
 unsigned long psm = 0;
 long UTC_Seconds = 0;
@@ -145,7 +184,47 @@ void PetTheWatchdog() {
 #endif
 }
 
+bool is_watchdog_on = false;
+void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion is that we can survive for 5 seconds we hope
+{
+  if (onoff)
+  {
+    esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
+    esp_task_wdt_add(NULL); //add current thread to WDT watch
+  }
+  else
+  {
+    esp_task_wdt_delete(NULL);
+    esp_task_wdt_deinit();
+    esp_task_wdt_delete(NULL);
+    esp_task_wdt_deinit();
+  }
+  is_watchdog_on = onoff;
+  battimeout = millis() + ADC_INTERVAL; // wait to turn the watchdog back on please
+}
 
+/**
+ * END WATCHDOG BLOCK
+ */
+
+
+/*******************************************************************************
+ * TCP/IP Block
+ *******************************************************************************/
+IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
+IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using.
+IPAddress Client_Gateway(GATEWAY_IP_ADDR);// this is the IP address OF THE ROUTER
+IPAddress Client_Subnet(GATEWAY_SUBNET);// usually 255,255,255,0 or 255,255,0,0
+IPAddress lwc(255, 255, 255, 255); // ip address of current client
+IPAddress IP(255, 255, 255, 255); // used to generate webpages
+String ipstring;
+String ipstring_c;
+String ipstring_a;
+String ipstring_b; // used in bluetooth mode
+byte last_web_caller; // last web ip that said something
+bool broadcast_twice = false;
+
+// util method
 String fourhex(int num1, int num2)
 {
   int num = (num1 * 256) + num2;
@@ -159,20 +238,6 @@ String fourhex(int num1, int num2)
     return String(num % 65536, HEX);
   return String(num, HEX);
 }
-
-
-IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
-IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using.
-IPAddress Client_Gateway(GATEWAY_IP_ADDR);// this is the IP address OF THE ROUTER
-IPAddress Client_Subnet(GATEWAY_SUBNET);// usually 255,255,255,0 or 255,255,0,0
-IPAddress lwc(255, 255, 255, 255); // ip address of current client
-IPAddress IP(255, 255, 255, 255); // used to generate webpages
-String ipstring;
-String ipstring_c;
-String ipstring_a;
-String ipstring_b; // used in bluetooth mode
-byte last_web_caller; // last web ip that said something
-bool broadcast_twice = false;
 
 void BuildNicknameTags()
 {
@@ -198,30 +263,12 @@ void BuildNicknameTags()
   ssid = SSIDROOT + ipstring;
   TEXT_ALIGN_STRING = centertext ? TEXT_ALIGN_STRING_A : TEXT_ALIGN_STRING_B;
 }
-bool is_watchdog_on = false;
-void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion is that we can survive for 5 seconds we hope
-{
-  if (onoff)
-  {
-    esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
-    esp_task_wdt_add(NULL); //add current thread to WDT watch
-  }
-  else
-  {
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_deinit();
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_deinit();
-  }
-  is_watchdog_on = onoff;
-  battimeout = millis() + ADC_INTERVAL; // wait to turn the watchdog back on please
-}
-
 String status_string()
 {
   return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") );
 }
 /*
+ * DUMMY METHODS FOR HTML ENCODE/DECODE - TODO: remove this comment as these methods got replaced?
   String decodeHtml(String text)
   {
   text.replace("&amp;", "&");
@@ -242,64 +289,11 @@ String status_string()
   }
 */
 
-void ResetDisplayViaPin()
-{
-#ifndef NODISPLAY
-  //  Wire.end();
-  pinMode(OLED_RST, OUTPUT);
-  digitalWrite(OLED_RST, LOW);
-  for (byte i = 0; i < 20; i++)
-    DoBasicSteps();
-  digitalWrite(OLED_RST, HIGH);
-  has_display_been_initialized = false;
-  Wire.begin(OLED_SDA, OLED_SCL);
-#endif
-}
+ 
+/****************************************************************
+ * LoRa32 Radio block - LoRa, WiFi, and BT
+ */
 
-#ifdef BATT_ADC
-void ReadBatteryADC(bool force)
-{
-  if (force || (millis() > battimeout))
-  {
-    Watchdog(true);
-    if (currbatterylevel > 0)
-      lastbatterylevel = currbatterylevel;
-    currbatterylevel = (analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC)) / 4;
-    if (lastbatterylevel == 0)
-      lastbatterylevel = currbatterylevel;
-    batt_delta = currbatterylevel - lastbatterylevel;
-    if (batt_delta > 100 or batt_delta < -100)
-      batt_delta = 0; // unrealistic, discard.
-    battimeout = millis() + ADC_INTERVAL; // should be less than that since these instructions take time, but meh
-  }
-}
-#else
-void  ReadBatteryADC(bool force)
-{
-  lastbatterylevel = FULL_BATT;
-  currbatterylevel = FULL_BATT;
-  batt_delta = 0;
-}
-#endif
-
-
-#ifndef NODISPLAY
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
-#endif
-
-//packet counter
-int txcounter = 0;
-int rxcounter = 0;
-byte charcounter = 0;
-boolean readytosend = false;
-byte charcounte2 = 0;
-boolean readytosen2 = false;
-boolean dodisplay = false;
-boolean dodisplaybuf = false;
-boolean displayexists = false;
-bool displayenabled = true;
-
-boolean enablecomport = false; // set to false for a solderless fix for UART buffer crosstalk hardware issue
 
 String LoRaData;
 
@@ -336,8 +330,6 @@ long LTISVL_1_time = 0;
 long LTISVL_0_time = 0;
 
 String gotstring = "";
-
-bool wifimode = true; // bluetooth or wifi
 
 
 #ifdef USER_BUTTON_PIN
@@ -406,115 +398,6 @@ char* string2char(String command) {
     return p;
   }
 }
-
-void led(boolean onoff)
-{
-#ifdef USER_LED_PIN
-  digitalWrite(USER_LED_PIN, onoff);
-#endif
-}
-
-long disptimeout = 0;
-bool display_on_ping = false;
-
-void displayonoff(bool onoff)
-{
-#ifdef NODISPLAY
-  displayenabled = false;
-#else
-  if (onoff)
-  {
-    if (has_display_been_initialized == false)
-      InitDisplayTryAll();
-    display.ssd1306_command(SSD1306_DISPLAYON);
-    displayenabled = true;
-  }
-  else
-  {
-    if (has_display_been_initialized)
-    {
-      display.clearDisplay();
-      display.display();
-      display.ssd1306_command(SSD1306_DISPLAYOFF);
-    }
-    displayenabled = false;
-  }
-#endif
-}
-
-#ifdef WIFI_IS_HYBRID
-int displayswitch = 0; // display switch if we are in hybrid mode
-#endif
-void DoDisplayIfItExists()
-{
-#ifndef NODISPLAY
-#ifdef user_button_display
-  if (digitalRead(USER_BUTTON_PIN) == false or display_on_ping == true) // actually button pushed
-#else
-  if (display_on_ping == true)
-#endif
-  {
-    if (has_display_been_initialized == false) // try without hard reset first
-      InitDisplayTryAll();
-    dodisplay = true;
-    displayonoff(true);
-    disptimeout = millis() + DISPLAY_INTERVAL;
-    display_on_ping = false;
-  }
-  if (millis() > (disptimeout))
-  {
-    displayonoff(false);
-    dodisplaybuf = false;
-    dodisplay = false;
-  }
-
-  // either update the entire display, or just the buffer indicator (faster)
-  if (dodisplay) // update entire display
-  {
-
-    if (displayexists and displayenabled)
-    {
-
-      display.clearDisplay();
-      display.setCursor(81, 0);
-      display.print(currbatterylevel);
-      display.setCursor(110, 0);
-      display.print(charcounter);
-      display.setCursor(0, 0);
-      if (wifimode)
-      {
-#ifdef WIFI_IS_CLIENT // getting noise here for some reason
-#ifdef WIFI_IS_HYBRID
-        display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
-#else
-        display.println(ipstring_c);
-#endif
-#else
-        display.println(ipstring_a);
-#endif
-      }
-      else
-      {
-        display.println(ipstring_b);
-      }
-      // print the last 3 lines we got, or at least the first 42 characters of each since it's what will fit.
-      for (int i=2;i>-1;i--)
-      {
-      display.setCursor(0, 45-(i*18));
-      tempstring=string_rx[i];
-      tempstring.replace("&lt;","<");
-      display.println(tempstring.substring(0, 42));
-      }
-      display.display();
-    }
-    dodisplaybuf = false;
-    dodisplay = false;
-  }
-#endif
-}
-
-
-
 // moves old strings out
 void cyclestrings(String newone)
 {
@@ -612,57 +495,6 @@ inline void Stop_LORA()
   }
 }
 
-void SleepLowBatt()
-{
-  tempstring = ":SYS:SLEEP " + String(derpme) + ":" + status_string();
-  Watchdog(false);
-  led(true);
-  if (low_batt_announce)
-  {
-    LoraSendAndUpdate(tempstring);
-    cyclestrings(tempstring);
-  }
-  lastbatterylevel = currbatterylevel;
-  lowpowerstart = true;
-  displayonoff(false);
-  led(false);
-
-  displayonoff(false);
-
-  //display.end();
-  // turn off external devices
-  Serial.println(tempstring);
-  Serial.flush();
-  Stop_LORA();
-  Stop_BT();
-  WiFi.mode(WIFI_OFF);
-  server.stop();
-  dnsServer.stop();
-  TryStoreSentences();
-  esp_deep_sleep_start();
-}
-
-
-
-
-
-
-void UpdateCharCounterIfDisplayExists()
-{
-#ifndef NODISPLAY
-  if (has_display_been_initialized == false)
-    InitDisplayTryAll();
-
-  if ((dodisplay == false) and displayexists and displayenabled and dodisplaybuf)
-  {
-    display.fillRect(110, 0, 45, 11, BLACK); // upperleftx, upperlefty, width, height, color
-    display.setCursor(110, 0);
-    display.print(charcounter);
-    display.display();
-    dodisplaybuf = false;
-  }
-#endif
-}
 
 void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout, bool streamexists, int whichtag)
 {
@@ -1121,67 +953,8 @@ void SendBinaryFile(String contenttype, const unsigned char file[], const long i
   }
   client.flush();
   client.println();
-
-
 }
 
-int countme = 0;
-
-
-bool InitDisplay(bool hardreset)
-{
-#ifndef NODISPLAY
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, hardreset, false)) { // Address 0x3C for 128x32
-    if (has_serial_been_initialized)
-      Serial.println(":SYS:SSD1306 init fail");
-    displayexists = false;
-    has_display_been_initialized = false;
-    return false;
-  }
-  else
-  {
-    display.setTextColor(WHITE);
-    display.setTextSize(1);
-    display.clearDisplay();
-    //    Serial.println(":SYS:SSD1306 init OK");
-    display.display();
-    displayexists = true;
-    dodisplay = true;
-    has_display_been_initialized = true;
-    return true;
-  }
-#endif
-  has_display_been_initialized = false;
-  return false;
-}
-
-void InitDisplayTryAll()
-{
-#ifndef NODISPLAY
-  if (has_display_been_initialized == false)
-    has_display_been_initialized = InitDisplay(false);
-  if (has_display_been_initialized == false)
-    has_display_been_initialized = InitDisplay(true);
-  if (has_display_been_initialized == false)
-  {
-    ResetDisplayViaPin();
-    has_display_been_initialized = InitDisplay(false);
-  }
-  if (has_display_been_initialized == false)
-    has_display_been_initialized = InitDisplay(true);
-#endif
-}
-
-void BlinkMeWhen()
-{
-  if (++lploops > LPLOOP_BLINK)
-  {
-    led(true);
-    DoBasicSteps();
-    lploops = 0;
-    led(false);
-  }
-}
 
 void Start_LORA(bool trydisplay)
 {
@@ -1360,6 +1133,280 @@ void DoRepeaterSteps()
   BlinkMeWhen();
 
 }
+/**
+ * END LORA32 RADIO BLOCK
+ */
+
+
+
+/********************************************
+ * DISPLAY BLOCK: USED FOR HANDLING OLED
+ */
+void ResetDisplayViaPin()
+{
+#ifndef NODISPLAY
+  //  Wire.end();
+  pinMode(OLED_RST, OUTPUT);
+  digitalWrite(OLED_RST, LOW);
+  for (byte i = 0; i < 20; i++)
+    DoBasicSteps();
+  digitalWrite(OLED_RST, HIGH);
+  has_display_been_initialized = false;
+  Wire.begin(OLED_SDA, OLED_SCL);
+#endif
+}
+void led(boolean onoff)
+{
+#ifdef USER_LED_PIN
+  digitalWrite(USER_LED_PIN, onoff);
+#endif
+}
+
+void displayonoff(bool onoff)
+{
+#ifdef NODISPLAY
+  displayenabled = false;
+#else
+  if (onoff)
+  {
+    if (has_display_been_initialized == false)
+      InitDisplayTryAll();
+    display.ssd1306_command(SSD1306_DISPLAYON);
+    displayenabled = true;
+  }
+  else
+  {
+    if (has_display_been_initialized)
+    {
+      display.clearDisplay();
+      display.display();
+      display.ssd1306_command(SSD1306_DISPLAYOFF);
+    }
+    displayenabled = false;
+  }
+#endif
+}
+
+#ifdef WIFI_IS_HYBRID
+int displayswitch = 0; // display switch if we are in hybrid mode
+#endif
+void DoDisplayIfItExists()
+{
+#ifndef NODISPLAY
+#ifdef user_button_display
+  if (digitalRead(USER_BUTTON_PIN) == false or display_on_ping == true) // actually button pushed
+#else
+  if (display_on_ping == true)
+#endif
+  {
+    if (has_display_been_initialized == false) // try without hard reset first
+      InitDisplayTryAll();
+    dodisplay = true;
+    displayonoff(true);
+    disptimeout = millis() + DISPLAY_INTERVAL;
+    display_on_ping = false;
+  }
+  if (millis() > (disptimeout))
+  {
+    displayonoff(false);
+    dodisplaybuf = false;
+    dodisplay = false;
+  }
+
+  // either update the entire display, or just the buffer indicator (faster)
+  if (dodisplay) // update entire display
+  {
+
+    if (displayexists and displayenabled)
+    {
+
+      display.clearDisplay();
+      display.setCursor(81, 0);
+      display.print(currbatterylevel);
+      display.setCursor(110, 0);
+      display.print(charcounter);
+      display.setCursor(0, 0);
+      if (wifimode)
+      {
+#ifdef WIFI_IS_CLIENT // getting noise here for some reason
+#ifdef WIFI_IS_HYBRID
+        display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
+#else
+        display.println(ipstring_c);
+#endif
+#else
+        display.println(ipstring_a);
+#endif
+      }
+      else
+      {
+        display.println(ipstring_b);
+      }
+      // print the last 3 lines we got, or at least the first 42 characters of each since it's what will fit.
+      for (int i=2;i>-1;i--)
+      {
+      display.setCursor(0, 45-(i*18));
+      tempstring=string_rx[i];
+      tempstring.replace("&lt;","<");
+      display.println(tempstring.substring(0, 42));
+      }
+      display.display();
+    }
+    dodisplaybuf = false;
+    dodisplay = false;
+  }
+#endif
+}
+
+void UpdateCharCounterIfDisplayExists()
+{
+#ifndef NODISPLAY
+  if (has_display_been_initialized == false)
+    InitDisplayTryAll();
+
+  if ((dodisplay == false) and displayexists and displayenabled and dodisplaybuf)
+  {
+    display.fillRect(110, 0, 45, 11, BLACK); // upperleftx, upperlefty, width, height, color
+    display.setCursor(110, 0);
+    display.print(charcounter);
+    display.display();
+    dodisplaybuf = false;
+  }
+#endif
+}
+
+
+
+
+int countme = 0;
+
+
+bool InitDisplay(bool hardreset)
+{
+#ifndef NODISPLAY
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, hardreset, false)) { // Address 0x3C for 128x32
+    if (has_serial_been_initialized)
+      Serial.println(":SYS:SSD1306 init fail");
+    displayexists = false;
+    has_display_been_initialized = false;
+    return false;
+  }
+  else
+  {
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+    display.clearDisplay();
+    //    Serial.println(":SYS:SSD1306 init OK");
+    display.display();
+    displayexists = true;
+    dodisplay = true;
+    has_display_been_initialized = true;
+    return true;
+  }
+#endif
+  has_display_been_initialized = false;
+  return false;
+}
+
+void InitDisplayTryAll()
+{
+#ifndef NODISPLAY
+  if (has_display_been_initialized == false)
+    has_display_been_initialized = InitDisplay(false);
+  if (has_display_been_initialized == false)
+    has_display_been_initialized = InitDisplay(true);
+  if (has_display_been_initialized == false)
+  {
+    ResetDisplayViaPin();
+    has_display_been_initialized = InitDisplay(false);
+  }
+  if (has_display_been_initialized == false)
+    has_display_been_initialized = InitDisplay(true);
+#endif
+}
+
+void BlinkMeWhen()
+{
+  if (++lploops > LPLOOP_BLINK)
+  {
+    led(true);
+    DoBasicSteps();
+    lploops = 0;
+    led(false);
+  }
+}
+
+
+/**
+ * END DISPLAY BLOCK
+ */
+
+
+/********************************************
+ * POWER MANAGEMENT BLOCK: USED FOR HANDLING BATTERY AND SLEEP
+ */
+#ifdef BATT_ADC
+void ReadBatteryADC(bool force)
+{
+  if (force || (millis() > battimeout))
+  {
+    Watchdog(true);
+    if (currbatterylevel > 0)
+      lastbatterylevel = currbatterylevel;
+    currbatterylevel = (analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC)) / 4;
+    if (lastbatterylevel == 0)
+      lastbatterylevel = currbatterylevel;
+    batt_delta = currbatterylevel - lastbatterylevel;
+    if (batt_delta > 100 or batt_delta < -100)
+      batt_delta = 0; // unrealistic, discard.
+    battimeout = millis() + ADC_INTERVAL; // should be less than that since these instructions take time, but meh
+  }
+}
+#else
+void  ReadBatteryADC(bool force)
+{
+  lastbatterylevel = FULL_BATT;
+  currbatterylevel = FULL_BATT;
+  batt_delta = 0;
+}
+#endif
+
+void SleepLowBatt()
+{
+  tempstring = ":SYS:SLEEP " + String(derpme) + ":" + status_string();
+  Watchdog(false);
+  led(true);
+  if (low_batt_announce)
+  {
+    LoraSendAndUpdate(tempstring);
+    cyclestrings(tempstring);
+  }
+  lastbatterylevel = currbatterylevel;
+  lowpowerstart = true;
+  displayonoff(false);
+  led(false);
+
+  displayonoff(false);
+
+  //display.end();
+  // turn off external devices
+  Serial.println(tempstring);
+  Serial.flush();
+  Stop_LORA();
+  Stop_BT();
+  WiFi.mode(WIFI_OFF);
+  server.stop();
+  dnsServer.stop();
+  TryStoreSentences();
+  esp_deep_sleep_start();
+}
+
+/**
+ * END POWER MANAGEMENT BLOCK
+ */
+/**
+ * OPERATIONS BLOCK - this is where logic for pylon goes
+ */
 
 void LowPowerLoop()
 {
@@ -1483,6 +1530,9 @@ void DoWifiSteps()
   BlinkMeWhen();
 }
 
+/**
+ * SETUP METHOD - Called first by the ESP32.
+ */
 void setup() {
   setCpuFrequencyMhz(CLKFREQ_LOW);
 
@@ -1813,6 +1863,13 @@ void HighPowerSetup(bool echo)
 
 
 }
+
+/****************************************************************
+ * WEBSITE SERVING CODE.
+ * This includes a full HTTP server that runs as a serial UART
+ * It is coded and coupled explicitly for performance
+ * K. Borri
+ ****************************************************************/
 
 void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh every x seconds
 {
