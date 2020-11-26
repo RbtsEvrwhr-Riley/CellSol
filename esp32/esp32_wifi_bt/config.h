@@ -1,6 +1,3 @@
-// Firmware version. I don't like it here but it has to be here.
-#define VERSIONSTRING "0.25"
-
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
 #define LORA32V2 // Heltec LORA32 V2 (White board)
 //#define TBEAM // TTGO T-Beam (Black board with gps)
@@ -130,11 +127,3 @@
 //#define SHOW_RSSI // if enabled, show RSSI for wireless packets coming in.
 
 #define TAG_END_SYMBOL ':'
-
-#define COMMUNITY_MEMORY_SIZE 50 // how many strings to save
-
-
-// PACKET SIZES
-#define MAXPKTSIZE  200 // lora packet is 255 bytes and we will need some for the header
-#define MAXPKTSIZEP 201 // lora packet is 255 bytes and we will need some for the header
-#define MAXPKTSIZEM 199 // lora packet is 255 bytes and we will need some for the header
