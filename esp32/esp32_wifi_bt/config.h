@@ -38,15 +38,11 @@
 
 // these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
 // the upstream router will have to either open port 80 to this, or do a redirect.
-//#define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
-//#define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
-#define CLIENT_IP_ADDR 10,5,112,55 // client IP address for client or hybrid mode. needs commas instead of periods
-#define GATEWAY_IP_ADDR 10,5,112,239 // router IP address for client or hybrid mode. needs commas instead of periods
+#define CLIENT_IP_ADDR 192,168,2,55 // client IP address for client or hybrid mode. needs commas instead of periods
+#define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
-//#define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
-//#define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
-#define WIFI_UPSTREAM_AP "RobotsEverywhere" // SSID of the router we're trying to connect to. 
-#define WIFI_UPSTREAM_PWD "Uchr0nia"// password for the router we're trying to connect to. Use "" for none/open.
+#define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
+#define WIFI_UPSTREAM_PWD "derpderp"// password for the router we're trying to connect to. Use "" for none/open.
 
 #define DHCP // DHCP on if defined; will ignore IP address setting fields above in that case.
 
