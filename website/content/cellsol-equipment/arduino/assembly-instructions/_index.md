@@ -3,6 +3,8 @@ publishdate=2019-11-17
 lastmod=2020-11-24
 ---
 
+{{< toc >}}
+
 # Arduino Repeater Pylon Setup
 
 Instructions by Kay Borri of Robots Everywhere. Many thanks.
@@ -139,3 +141,18 @@ These instructions assume that you know how to solder. This project can be attem
 30) This is what the complete unit looks like. You can flash the Arduino before installing it, or after.
 
 ![This is what the complete unit looks like. You can flash the Arduino before installing it, or after.](photos/30.jpg)
+
+## Using the Antenna Cutting Guide (optional)
+
+The antenna cutting guide is exactly 85mm in length; while the antenna inside the case DOES in fact also resonate, it resonates slightly less, and due to the small size of the case, 85mm is "close enough". A short wire is not going to give you precisely tuned performance at any rate.
+
+Please remember that this is a monopole antenna, and the RF ground pin on the pylon needs to be connected to earth ground for it to work effectively.
+
+1. You will need the antenna cutting guide (3D printable, and available as part of the [Arduino Repeater Pylon case on thingiverse](https://www.thingiverse.com/thing:4660194) and a short length of 20 gauge stranded copper wire. It also helps to have some tape to hold the wire in place.
+![A length of 20 gauge stranded copper wire next to the CellSol Arduino Repeater Pylon Antenna Cutting Guide](photos/antenna1.jpg)
+2. Put the wire through the hole in the antenna cutting guide.
+![A length of 20 gauge stranded copper wire slotted into to the CellSol Arduino Repeater Pylon Antenna Cutting Guide](photos/antenna2.jpg)
+3. Tape the wire in place, so that it doesn't move.
+![CellSol Arduino Repeater Pylon Antenna Cutting Guide with antenna wire taped in place, before cutting](photos/antenna3.jpg)
+4. Cut the wire to the rough 85mm length.
+![CellSol Arduino Repeater Pylon Antenna Cutting Guide with antenna wire taped in place, after cutting](photos/antenna4.jpg)
