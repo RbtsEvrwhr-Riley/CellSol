@@ -80,7 +80,7 @@ static RTC_NOINIT_ATTR bool centertext = true;// if this, center, otherwise, jus
 // Wireless UART Configuration
 long LastReconnect = 0;
 int currbatterylevel = 0;
-#define SSIDROOT "CellSol "
+
 #define UART_BAUD_RATE 9600
 String ssid = SSIDROOT;
 String tempstring = ""; // internal function use only

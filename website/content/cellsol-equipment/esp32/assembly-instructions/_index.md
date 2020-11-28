@@ -82,9 +82,9 @@ The other settings for the Lora32 board can be left default; even if you are not
 
 There are several firmware settings you will need to choose in order to get the performance you want out of your pocket pylons.
 
-If you have not already done so, open the firmware's arduino project by File -> open, or using your system's file manager, and opening "esp32_wifi_bt.ino" that you downloaded at the beginning.
+If you have not already done so, open the firmware's Arduino project in the Arduino IDE you downloaded, using File -> open, or using your system's file manager. In either case, the file you open is the "esp32_wifi_bt.ino" that you downloaded at the beginning.
 
-All of these options are configured in #define lines at the top of the root file "esp32_wifi_bt.ino"
+All of these options are configured in #define lines in the configuration file "config.h", which will open in a tab at the top of the window.
 
 Most of these options are turned on and off by commenting (making the line begin with //) or uncommenting (removing the //) the #define statements. The options you must set to make your pocket pylon work are explained below. The options not described are intended for developers, for more advanced configuration - you don't have to worry about them right now.
 
@@ -99,6 +99,9 @@ Most of these options are turned on and off by commenting (making the line begin
 |GATEWAY_SUBNET|Subnet mask for the gateway router, with the numbers separated by commas; only used in IS_CLIENT or IS_HYBRID and only if DCHP is off.|An IP subnet mask separated by commas such as 255,255,255,0|
 |WIFI_UPSTREAM_AP|The access point name to be connected to if in IS_CLIENT or IS_HYBRID mode.|Network name in double quotes, like "RobotsEverywhere_24"|
 |WIFI_UPSTREAM_PWD|The password to the access point to connect to in client or hybrid mode|Password in double quotes, like "derpderp"|
+|SSIDROOT|The root SSID for the access point served by the pylon, if in AP or Hybrid mode|Network name in double quotes, like "RobotsEverywhere_24"|
+
+There are more options, but they are not required for setup, and are described in the comments of the "config.h" file. If you have questions, reach out to us on [GitHub]() or [by email](mailto:cellsol@robots-everywhere.com)
 
 ## Step 4: Assembling the Hardware
 
