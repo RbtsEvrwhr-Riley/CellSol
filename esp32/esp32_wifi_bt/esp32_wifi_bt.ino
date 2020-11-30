@@ -1875,7 +1875,8 @@ void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh 
 {
   PetTheWatchdog();
   client.print("<!DOCTYPE html><html><head>"
-               "<title>CellSol WiFi Pylon " VERSIONSTRING "</title>");
+               "<title>CellSol WiFi Pylon " VERSIONSTRING "</title>"
+               "<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">");
   if (redir == 0)
     client.print("<meta http-equiv=\"refresh\" content=\"0;URL='/'\" />");
   else if (redir > -1 && redir < 99)
@@ -1886,6 +1887,7 @@ void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh 
                    "</head>");
   */
   client.print("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
+   
                "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: ");
   client.print(TEXT_ALIGN_STRING);
   client.println(";}.button {border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 1.2em; margin: 0px; cursor: pointer;}.button2 {}</style></head>");
@@ -2320,6 +2322,12 @@ void send_faq_page()
 
               send_html_header();
               client.println("<script>"
+                             "window.addEventListener(\"load\", function(){"
+                             "var input = document.getElementById('msgfield');"
+                             "input.addEventListener(\"keyup\", function(event) {"  
+                             "if (event.keyCode === 13) {"    
+                             "event.preventDefault();"    
+                             "document.getElementById(\"msgBtn\").click();}});});"
                              "function resizeIframe(obj) {"
                              "    obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';"
                              //"    obj.style.width = obj.contentWindow.document.documentElement.scrollWidth + 'px';"
@@ -2351,7 +2359,7 @@ void send_faq_page()
 #ifdef TX_IFRAME
                              "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
 #else
-                             "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
+                             "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button id=\"msgBtn\" onClick=sendMsg() value=\"Send\">Send</button><br>"
 #endif
                             );
               /*
