@@ -1,0 +1,7 @@
+This is a website built using Hugo (https://www.gohugo.io) and the Geekdocs theme (https://geekdocs.de/)
+
+If you wish to preview the site locally, install Hugo on your environment, then simply run "hugo server" in this directory.
+
+The "config.toml" file does the magic.
+
+Refer to the Hugo documentation for everything else. Content is all markdown files in the "content" directory.

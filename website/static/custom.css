@@ -1,0 +1,50 @@
+/* Color Palette 
+Black #000000;
+DarkGrey #202020;
+WhiteSkin #fdefd9;
+White #ffffff;
+PeachRed #ff5555;
+DarkSkinDark #573623
+DarkSkinLight #91522d
+Peach: #ffb38e
+Orange #ff9f3c
+LightOrange #f6c879
+LighterOrange #ffe0aa
+Cyan #55ffff
+LightCyan #aaffff
+LightBlue #66c8f5
+Blue #3068cf
+Lavender #aaa9ff
+DarkMagenta #aa00aa
+Magenta #ff55ff
+*/
+
+/* default link color */
+a { color: #1c388e; }
+a:visited { color: #73bfb8 }
+
+/* site header */
+.gdoc-header { background: #000000; border-color: #aa00aa;}
+.gdoc-header__link, .gdoc-header__link:visited { color: #ffffff; font-size: 3rem; font-family: Courier; font-weight: bold; }
+.gdoc-brand { font-size: 3rem;}
+
+.gdoc-brand__img { height: 2em; width: 2em;}
+
+/* page links */
+.gdoc-page__footer a, .gdoc-page__footer a:visited { color: #aa00aa; }
+.gdoc-page__header a, .gdoc-page__header a:visited { color: #aa00aa; }
+
+/* site footer */
+.gdoc-footer { background: #202020; color: #ffffff; }
+.gdoc-footer__link{ color: #ff55ff; }
+.gdoc-footer__link:visited, .gdoc-footer__link:hover { color: #ff55ff; }
+
+/* custom shortcodes */
+/* button */
+.gdoc-button { color: #aa00aa; }
+.gdoc-button:hover { background-color: #aaa9ff; border-color: #aaa9ff; color: #ffffff; }
+
+/* hint */
+.gdoc-hint.info { background: #aaa9ff; border-color: #aa00aa; color: black; }
+.gdoc-hint.warning { background: #fef5dc; border-color: #f6c879; color: black; }
+.gdoc-hint.danger { background: #fae1db; border-color: #ff5555; color: black; }

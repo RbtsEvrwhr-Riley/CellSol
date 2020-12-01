@@ -1,0 +1,81 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:1-39:12
+	package
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:17:7-47
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+	android:versionName
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:19:7-32
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:16:11-69
+	android:versionCode
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:18:7-30
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+uses-sdk
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+	android:maxSdkVersion
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:15-42
+	android:targetSdkVersion
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+		INJECTED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml
+uses-permission#android.permission.BLUETOOTH_ADMIN
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:21:5-74
+	android:name
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:21:22-71
+uses-permission#android.permission.BLUETOOTH
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:22:5-68
+	android:name
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:22:22-65
+application
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:24:5-38:19
+	android:label
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:24:18-50
+	android:icon
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:25:18-51
+activity#com.example.android.CellSolBTT.BluetoothChat
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:26:9-33:20
+	android:label
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:27:19-51
+	android:configChanges
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:28:19-69
+	android:name
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:26:19-78
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:29:13-32:29
+action#android.intent.action.MAIN
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:30:17-69
+	android:name
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:30:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:31:17-77
+	android:name
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:31:27-74
+activity#com.example.android.CellSolBTT.DeviceListActivity
+ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:34:9-37:72
+	android:label
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:35:19-56
+	android:configChanges
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:37:19-69
+	android:theme
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:36:19-67
+	android:name
+		ADDED from C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:34:19-83

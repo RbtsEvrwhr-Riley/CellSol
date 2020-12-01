@@ -1,12 +1,17 @@
 /*********
-  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s) by spiritplumber. Intended to be used to allow for comms after a natural disaster.
+  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s). It is intended to be used for infrastructure-independent comms during or after a disaster.
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
-  Written by Riley August (HTML, CSS), and spiritplumber (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration
+  Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.
+  Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
+  Distributed independently https://www.f3.to/cellsol
+  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
+
+  This file is used for 32u4-based boards (BSFrance, Flora/Feather, etc).
 *********/
 
-#define VERSIONSTRING "0.24"
+#define VERSIONSTRING "0.25"
 
-//  Actual running speed is 1Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
+//  Actual running speed is 1Mhz.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)

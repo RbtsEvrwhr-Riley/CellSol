@@ -1,18 +1,24 @@
 /*********
-  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s) by spiritplumber. Intended to be used to allow for comms after a natural disaster.
+  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s). It is intended to be used for infrastructure-independent comms during or after a disaster.
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
-  Written by Riley August (HTML, CSS), and spiritplumber (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration
+  Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.
+  Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
+  Distributed independently https://www.f3.to/cellsol
+  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
+
+  This file is used for Atmel328-based boards (Arduino Uno, Mini, Nano, etc).
 *********/
 
-#define VERSIONSTRING "0.24"
 
-//  Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
-//#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will eat the most anyway.
+#define VERSIONSTRING "0.25"
+
+// Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
+//#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
 #define RECALL_STRAY_CHARS // trim to packet, or keep last packet that went away?
-#define CONDENSE_TAGS // if it's the same person messaging more than once, condense messages in memory
+#define CONDENSE_TAGS // if it's the same person messaging more than once, condense messages in memory. A bit slow.
 
 #define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
 #define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
