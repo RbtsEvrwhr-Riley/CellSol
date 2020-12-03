@@ -1,14 +1,15 @@
 /*********
   Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s). It is intended to be used for infrastructure-independent comms during or after a disaster.
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
-  Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.
+  Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (other). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
   Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
   Distributed independently https://www.f3.to/cellsol
-  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
+
+  This file is used for esp32-based boards (Lora32, TTGO T-Beam, etc.)
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.25"
+#define VERSIONSTRING "0.30"
 
 #include "config.h" // Please make config changes in config.h and pinout.h instead of here!
 
@@ -2545,7 +2546,8 @@ void irc_callback(IRCMessage ircMessage)
     bool isotherpylon = false;
 #ifdef ALLOW_PYLON_FORWARD
     if (validforward==false)
-      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
+//      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
+      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (ircMessage.nick.charAt(ircMessage.nick.length()) == '0') and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
 #endif
     validforward = validforward or isotherpylon;
     if (validforward)
