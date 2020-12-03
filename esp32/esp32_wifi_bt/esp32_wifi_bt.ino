@@ -2263,6 +2263,8 @@ void ServeWebPagesAsNecessary()
                 last_web_caller = last_web_caller + spare_id_nibble; // do SOMETHING with the third digit
               hextag_temp = fourhex(derpme, last_web_caller);
 #endif
+              if (hextag_temp.charAt(3) == ('0'))
+                hextag_temp.setCharAt(3, '1'); // only actual nodes are allowed to end in 0
               lasttagimade = hextag_temp;
 
 #ifdef GPS_SERIAL_1
@@ -2319,10 +2321,18 @@ void ServeWebPagesAsNecessary()
             {
               enablecomport = false;
             }
+
             if (option == 'T') // reset pseudoseconds timer
             {
               pseudoseconds = 0;
             }
+#ifdef IRC_SERVER
+            if (option == 'I') // reset failed irc connections / try to connect to irc again
+            {
+              failed_irc_connections = 0;
+              has_irc_been_initialized = false;
+            }
+#endif
             if (option == 'D') // force display on
             {
               display_on_ping = true;
@@ -2461,9 +2471,10 @@ void ServeWebPagesAsNecessary()
 String IRC_NICK;
 String IRC_CHAN;
 String hextag_irc;
+int prefixlength = -1;
 
 WiFiClient wificlient2;
-bool has_wifi_client_2_been_initialized = false;
+bool has_irc_been_initialized = false;
 IRCClient ircclient(IRC_SERVER, IRC_PORT, wificlient2);
 
 void DoIRCStuff()
@@ -2471,14 +2482,21 @@ void DoIRCStuff()
   if (failed_irc_connections > IRC_FAILED_TRE)
     return;
 
-  if (has_wifi_client_2_been_initialized == false)
+  if (has_irc_been_initialized == false)
   {
     hextag_irc = fourhex(derpme, spare_id_nibble + 0);
     IRC_NICK = IRC_NICK_ROOT + hextag_irc;
-    IRC_CHAN = String("#") + IRC_CHAN_ROOT;// + String("_") + hextag_irc;
+#ifdef IRC_CHAN_HEXTAG
+    IRC_CHAN = String("#") + IRC_CHAN_ROOT + hextag_irc;
+#else
+    IRC_CHAN = String("#") + IRC_CHAN_ROOT;
+#endif
+#ifdef FWD_PREFIX
+    prefixlength = String(FWD_PREFIX).length();
+#endif
     ircclient.setCallback(irc_callback);
     ircclient.setSentCallback(debugSentCallback);
-    has_wifi_client_2_been_initialized = true;
+    has_irc_been_initialized = true;
   }
   if (!ircclient.connected())
   {
@@ -2502,10 +2520,9 @@ void DoIRCStuff()
   ircclient.loop();
 
 }
-
 void irc_broadcast (String s)
 {
-  if (has_wifi_client_2_been_initialized)
+  if (has_irc_been_initialized)
     if (ircclient.connected())
       ircclient.sendMessage(IRC_CHAN, s);
 }
@@ -2516,31 +2533,30 @@ void irc_callback(IRCMessage ircMessage)
   // PRIVMSG ignoring CTCP messages
   if (ircMessage.command == "PRIVMSG" && ircMessage.text[0] != '\001')
   {
-    //String message("<" + ircMessage.nick + "> " + ircMessage.text);
-    //ircclient.sendMessage(ircMessage.nick, "Hi " + ircMessage.nick + "! I'm your IRC bot.");
-
-    //irc_broadcast( "Hi " + ircMessage.nick + "! I'm your IRC bot.");
-
+#ifdef FWD_PREFIX
     if (ircMessage.text.startsWith(FWD_PREFIX))
+    {
+      String gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(0, 6) + ">" + ircMessage.text.substring(prefixlength, MAXPKTSIZEM);
+      gotstring = gotstring.substring(0, MAXPKTSIZEP);
+#else
     {
       String gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(0, 6) + ">" + ircMessage.text;
       gotstring = gotstring.substring(0, MAXPKTSIZEP);
-      gotstring.replace(FWD_PREFIX, "");
+#endif
       Serial.println(gotstring);
 
 #ifdef BT_ENABLE_FOR_AP
-      ESP_BT.println(gotstring);
+      if (has_bluetooth_been_initialized)
+        ESP_BT.println(gotstring);
 #endif
 
-      //Send LoRa packet to receiver. Will need to make sure we don't send duplicates.
       LoraSendAndUpdate(gotstring);
       cyclestrings(gotstring);
     }
-    //Serial.println(message);
     return;
   }
   //Serial.print("irc_callback");
-  if (ircMessage.original.endsWith("Nickname is already in use."))
+  if (ircMessage.original.endsWith("already in use."))
   {
     PetTheWatchdog();
     IRC_NICK = IRC_NICK + "_";
@@ -2554,13 +2570,13 @@ void irc_callback(IRCMessage ircMessage)
 void debugSentCallback(String data)
 {
   PetTheWatchdog();
-  if (data.startsWith("SENT: PONG"))
+  if (data.startsWith("SENT: PONG")) // if we are getting pings, we are in good shape as far as the irc server is concerned, so join the channel and start doing work.
   {
     ircclient.sendRaw("JOIN " + IRC_CHAN); // if already joined, rejoin, not a problem
+    ircclient.sendRaw("TOPIC " + IRC_CHAN + " " + IRC_TOPIC); // if already set, not a problem
   }
   //Serial.print("debugSentCallback");
   //Serial.println(data);
-
 }
 
 #endif
