@@ -1864,7 +1864,11 @@ void HighPowerSetup(bool echo)
 #else
       string_rx[1] = "Client IP address:   " + Client_IP.toString();
 #endif
+#ifdef IRC_SERVER
+      string_rx[0] = "(I)Upstream router:  " + Client_Gateway.toString();
+#else
       string_rx[0] = "Upstream router:     " + Client_Gateway.toString();
+#endif
 #else
 #ifdef BT_ENABLE_FOR_AP
       //                                   012345678901234567890
@@ -2330,6 +2334,7 @@ void ServeWebPagesAsNecessary()
             if (option == 'I') // reset failed irc connections / try to connect to irc again
             {
               failed_irc_connections = 0;
+              pongs_joins = 0;
               has_irc_been_initialized = false;
             }
 #endif
@@ -2472,6 +2477,7 @@ String IRC_NICK;
 String IRC_CHAN;
 String hextag_irc;
 int prefixlength = -1;
+byte pongs_joins = 0;
 
 WiFiClient wificlient2;
 bool has_irc_been_initialized = false;
@@ -2506,6 +2512,7 @@ void DoIRCStuff()
     {
       Serial.println(":SYS:IRC_CONN_OK");
       failed_irc_connections = 0;
+      pongs_joins = 0;
     }
     else
     {
@@ -2570,10 +2577,11 @@ void irc_callback(IRCMessage ircMessage)
 void debugSentCallback(String data)
 {
   PetTheWatchdog();
-  if (data.startsWith("SENT: PONG")) // if we are getting pings, we are in good shape as far as the irc server is concerned, so join the channel and start doing work.
+  if (data.startsWith("SENT: PONG") and (++pongs_joins < 3)) // if we are getting pings, we are in good shape as far as the irc server is concerned, so join the channel and start doing work.
   {
     ircclient.sendRaw("JOIN " + IRC_CHAN); // if already joined, rejoin, not a problem
-    ircclient.sendRaw("TOPIC " + IRC_CHAN + " " + IRC_TOPIC); // if already set, not a problem
+    ircclient.sendRaw("TOPIC " + IRC_CHAN + " :" + IRC_TOPIC); // if already set, not a problem
+    
   }
   //Serial.print("debugSentCallback");
   //Serial.println(data);
