@@ -2540,10 +2540,27 @@ void irc_callback(IRCMessage ircMessage)
   // PRIVMSG ignoring CTCP messages
   if (ircMessage.command == "PRIVMSG" && ircMessage.text[0] != '\001')
   {
-#ifdef FWD_PREFIX
-    if (ircMessage.text.startsWith(FWD_PREFIX))
+#ifdef FWD_PREFIX // forward if there's a valid prefix, or if there's another pylon that is using correct syntax.
+    bool validforward = ircMessage.text.startsWith(FWD_PREFIX);
+    bool isotherpylon = false;
+#ifdef ALLOW_PYLON_FORWARD
+    if (validforward==false)
+      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
+    Serial.println(isotherpylon);
+#endif
+    validforward = validforward or isotherpylon;
+    if (validforward)
     {
-      String gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(0, 6) + ">" + ircMessage.text.substring(prefixlength, MAXPKTSIZEM);
+      String gotstring;
+      if (isotherpylon)
+      {
+//        Serial.println("ADDITIONAL PYLONS");
+        gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(ircMessage.nick.length() - 4) + ">" + ircMessage.text.substring(0, MAXPKTSIZEM);
+      }
+      else
+      {
+        gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(0, 6) + ">" + ircMessage.text.substring(prefixlength, MAXPKTSIZEM);
+      }
       gotstring = gotstring.substring(0, MAXPKTSIZEP);
 #else
     {
@@ -2581,7 +2598,7 @@ void debugSentCallback(String data)
   {
     ircclient.sendRaw("JOIN " + IRC_CHAN); // if already joined, rejoin, not a problem
     ircclient.sendRaw("TOPIC " + IRC_CHAN + " :" + IRC_TOPIC); // if already set, not a problem
-    
+
   }
   //Serial.print("debugSentCallback");
   //Serial.println(data);

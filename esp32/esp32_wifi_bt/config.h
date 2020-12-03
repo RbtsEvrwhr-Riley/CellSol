@@ -75,9 +75,9 @@
 #define IRC_CHAN_ROOT "CellSol" // will add hextag if the line below is uncommented
 //#define IRC_CHAN_HEXTAG
 #define FWD_PREFIX "~~" // if there's a prefix, forward it to the radio stuff, otherwise don't.
+#define ALLOW_PYLON_FORWARD // if this is defined, other cellsol pylons are exempt from FWD_PREFIX, and will format formward message in a more compact way.
 #define IRC_FAILED_TRE 9 // if more than this many fails, stop trying
 #define IRC_TOPIC "CellSol relay channel! Start your message with " FWD_PREFIX " to forward to radio. Example: " FWD_PREFIX "Please report!" // Edit this to fit, specifically if you remove FWD_PREFIX.
-
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across power cycles. if not, use battery level to get a bit of noise in the ID (mostly to avoid creepy people hashing it to figure out where you are).
 #define DO_NOT_LOG_SYSTEM_PACKETS // Don't display system packets to avoid spamming out human messages (example: UTC fix)
 
