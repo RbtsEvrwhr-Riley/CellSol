@@ -2546,7 +2546,6 @@ void irc_callback(IRCMessage ircMessage)
 #ifdef ALLOW_PYLON_FORWARD
     if (validforward==false)
       isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
-    Serial.println(isotherpylon);
 #endif
     validforward = validforward or isotherpylon;
     if (validforward)
