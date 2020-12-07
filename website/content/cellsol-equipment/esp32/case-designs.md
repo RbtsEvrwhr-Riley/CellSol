@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 We currently have two case designs for the ESP32 WiFi Pylon developed.

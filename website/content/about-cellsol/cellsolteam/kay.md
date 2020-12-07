@@ -1,8 +1,8 @@
 ---
 title: Kay Borri
 weight: -10
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 Kay is the chief engineer of the CellSol project, having designed all of the system's specifications, hardware, most of the firmware, and is the driving force behind

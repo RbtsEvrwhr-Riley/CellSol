@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 Compression is a useful tool for stretching low bandwidth connections a bit further, but comes with significant computing overhead. Using dictionary compression attempts to remove the overhead of traditional

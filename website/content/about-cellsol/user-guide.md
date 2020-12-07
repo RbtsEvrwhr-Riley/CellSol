@@ -29,7 +29,7 @@ Please note that CellSol does not store your location or identity data, but also
 
 The tag in front of your message is a pseudonymous identifier used to tell people apart. It is four hex digits. We chose to remove nicknames, to simplify the data. You can always add one to your message.
 
-![CellSol Web Interface with Help Highlights](../help_graphic.png)
+![CellSol Web Interface with Help Highlights](../photos/help_graphic.png)
 
 ## About Bluetooth and Repeater Pylons
 
@@ -42,7 +42,7 @@ If you are on a Bluetooth or serial CellSol pylon, typing ,,, on a line by itsel
 
 By default, your pylon will connect to IRC on irc.rizon.net port 6667, and create or join the channel CellSol.
 
-You can also connect to this (or whatever channel you have configured, see the [assembly instructions]({{< ref /cellsol-equipment/esp32/assembly-instructions >}})
+You can also connect to this (or whatever channel you have configured, see the [assembly instructions]({{< ref "/cellsol-equipment/esp32/assembly-instructions" >}})
 by using any IRC client.
 
 Once you have connected to IRC and joined the channel, you should see a number of users whose names begin with CellSol and end in 4 hex digits. These
@@ -52,5 +52,7 @@ with the 4 hex digit code of the user that sent the message, followed by the mes
 Messages from non-pylon users on the IRC channel will not automatically be relayed by the connected CellSol nodes, in order to save bandwidth. For a message
 to be forwarded onto the network by the connected nodes, it must start with that node's chosen prefix (default is ~~). It is most useful if all nodes
 connecting to the same IRC channel be set up to have the same prefix, and that the topic of the IRC channel is set to report that prefix correctly.
+
+![Photo of CellSol and IRC relaying to each other using Rizon network](../photos/cellsolplusirc.png)
 
 We hope you enjoy the new IRC feature!

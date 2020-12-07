@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 Much like the ESP32, we will put our firmware here when the GitHub repo is ready for public access.
