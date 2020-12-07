@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-12-07
 ---
 
 # CellSol WiFi Pylon User Guide
@@ -37,3 +37,20 @@ Any phone with a Bluetooth chat app (available from our [github](https://github.
 need to use a Bluetooth terminal app, such as "BluTerm". We do not work on or endorse any third party apps.
 
 If you are on a Bluetooth or serial CellSol pylon, typing ,,, on a line by itself will dump the pylon's status and last received strings (in case your phone loses them). Our app does this automatically on reconnect.
+
+## Chatting with IRC (Internet Relay Chat)
+
+By default, your pylon will connect to IRC on irc.rizon.net port 6667, and create or join the channel CellSol.
+
+You can also connect to this (or whatever channel you have configured, see the [assembly instructions]({{< ref /cellsol-equipment/esp32/assembly-instructions >}})
+by using any IRC client.
+
+Once you have connected to IRC and joined the channel, you should see a number of users whose names begin with CellSol and end in 4 hex digits. These
+are the IRC users for the CellSol nodes currently connected to the channel. These users will relay messages from their node to the IRC channel, starting
+with the 4 hex digit code of the user that sent the message, followed by the message itself, just like on the CellSol web interface.
+
+Messages from non-pylon users on the IRC channel will not automatically be relayed by the connected CellSol nodes, in order to save bandwidth. For a message
+to be forwarded onto the network by the connected nodes, it must start with that node's chosen prefix (default is ~~). It is most useful if all nodes
+connecting to the same IRC channel be set up to have the same prefix, and that the topic of the IRC channel is set to report that prefix correctly.
+
+We hope you enjoy the new IRC feature!
