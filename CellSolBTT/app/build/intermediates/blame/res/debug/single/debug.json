@@ -1,0 +1,30 @@
+[
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\layout_device_name.xml.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\layout\\device_name.xml"
+    },
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\layout_message.xml.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\layout\\message.xml"
+    },
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\drawable_app_icon.png.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\drawable\\app_icon.png"
+    },
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\layout_device_list.xml.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\layout\\device_list.xml"
+    },
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\layout_custom_title.xml.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\layout\\custom_title.xml"
+    },
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\layout_main.xml.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\layout\\main.xml"
+    },
+    {
+        "merged": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\build\\intermediates\\res\\merged\\debug\\menu_option_menu.xml.flat",
+        "source": "C:\\work\\robotseverywhere\\cellsol\\CellSolBTT\\app\\src\\main\\res\\menu\\option_menu.xml"
+    }
+]

@@ -1,12 +1,18 @@
 /*********
-  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s) by spiritplumber. Intended to be used to allow for comms after a natural disaster.
+  Cellular-Solar (CellSol) is a simple interconnect between lora, wifi and com port(s). It is intended to be used for infrastructure-independent comms during or after a disaster.
   (c) 2020 Robots Everywhere, LLC until we are ready to release it under copyleft
-  Written by Riley August (HTML, CSS), and spiritplumber (skeleton). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration
+  Written by M K Borri. Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
+  Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
+  Distributed independently https://www.f3.to/cellsol
+
+  This file is used for 32u4-based boards (BSFrance, Flora/Feather, etc).
 *********/
 
-#define VERSIONSTRING "0.24"
 
-//  Actual running speed is 1Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
+
+#define VERSIONSTRING "0.30"
+
+//  Actual running speed is 1Mhz.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
@@ -14,7 +20,7 @@
 #define CONDENSE_TAGS // if it's the same person messaging more than once, condense messages in memory
 
 #define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
-#define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
+#define RSSI_TRE_LO -120 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
 
 #define DO_NOT_LOG_SYSTEM_PACKETS
@@ -157,7 +163,11 @@ void setup() {
   hextag2 = fourhex(UniqueID8[6] * 256 + (UniqueID8[7] | 1)) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
 #endif
 
-
+  if (hextag.charAt(3)=='0') // this unit is not set up to do service tasks, so don't end in 0
+  {
+      hextag.setCharAt(3, '1'); 
+      hextag2.setCharAt(3, '2'); 
+  }
 
   Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>1"));
 

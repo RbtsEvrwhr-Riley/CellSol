@@ -1,0 +1,76 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<!--
+3 Copyright (C) 2009 The Android Open Source Project
+4
+5     Licensed under the Apache License, Version 2.0 (the "License");
+6     you may not use this file except in compliance with the License.
+7     You may obtain a copy of the License at
+8
+9          http://www.apache.org/licenses/LICENSE-2.0
+10
+11     Unless required by applicable law or agreed to in writing, software
+12     distributed under the License is distributed on an "AS IS" BASIS,
+13     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+14     See the License for the specific language governing permissions and
+15     limitations under the License.
+16-->
+17<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+18    package="com.example.android.BluetoothChat"
+19    android:versionCode="1"
+20    android:versionName="1.0" >
+21
+22    <uses-sdk
+22-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+23        android:maxSdkVersion="999"
+23-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:15-42
+24        android:minSdkVersion="6"
+24-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+25        android:targetSdkVersion="11" />
+25-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:20:5-44
+26
+27    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+27-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:21:5-74
+27-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:21:22-71
+28    <uses-permission android:name="android.permission.BLUETOOTH" />
+28-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:22:5-68
+28-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:22:22-65
+29
+30    <application
+30-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:24:5-38:19
+31        android:debuggable="true"
+32        android:icon="@drawable/app_icon"
+32-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:25:18-51
+33        android:label="@string/app_name" >
+33-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:24:18-50
+34        <activity
+34-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:26:9-33:20
+35            android:name="com.example.android.CellSolBTT.BluetoothChat"
+35-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:26:19-78
+36            android:configChanges="orientation|keyboardHidden"
+36-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:28:19-69
+37            android:label="@string/app_name" >
+37-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:27:19-51
+38            <intent-filter>
+38-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:29:13-32:29
+39                <action android:name="android.intent.action.MAIN" />
+39-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:30:17-69
+39-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:30:25-66
+40
+41                <category android:name="android.intent.category.LAUNCHER" />
+41-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:31:17-77
+41-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:31:27-74
+42            </intent-filter>
+43        </activity>
+44        <activity
+44-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:34:9-37:72
+45            android:name="com.example.android.CellSolBTT.DeviceListActivity"
+45-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:34:19-83
+46            android:configChanges="orientation|keyboardHidden"
+46-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:37:19-69
+47            android:label="@string/select_device"
+47-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:35:19-56
+48            android:theme="@android:style/Theme.Holo.Dialog" />
+48-->C:\work\robotseverywhere\cellsol\CellSolBTT\app\src\main\AndroidManifest.xml:36:19-67
+49    </application>
+50
+51</manifest>
