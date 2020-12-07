@@ -1,7 +1,7 @@
 ---
 title: Bill of Materials
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 Everything you need for the LoRa32-based WiFi Pylon

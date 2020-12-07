@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 Here is a basic schematic for how to wire up the ESP32 Wifi Pylon using both a USB Power Bank and without.

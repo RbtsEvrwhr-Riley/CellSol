@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 # CellSol ESP32 WiFi Pylon Setup
@@ -102,6 +102,31 @@ Most of these options are turned on and off by commenting (making the line begin
 |SSIDROOT|The root SSID for the access point served by the pylon, if in AP or Hybrid mode|Network name in double quotes, like "RobotsEverywhere_24"|
 
 There are more options, but they are not required for setup, and are described in the comments of the "config.h" file. If you have questions, reach out to us on [GitHub]() or [by email](mailto:cellsol@robots-everywhere.com)
+
+## Step 3.5: Configuring IRC Connectivity
+
+As of Beta 0.3, the CellSol firmware will connect to an IRC server by default and begin relaying messages to the wider web, so that other CellSol nodes
+can pick them up. If you don't want to use this functionality, or want to create a smaller subnet, this section will also explain how to do that.
+
+In the "config.h" file, you will find a comment block for "irc relay stuff" - this section has configuration options for connecting to IRC.
+
+If you wish to turn off IRC functionality entirely, comment out the line #define IRC_SERVER by putting // in front of it.
+
+|Option Name|Purpose|Default|
+|IRC_SERVER|URL or IP of IRC server to connect to|irc.rizon.net|
+|IRC_PORT|Port to use to connect to the IRC server|6667 (default for IRC)|
+|IRC_NICK_ROOT|Prefix for the nickname this relay will use on IRC|CellSol|
+|IRC_CHAN_ROOT|Prefix for the channel name this relay will use (or create) on IRC|CellSol|
+|IRC_CHAN_HEXTAG|If defined, add hextag to the IRC channel name as well as the nickname|Off (commented out)|
+|FWD_PREFIX|Only forward messages from IRC that start with this prefix to this relay|~~|
+|ALLOW_PYLON_FORWARD|If this is defined, messages from other pylons will always be forwarded even without the prefix|On|
+|IRC_FAILED_TRE|Number of connection attempts to IRC before failing and disabling IRC until restart|9|
+|IRC_TOPIC|Message to use as the channel topic when creating a new IRC channel|(long, see code)|
+|USE_BATTERY_NOISE_FOR_ID|If defined, use battery noise to determine the relay's hex tag; if undefined, hex tag will persist across restarts|On|
+|DO_NOT_LOG_SYSTEM_PACKETS|If defined, don't display system packets to avoid spamming out human messages (example: UTC fix)|On|
+
+For more on using IRC, refer to the [User Guide]({{< ref "/about-cellsol/user-guide" >}}User Guide).
+
 
 ## Step 4: Assembling the Hardware
 
