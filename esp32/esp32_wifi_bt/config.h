@@ -11,7 +11,6 @@
 #define BAND 9151E5
 
 // compile time setup stuff. if you aren't sure what these do, leave them alone.
-<<<<<<< HEAD
 
 
 // the default is that these four are commented out. This gives you the standard wifi access point setup.
@@ -32,24 +31,6 @@
 
 #define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
 #define RSSI_TRE_LO -120 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
-=======
-// the default is that these four are commented out. This gives you the standard wifi access point setup.
-// The first mode saves power but makes the AP invisible 45 seconds out of every minute.
-// The last three modes use more power than standard mode!
-// switching between wifi and bluetooth is done at startup with the normal mode, not here; push the button immediately after a reset.
-// if more than one is uncommented, lowest line wins.
-#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full.
-//#define BT_ENABLE_FOR_AP // Uncomment this to also enable Bluetooth when the pylon is running as an access point. THIS WILL EAT UP A LOT OF POWER! Only enable if you're using a big battery and a big panel, or have line power.
-//#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
-#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
-
-//#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
-
-//#define NODISPLAY // display is absent or should be kept turned off at all times. Saves some power, naturally.
-
-#define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
-#define RSSI_TRE_LO -130 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
->>>>>>> main
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
 
 /**
@@ -58,13 +39,8 @@
 #define TUTORIALSTRINGS // On first activation after a poweroff/reset, should we display a mini help on the screen?
 
 #define PROVIDE_APK // make bluetooth terminal apk available?
-<<<<<<< HEAD
 #define PROVIDE_CAT_PICTURE // load cat picture as an example of embedded file?
 #define PROVIDE_SOURCE_CODE // embed source zip in source for the glory of recursion?
-=======
-#define THE_INTERNET_IS_MADE_OF_CATS // load cat picture as an example of embedded file?
-#define YOU_ARE_EATING_RECURSION // embed source zip in source for the glory of recursion?
->>>>>>> main
 #define SERVE_FAQ_PAGE  // if undefined, do not add help page
 #define REFRESH_CHAT_EVERY 3 // seconds
 
@@ -91,7 +67,6 @@
 
 #define DHCP // DHCP on if defined; will ignore IP address setting fields above in that case.
 
-<<<<<<< HEAD
 // irc relay stuff (only used if wifi is client or hybrid)
 
 #define IRC_SERVER   "irc.rizon.net" // comment this line out to avoid using irc subsystem
@@ -103,8 +78,6 @@
 #define ALLOW_PYLON_FORWARD // if this is defined, other cellsol pylons are exempt from FWD_PREFIX, and will format formward message in a more compact way.
 #define IRC_FAILED_TRE 9 // if more than this many fails, stop trying
 #define IRC_TOPIC "CellSol relay channel! Start your message with " FWD_PREFIX " to forward to radio. Example: " FWD_PREFIX "Please report!" // Edit this to fit, specifically if you remove FWD_PREFIX.
-=======
->>>>>>> main
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across power cycles. if not, use battery level to get a bit of noise in the ID (mostly to avoid creepy people hashing it to figure out where you are).
 #define DO_NOT_LOG_SYSTEM_PACKETS // Don't display system packets to avoid spamming out human messages (example: UTC fix)
 
@@ -115,7 +88,6 @@
 
 
 /**
-<<<<<<< HEAD
  * BATTERY & SLEEP CONFIGURATION
  */
 
@@ -137,8 +109,6 @@
 
 
 /**
-=======
->>>>>>> main
  * DON'T TOUCH THESE, THEY ARE AUTOMATED
  */
 // consequences of the setup above
@@ -162,47 +132,18 @@
 #define SLEEP_TIME 20  // gateway is line powered, so it stays on
 #define BT_ENABLE_FOR_AP // one implies the other
 #define PYLONTYPE "(STA+BT)" // identifier for how we are running
-<<<<<<< HEAD
 #ifdef IRC_SERVER
 #define PYLONTYPE "(STA+BT+I)"
 #endif
-=======
->>>>>>> main
 #endif
 #ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
 #define RECONNECT_EVERY 2000000000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
 #define PYLONTYPE "(AP+STA+BT)"// identifier for how we are running
-<<<<<<< HEAD
 #ifdef IRC_SERVER
 #define PYLONTYPE "(AP+STA+BT+I)"
 #endif
 #endif
 
-=======
-#endif
-
-
-/**
- * BATTERY & SLEEP CONFIGURATION
- */
-
-// more timing stuff
-#define SLEEP_TIME 60 // this is in seconds - how long to sleep before waking up and checking power level again? NOT ACCURATE.
-#define DISPLAY_INTERVAL 60 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
-
-// battery stuff
-#define MODEFLIP_BATTERY_FULL 1304 // if modeflip, battery level above this will leave the module running on full. Useful if we are getting good sunlight and the battery is full anyway.
-#define MODEFLIP_BUTTON // user button gets you back into high power mode
-
-#define LPLOOP_BLINK 10000 // eversoly this many cycles (not milliseconds!), blink the led
-#define ADC_INTERVAL 5000 // In milliseconds, how often to read the battery level? NOT ACCURATE.
-#define FULL_BATT 1450 // unused but a good reference. more than this = there probably is no battery
-#define BATT_HIGH_ENOUGH_FOR_FULL_POWER 1200 // above this, allow wifi/bt
-#define BATT_TOO_LOW_FOR_ANYTHING 1065 // below this, don't try to turn on, go back to sleep and wait for better times
-#define BATT_HYSTERESIS_POWER 15 // hysteresis between power state changes
-#define POWER_STATE_CHANGE_ANNOUNCE false //  should the module announce it when it's coming online or going offline? (probably only for debugging)
-
->>>>>>> main
 /**
  * FURTHER AUTOMATED STUFF
  */
@@ -210,11 +151,7 @@
 #define LPLOOP_BLINK 5000 // every this many cycles (not milliseconds!), blink the led
 #define ADC_INTERVAL 10000 // In milliseconds, how often to read the battery level? NOT ACCURATE.
 #define FULL_BATT 1450 // unused but a good reference. more than this = there probably is no battery
-<<<<<<< HEAD
 #define BATT_HIGH_ENOUGH_FOR_FULL_POWER 2000 // above this, allow wifi/bt
-=======
-#define BATT_HIGH_ENOUGH_FOR_FULL_POWER 1500 // above this, allow wifi/bt
->>>>>>> main
 #define BATT_TOO_LOW_FOR_ANYTHING 1065 // below this, don't try to turn on, go back to sleep and wait for better times
 #define BATT_HYSTERESIS_POWER 15 // hysteresis between power state changes
 #define POWER_STATE_CHANGE_ANNOUNCE false //  should the module announce it when it's coming online or going offline? (probably only for debugging)
@@ -222,9 +159,6 @@
 #define PYLONTYPE "L0WPWR"// identifier for how we are running
 #undef TUTORIALSTRINGS
 #endif
-<<<<<<< HEAD
 #ifndef WIFI_IS_CLIENT
 #undef IRC_SERVER // we aren't connecting to the wider internet
 #endif
-=======
->>>>>>> main
