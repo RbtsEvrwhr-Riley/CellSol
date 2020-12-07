@@ -4,6 +4,7 @@
   Written by Riley August (HTML/CSS/DHCP/Optimizations), and M K Borri (other). Thanks to Rui Santos for the tutorials. Thanks to Jerry Jenkins for the inspiration. Thanks to Lisa Rein for initiating the project.  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
   Originally produced as part of the Aaron Swartz Day project https://www.aaronswartzday.org
   Distributed independently https://www.f3.to/cellsol
+<<<<<<< HEAD
 
   This file is used for esp32-based boards (Lora32, TTGO T-Beam, etc.)
 *********/
@@ -12,6 +13,15 @@
 #define VERSIONSTRING "0.30"
 
 #include "config.h" // Please make config changes in config.h and pinout.h instead of here!
+=======
+  Thanks to Robots Everywhere for infrastructure support https://www.robots-everywhere.com
+*********/
+
+// Firmware version.
+#define VERSIONSTRING "0.25"
+
+#include "config.h"
+>>>>>>> main
 
 #ifdef PROVIDE_APK
 #include "btt/btt.h"
@@ -96,7 +106,11 @@ boolean enablecomport = false; // set to false for a solderless fix for UART buf
 // Set web server port number to 80
 WiFiServer server(80);
 DNSServer dnsServer;
+<<<<<<< HEAD
 WiFiClient wificlient1;
+=======
+WiFiClient client;
+>>>>>>> main
 
 // WEB SERVICE CONFIGURATION - What files do we want to serve?
 #ifdef PROVIDE_APK
@@ -159,7 +173,11 @@ bool display_on_ping = false;
 
 
 /**********************************************
+<<<<<<< HEAD
    Watchdog block; creates and manages a task watchdog for esp32 to prevent unwanted power off
+=======
+ * Watchdog block; creates and manages a task watchdog for esp32 to prevent unwanted power off
+>>>>>>> main
  **********************************************/
 unsigned long pseudoseconds = 0;
 unsigned long psm = 0;
@@ -206,12 +224,21 @@ void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion i
 }
 
 /**
+<<<<<<< HEAD
    END WATCHDOG BLOCK
 */
 
 
 /*******************************************************************************
    TCP/IP Block
+=======
+ * END WATCHDOG BLOCK
+ */
+
+
+/*******************************************************************************
+ * TCP/IP Block
+>>>>>>> main
  *******************************************************************************/
 IPAddress AP_IP(192, 168, 255, 1); // ip address of AP
 IPAddress Client_IP(CLIENT_IP_ADDR);// this is the IP address we will be using.
@@ -270,7 +297,11 @@ String status_string()
   return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") );
 }
 /*
+<<<<<<< HEAD
    DUMMY METHODS FOR HTML ENCODE/DECODE - TODO: remove this comment as these methods got replaced?
+=======
+ * DUMMY METHODS FOR HTML ENCODE/DECODE - TODO: remove this comment as these methods got replaced?
+>>>>>>> main
   String decodeHtml(String text)
   {
   text.replace("&amp;", "&");
@@ -291,10 +322,17 @@ String status_string()
   }
 */
 
+<<<<<<< HEAD
 
 /****************************************************************
    LoRa32 Radio block - LoRa, WiFi, and BT
 */
+=======
+ 
+/****************************************************************
+ * LoRa32 Radio block - LoRa, WiFi, and BT
+ */
+>>>>>>> main
 
 
 String LoRaData;
@@ -969,8 +1007,8 @@ void SendBinaryFile(String contenttype, const unsigned char file[], const long i
     if (i % 512 == 384)
       SendSerialIfReady();
   }
-  wificlient1.flush();
-  wificlient1.println();
+  client.flush();
+  client.println();
 }
 
 
@@ -1099,9 +1137,6 @@ void LowPowerSetup()
   {
     LoraSendAndUpdate(tempstring);
     cyclestrings(tempstring);
-#ifdef IRC_SERVER
-    irc_broadcast( tempstring);
-#endif
   }
 
   ReadBatteryADC(true);
@@ -1125,6 +1160,256 @@ void DoBasicSteps()
     SendSerialIfReady();
 }
 
+void DoRepeaterSteps()
+{
+
+  if (has_serial_been_initialized == false)
+    Start_UART();
+  if (has_lora_been_initialized == false)
+    Start_LORA(false);
+  if (has_display_been_initialized)
+    ResetDisplayViaPin();
+
+
+  //  Serial.println(""+String(has_serial_been_initialized)+String(has_lora_been_initialized)+String(has_display_been_initialized));
+  DoBasicSteps();
+
+  if (currbatterylevel < (BATT_TOO_LOW_FOR_ANYTHING))
+    SleepLowBatt();
+
+#ifdef USER_BUTTON_PIN
+  if (digitalRead(USER_BUTTON_PIN) == false)
+    if ((lploops + lploops) < LPLOOP_BLINK) // blink for me if we push the button, to denote aliveness
+      if (digitalRead(USER_BUTTON_PIN) == false)
+      {
+        lploops = LPLOOP_BLINK - 10;
+      }
+#endif
+
+  BlinkMeWhen();
+
+}
+/**
+ * END LORA32 RADIO BLOCK
+ */
+
+
+
+/********************************************
+ * DISPLAY BLOCK: USED FOR HANDLING OLED
+ */
+void ResetDisplayViaPin()
+{
+#ifndef NODISPLAY
+  //  Wire.end();
+  pinMode(OLED_RST, OUTPUT);
+  digitalWrite(OLED_RST, LOW);
+  for (byte i = 0; i < 20; i++)
+    DoBasicSteps();
+  digitalWrite(OLED_RST, HIGH);
+  has_display_been_initialized = false;
+  Wire.begin(OLED_SDA, OLED_SCL);
+#endif
+}
+void led(boolean onoff)
+{
+#ifdef USER_LED_PIN
+  digitalWrite(USER_LED_PIN, onoff);
+#endif
+}
+
+void displayonoff(bool onoff)
+{
+#ifdef NODISPLAY
+  displayenabled = false;
+#else
+  if (onoff)
+  {
+    if (has_display_been_initialized == false)
+      InitDisplayTryAll();
+    display.ssd1306_command(SSD1306_DISPLAYON);
+    displayenabled = true;
+  }
+  else
+  {
+    if (has_display_been_initialized)
+    {
+      display.clearDisplay();
+      display.display();
+      display.ssd1306_command(SSD1306_DISPLAYOFF);
+    }
+    displayenabled = false;
+  }
+#endif
+}
+
+#ifdef WIFI_IS_HYBRID
+int displayswitch = 0; // display switch if we are in hybrid mode
+#endif
+void DoDisplayIfItExists()
+{
+#ifndef NODISPLAY
+#ifdef user_button_display
+  if (digitalRead(USER_BUTTON_PIN) == false or display_on_ping == true) // actually button pushed
+#else
+  if (display_on_ping == true)
+#endif
+  {
+    if (has_display_been_initialized == false) // try without hard reset first
+      InitDisplayTryAll();
+    dodisplay = true;
+    displayonoff(true);
+    disptimeout = millis() + DISPLAY_INTERVAL;
+    display_on_ping = false;
+  }
+  if (millis() > (disptimeout))
+  {
+    displayonoff(false);
+    dodisplaybuf = false;
+    dodisplay = false;
+  }
+
+  // either update the entire display, or just the buffer indicator (faster)
+  if (dodisplay) // update entire display
+  {
+
+    if (displayexists and displayenabled)
+    {
+
+      display.clearDisplay();
+      display.setCursor(81, 0);
+      display.print(currbatterylevel);
+      display.setCursor(110, 0);
+      display.print(charcounter);
+      display.setCursor(0, 0);
+      if (wifimode)
+      {
+#ifdef WIFI_IS_CLIENT // getting noise here for some reason
+#ifdef WIFI_IS_HYBRID
+        display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
+#else
+        display.println(ipstring_c);
+#endif
+#else
+        display.println(ipstring_a);
+#endif
+      }
+      else
+      {
+        display.println(ipstring_b);
+      }
+      // print the last 3 lines we got, or at least the first 42 characters of each since it's what will fit.
+      for (int i=2;i>-1;i--)
+      {
+      display.setCursor(0, 45-(i*18));
+      tempstring=string_rx[i];
+      tempstring.replace("&lt;","<");
+      display.println(tempstring.substring(0, 42));
+      }
+      display.display();
+    }
+    dodisplaybuf = false;
+    dodisplay = false;
+  }
+#endif
+}
+
+void UpdateCharCounterIfDisplayExists()
+{
+#ifndef NODISPLAY
+  if (has_display_been_initialized == false)
+    InitDisplayTryAll();
+
+  if ((dodisplay == false) and displayexists and displayenabled and dodisplaybuf)
+  {
+    display.fillRect(110, 0, 45, 11, BLACK); // upperleftx, upperlefty, width, height, color
+    display.setCursor(110, 0);
+    display.print(charcounter);
+    display.display();
+    dodisplaybuf = false;
+  }
+<<<<<<< HEAD
+  wificlient1.flush();
+  wificlient1.println();
+}
+=======
+#endif
+}
+
+
+
+>>>>>>> main
+
+
+
+/**
+ * END DISPLAY BLOCK
+ */
+
+
+/********************************************
+ * POWER MANAGEMENT BLOCK: USED FOR HANDLING BATTERY AND SLEEP
+ */
+#ifdef BATT_ADC
+void ReadBatteryADC(bool force)
+{
+  if (force || (millis() > battimeout))
+  {
+    Watchdog(true);
+    if (currbatterylevel > 0)
+      lastbatterylevel = currbatterylevel;
+    currbatterylevel = (analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC)) / 4;
+    if (lastbatterylevel == 0)
+      lastbatterylevel = currbatterylevel;
+    batt_delta = currbatterylevel - lastbatterylevel;
+    if (batt_delta > 100 or batt_delta < -100)
+      batt_delta = 0; // unrealistic, discard.
+    battimeout = millis() + ADC_INTERVAL; // should be less than that since these instructions take time, but meh
+  }
+}
+#else
+void  ReadBatteryADC(bool force)
+{
+  lastbatterylevel = FULL_BATT;
+  currbatterylevel = FULL_BATT;
+  batt_delta = 0;
+}
+#endif
+
+void SleepLowBatt()
+{
+  tempstring = ":SYS:SLEEP " + String(derpme) + ":" + status_string();
+  Watchdog(false);
+  led(true);
+  if (low_batt_announce)
+  {
+    LoraSendAndUpdate(tempstring);
+    cyclestrings(tempstring);
+#ifdef IRC_SERVER
+    irc_broadcast( tempstring);
+#endif
+  }
+  lastbatterylevel = currbatterylevel;
+  lowpowerstart = true;
+  displayonoff(false);
+  led(false);
+
+  displayonoff(false);
+
+  //display.end();
+  // turn off external devices
+  Serial.println(tempstring);
+  Serial.flush();
+  Stop_LORA();
+  Stop_BT();
+  WiFi.mode(WIFI_OFF);
+  server.stop();
+  dnsServer.stop();
+  TryStoreSentences();
+  esp_deep_sleep_start();
+}
+
+<<<<<<< HEAD
 void DoRepeaterSteps()
 {
 
@@ -1424,6 +1709,14 @@ void SleepLowBatt()
   TryStoreSentences();
   esp_deep_sleep_start();
 }
+=======
+/**
+ * END POWER MANAGEMENT BLOCK
+ */
+/**
+ * OPERATIONS BLOCK - this is where logic for pylon goes
+ */
+>>>>>>> main
 
 /**
    END POWER MANAGEMENT BLOCK
@@ -1555,8 +1848,13 @@ void DoWifiSteps()
 }
 
 /**
+<<<<<<< HEAD
    SETUP METHOD - Called first by the ESP32.
 */
+=======
+ * SETUP METHOD - Called first by the ESP32.
+ */
+>>>>>>> main
 void setup() {
   setCpuFrequencyMhz(CLKFREQ_LOW);
 
@@ -1902,18 +2200,31 @@ void HighPowerSetup(bool echo)
 }
 
 /****************************************************************
+<<<<<<< HEAD
    WEBSITE SERVING CODE.
    This includes a full HTTP server that runs as a serial UART
    It is coded and coupled explicitly for performance
    K. Borri
+=======
+ * WEBSITE SERVING CODE.
+ * This includes a full HTTP server that runs as a serial UART
+ * It is coded and coupled explicitly for performance
+ * K. Borri
+>>>>>>> main
  ****************************************************************/
 
 void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh every x seconds
 {
   PetTheWatchdog();
+<<<<<<< HEAD
   wificlient1.print("<!DOCTYPE html><html><head>"
                     "<title>CellSol WiFi Pylon " VERSIONSTRING "</title>"
                     "<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">");
+=======
+  client.print("<!DOCTYPE html><html><head>"
+               "<title>CellSol WiFi Pylon " VERSIONSTRING "</title>"
+               "<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">");
+>>>>>>> main
   if (redir == 0)
     wificlient1.print("<meta http-equiv=\"refresh\" content=\"0;URL='/'\" />");
   else if (redir > -1 && redir < 99)
@@ -1923,11 +2234,19 @@ void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh 
                    "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: " + TEXT_ALIGN_STRING + ";}.button { background-color: #4CAF50; border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 20px; margin: 0px; cursor: pointer;}.button2 {background-color: #555555;}</style>"
                    "</head>");
   */
+<<<<<<< HEAD
   wificlient1.print("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
 
                     "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: ");
   wificlient1.print(TEXT_ALIGN_STRING);
   wificlient1.println(";}.button {border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 1.2em; margin: 0px; cursor: pointer;}.button2 {}</style></head>");
+=======
+  client.print("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
+   
+               "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: ");
+  client.print(TEXT_ALIGN_STRING);
+  client.println(";}.button {border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 1.2em; margin: 0px; cursor: pointer;}.button2 {}</style></head>");
+>>>>>>> main
 }
 bool client_on_lan = true;
 String hoststring = "/";
@@ -1964,9 +2283,15 @@ void send_form_iframe()
 {
   send_ok_response();
   send_html_header();
+<<<<<<< HEAD
   wificlient1.println("<body>"
                       "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
                       "</body></html>");
+=======
+  client.println("<body>"
+                 "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
+                 "</body></html>");
+>>>>>>> main
 }
 #endif
 void send_ok_response()
@@ -1983,6 +2308,7 @@ void send_faq_page()
 {
   send_ok_response();
   send_html_header();
+<<<<<<< HEAD
   wificlient1.println( "<style> html{text-align: start;}</style>"
                        "<body><h1>CellSol WiFi Pylon " VERSIONSTRING " Help</h1>"
                        "<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
@@ -2001,6 +2327,26 @@ void send_faq_page()
                        "<p>The best use for a standalone repeater is somewhere between areas with traffic, on a road for example. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone."
                        "<p>The best use for a WiFi pylonis somewhere that has a stable internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
                        "<h2>About This Pylon</h2>"
+=======
+  client.println( "<style> html{text-align: start;}</style>"
+                  "<body><h1>CellSol WiFi Pylon " VERSIONSTRING " Help</h1>"
+                  "<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
+                  "<h2>About the Chat<h2>"
+                  "<p>By using the chat in the main page, you will be able to communicate with people who are in range of the CellSol network, or people who are using CellSol gateways."
+                  "<p>Each message is sent out to neighboring pylons, which can be a few kilometers apart, and rebroadcast."
+                  "<p>You can consider this system akin to a single IRC/Discord/Twitch chat channel, except it will work when the internet at large will not."
+                  "<p>Any phone with a Bluetooth chat app (Android APK can be downloaded from this very pylon, iPhone or others will have to use their own) can also use the Bluetooth pylons or pocket nodes. They require very little power to operate."                  
+                  "<p>Please note that CellSol does not store your location or identity data, but also please note that there is no encryption for these messages (to make it easier for other systems to interoperate with). This is intended to be used during or after natural disasters, so that should really not be a concern."
+                  "<h3>Identifying Users</h3>"
+                  "<p>The tag in front of your message is a pseudonymous identifier: it is used to tell people apart. It is four hex digits. (Sorry, no nicknames). Example: 0abc."
+                  "<h2>About the Network</h2>"
+                  "<p>CellSol is free to use and does not depend on any infrastructure, each pylon is self-contained: just deploy a few of them in an area and you are good to go."
+                  "<p>This is a lot like existing LoRa mesh chat systems, except that it's intended to leave repeaters in place."                  
+                  "<p>The mesh topology prioritizes redundancy over speed or cleanliness, so you may occasionally get a garbled message: we try to display those in case their meaning can be understood despite the garbling."
+                  "<p>The best use for a standalone repeater is somewhere between areas with traffic, on a road for example. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone."
+                  "<p>The best use for a WiFi pylonis somewhere that has a stable internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
+                  "<h2>About This Pylon</h2>"
+>>>>>>> main
 #ifdef REQUIRE_TAG_FOR_REBROADCAST_STRICT
 #else
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
@@ -2009,7 +2355,11 @@ void send_faq_page()
                        "<p>It will honor other mesh network systems by repeating their packets too!"
 #endif
 #endif
+<<<<<<< HEAD
                        "<p>If you are on a Bluetooth or serial CellSol pylon, typing ,,, on a line by itself will dump the pylon's status and last received strings (in case your phone loses them). Our app does this automatically on reconnect. This lets you use any terminal app."
+=======
+                  "<p>If you are on a Bluetooth or serial CellSol pylon, typing ,,, on a line by itself will dump the pylon's status and last received strings (in case your phone loses them). Our app does this automatically on reconnect. This lets you use any terminal app."
+>>>>>>> main
 #ifdef MODEFLIP
                        "<p>This pylon will turn on its WiFi once a minute to check for clients, and be a repeater the rest of the time, in order to save power."
 #else
@@ -2019,14 +2369,25 @@ void send_faq_page()
                        "<p>This pylon is in WiFi mode right now. You can switch to Bluetooth mode by pushing the PROG button right after a reset and keeping it pushed until the screen says Bluetooth."
 #endif
 #endif
+<<<<<<< HEAD
                        "<p>The CellSol pylons (any version of them) will work on any 3.6 or 3.7v batteries, or any USB power banks, or anything that delivers 3.5 to 6 volts, really."
                        "<h2> About the Project</h2>"
 #ifdef PROVIDE_SOURCE_CODE
                        "<p>The project is open source and open schematic. You can get a copy of the source right from here! <a href=\"/src.zip\"> Source code </a>."
+=======
+                  "<p>The CellSol pylons (any version of them) will work on any 3.6 or 3.7v batteries, or any USB power banks, or anything that delivers 3.5 to 6 volts, really."
+                  "<h2> About the Project</h2>"
+#ifdef YOU_ARE_EATING_RECURSION
+                  "<p>The project is open source and open schematic. You can get a copy of the source right from here! <a href=\"/src.zip\"> Source code </a>."
+>>>>>>> main
 #else
                        "<p>The project is open source and open schematic. You can download everything from <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a> or from a pylon that carries it (This one doesn't have enough memory to)."
 #endif
+<<<<<<< HEAD
                        "<p><a href=\"/\">Go back</a></body></html>");
+=======
+                  "<p><a href=\"/\">Go back</a></body></html>");
+>>>>>>> main
   PetTheWatchdog();
   wificlient1.println();
 }
@@ -2253,6 +2614,7 @@ void ServeWebPagesAsNecessary()
             }
             if (gotstring.length() > 1) // don't send empty strings or strings with just
             {
+<<<<<<< HEAD
               char tempme[MAXPKTSIZE]; // slightly more efficient
               gotstring.toCharArray(tempme, MAXPKTSIZE);
               decode_in_place(tempme);
@@ -2260,6 +2622,29 @@ void ServeWebPagesAsNecessary()
               gotstring.trim();
               String hextag_temp;
               last_web_caller = wificlient1.remoteIP()[3];
+=======
+                // get header value for input1 which should be message
+                gotstring = header.substring(header.indexOf("input1="));
+                gotstring = gotstring.substring(0, gotstring.indexOf("HTTP/1.1"));
+                gotstring = gotstring.substring(7, gotstring.indexOf("&refresh="));//HTTP/1.1")); //input1= is 7 characters
+                if (gotstring.length() > (MAXPKTSIZE + 5)) // prevent intentional spam on arrival. the other input methods already do this
+                {
+                  gotstring = "(>maxsize)" + gotstring.substring(0, 20) + "..."; // give a preview of what was sent, in case it's important and got thru even if it should not have
+                }
+                if (gotstring.length() > MAXPKTSIZEM) // prevent accidental spam // do not flood the lora
+                {
+                  gotstring = gotstring.substring(0, MAXPKTSIZEM);
+                }
+                if (gotstring.length() > 1) // don't send empty strings or strings with just
+                {
+                  char tempme[MAXPKTSIZE]; // slightly more efficient
+                  gotstring.toCharArray(tempme, MAXPKTSIZE);
+                  decode_in_place(tempme);
+                  gotstring = String(tempme);
+                  gotstring.trim();
+                  String hextag_temp;
+                  last_web_caller = client.remoteIP()[3];
+>>>>>>> main
 #ifdef WIFI_IS_CLIENT
               lwc = wificlient1.remoteIP();
               hextag_temp = fourhex(lwc[0] ^ lwc[3], lwc[1] ^ lwc[2]); // should be unique enough, but mix it up so that we don't accidentally reveal someone's ip
@@ -2303,11 +2688,19 @@ void ServeWebPagesAsNecessary()
 #else
             send_redirect_to_main(true);
 #endif
+<<<<<<< HEAD
           }
           else if (whattoget.equals("/refresh")) // exception is needed to make sure that the refresh button works properly
           {
             send_redirect_to_main(true);
           }
+=======
+            }
+            else if (whattoget.equals("/refresh")) // exception is needed to make sure that the refresh button works properly
+            {
+                send_redirect_to_main(true);
+            }
+>>>>>>> main
 #ifdef DEBUG_OPTIONS_PAGE
           else if (whattoget.startsWith("/option!")) // semi hidden option stuff! Yay! Any more that we need? I don't want to make it possible to turn this off or switch modes remotely because that's easy to abuse.
           {
@@ -2341,6 +2734,7 @@ void ServeWebPagesAsNecessary()
 #endif
             if (option == 'D') // force display on
             {
+<<<<<<< HEAD
               display_on_ping = true;
             }
             if (option == 'd') // force display off
@@ -2394,6 +2788,37 @@ void ServeWebPagesAsNecessary()
                                 "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
             wificlient1.print(ipstring_a);
             wificlient1.println("<br>"
+=======
+              //Serial.println("Regular page (default)");
+              send_ok_response();
+              // Display the HTML web page
+              // General purpose html header
+
+              send_html_header();
+              client.println("<script>"
+                             "window.addEventListener(\"load\", function(){"
+                             "var input = document.getElementById('msgfield');"
+                             "input.addEventListener(\"keyup\", function(event) {"  
+                             "if (event.keyCode === 13) {"    
+                             "event.preventDefault();"    
+                             "document.getElementById(\"msgBtn\").click();}});});"
+                             "function resizeIframe(obj) {"
+                             "    obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';"
+                             //"    obj.style.width = obj.contentWindow.document.documentElement.scrollWidth + 'px';"
+                             "  }\r\n</script>"
+                             
+                             "<script>function sendMsg(){\r\n"                             
+                             "getSend('\\get',document.getElementById('msgfield').value); document.getElementById('msgfield').value=\"\";\r\n"
+                             "}\r\n"
+                             "function getSend(url, input1=null) {\r\n" // we default undefined so that we don't have to explicitly specify it; it just gets passed to the next function
+                             "var xhttp = new XMLHttpRequest();\r\n"
+                             "xhttp.open('GET', url+\"?input1=\" + input1, true); xhttp.send();" // we don't care about the response, we are just dumb sending.                             
+                             "}"                             
+                             "</script>"
+                             "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
+              client.print(ipstring_a);
+              client.println("<br>"
+>>>>>>> main
 #ifdef COMMUNITY_MEMORY_SIZE
                                 "<a href=\"http://" + hoststring + "mem.html\">Older messages</a> "
 #endif
@@ -2409,6 +2834,7 @@ void ServeWebPagesAsNecessary()
 #ifdef TX_IFRAME
                                 "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:3em;\" /></iframe></div>"
 #else
+<<<<<<< HEAD
                                 "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button id=\"msgBtn\" onClick=sendMsg() value=\"Send\">Send</button><br>"
 #endif
                                );
@@ -2426,6 +2852,25 @@ void ServeWebPagesAsNecessary()
             wificlient1.println("<button value=\"Refresh this page (in case of errors, etc.)\" onClick=getSend('/refresh')>Refresh this page (in case of errors, etc.)</button>");
             wificlient1.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
                                 "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
+=======
+                             "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button id=\"msgBtn\" onClick=sendMsg() value=\"Send\">Send</button><br>"
+#endif
+                            );
+              /*
+                "<iframe id=\"chatin\" src=\"/chat.html\" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this);\"style=\"width:100%;\" />");
+                // in case iframe doesn't work
+                sendstrings();
+                client.println("</iframe>"
+                "<br>"
+                "<iframe id=\"chatout\" src=\"/answerform.html\" frameborder=\"0\" scrolling=\"no\" style=\"width:100%; height:5em;\" />"
+                // in case iframe doesn't work, it displays this
+                "<form action=\"/get\"> Your message: <input type=\"text\" maxlength=\"50\" name=\"input1\"><input type=\"submit\" value=\"Submit\"><form>"
+                "</iframe>");
+              */
+              client.println("<button value=\"Refresh this page (in case of errors, etc.)\" onClick=getSend('/refresh')>Refresh this page (in case of errors, etc.)</button>");
+              client.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
+                             "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
+>>>>>>> main
 #ifdef PROVIDE_APK
                                 "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
 #else

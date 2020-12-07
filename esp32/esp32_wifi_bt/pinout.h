@@ -51,8 +51,13 @@
 #define SS 18
 #define RST 23
 #define DIO0 26
+<<<<<<< HEAD
 #undef PROVIDE_SOURCE_CODE
 #undef PROVIDE_CAT_PICTURE
+=======
+#undef YOU_ARE_EATING_RECURSION
+#undef THE_INTERNET_IS_MADE_OF_CATS
+>>>>>>> main
 #undef PROVIDE_APK
 #undef TUTORIALSTRINGS
 #undef SERVE_FAQ_PAGE
