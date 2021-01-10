@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<!--[if IE 7]>
+<html class="ie ie7" lang="en-US">
+<![endif]-->
+<!--[if IE 8]>
+<html class="ie ie8" lang="en-US">
+<![endif]-->
+<!--[if !(IE 7) & !(IE 8)]><!-->
+<html lang="en-US"><!--<![endif]--><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Guide to Building an Emergency LoRa Network | Aaron Swartz Day and International Hackathon</title>
+	<link rel="profile" href="http://gmpg.org/xfn/11">
+	<link rel="pingback" href="https://www.aaronswartzday.org/xmlrpc.php">
+	<!--[if lt IE 9]>
+	<script src="https://www.aaronswartzday.org/wp-content/themes/twentyfourteen/js/html5.js"></script>
+	<![endif]-->
+	<link rel="dns-prefetch" href="https://fonts.googleapis.com/">
+<link rel="dns-prefetch" href="https://s.w.org/">
+<link href="https://fonts.gstatic.com/" crossorigin="" rel="preconnect">
+<link rel="alternate" type="application/rss+xml" title="Aaron Swartz Day and International Hackathon » Feed" href="https://www.aaronswartzday.org/feed/">
+<link rel="alternate" type="application/rss+xml" title="Aaron Swartz Day and International Hackathon » Comments Feed" href="https://www.aaronswartzday.org/comments/feed/">
+<!-- This site uses the Google Analytics by MonsterInsights plugin v7.10.4 - Using Analytics tracking - https://www.monsterinsights.com/ -->
+<script async="" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/analytics.js"></script><script type="text/javascript" data-cfasync="false">
+	var mi_version         = '7.10.4';
+	var mi_track_user      = true;
+	var mi_no_track_reason = '';
+	
+	var disableStr = 'ga-disable-UA-107371708-1';
+
+	/* Function to detect opted out users */
+	function __gaTrackerIsOptedOut() {
+		return document.cookie.indexOf(disableStr + '=true') > -1;
+	}
+
+	/* Disable tracking if the opt-out cookie exists. */
+	if ( __gaTrackerIsOptedOut() ) {
+		window[disableStr] = true;
+	}
+
+	/* Opt-out function */
+	function __gaTrackerOptout() {
+	  document.cookie = disableStr + '=true; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/';
+	  window[disableStr] = true;
+	}
+	
+	if ( mi_track_user ) {
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+			m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','__gaTracker');
+
+		__gaTracker('create', 'UA-107371708-1', 'auto');
+		__gaTracker('set', 'forceSSL', true);
+		__gaTracker('require', 'displayfeatures');
+		__gaTracker('send','pageview');
+	} else {
+		console.log( "" );
+		(function() {
+			/* https://developers.google.com/analytics/devguides/collection/analyticsjs/ */
+			var noopfn = function() {
+				return null;
+			};
+			var noopnullfn = function() {
+				return null;
+			};
+			var Tracker = function() {
+				return null;
+			};
+			var p = Tracker.prototype;
+			p.get = noopfn;
+			p.set = noopfn;
+			p.send = noopfn;
+			var __gaTracker = function() {
+				var len = arguments.length;
+				if ( len === 0 ) {
+					return;
+				}
+				var f = arguments[len-1];
+				if ( typeof f !== 'object' || f === null || typeof f.hitCallback !== 'function' ) {
+					console.log( 'Not running function __gaTracker(' + arguments[0] + " ....) because you are not being tracked. " + mi_no_track_reason );
+					return;
+				}
+				try {
+					f.hitCallback();
+				} catch (ex) {
+
+				}
+			};
+			__gaTracker.create = function() {
+				return new Tracker();
+			};
+			__gaTracker.getByName = noopnullfn;
+			__gaTracker.getAll = function() {
+				return [];
+			};
+			__gaTracker.remove = noopfn;
+			window['__gaTracker'] = __gaTracker;
+					})();
+		}
+</script>
+<!-- / Google Analytics by MonsterInsights -->
+		<script type="text/javascript">
+			window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/12.0.0-1\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/12.0.0-1\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/www.aaronswartzday.org\/wp-includes\/js\/wp-emoji-release.min.js?ver=5.4.2"}};
+			/*! This file is auto-generated */
+			!function(e,a,t){var r,n,o,i,p=a.createElement("canvas"),s=p.getContext&&p.getContext("2d");function c(e,t){var a=String.fromCharCode;s.clearRect(0,0,p.width,p.height),s.fillText(a.apply(this,e),0,0);var r=p.toDataURL();return s.clearRect(0,0,p.width,p.height),s.fillText(a.apply(this,t),0,0),r===p.toDataURL()}function l(e){if(!s||!s.fillText)return!1;switch(s.textBaseline="top",s.font="600 32px Arial",e){case"flag":return!c([127987,65039,8205,9895,65039],[127987,65039,8203,9895,65039])&&(!c([55356,56826,55356,56819],[55356,56826,8203,55356,56819])&&!c([55356,57332,56128,56423,56128,56418,56128,56421,56128,56430,56128,56423,56128,56447],[55356,57332,8203,56128,56423,8203,56128,56418,8203,56128,56421,8203,56128,56430,8203,56128,56423,8203,56128,56447]));case"emoji":return!c([55357,56424,55356,57342,8205,55358,56605,8205,55357,56424,55356,57340],[55357,56424,55356,57342,8203,55358,56605,8203,55357,56424,55356,57340])}return!1}function d(e){var t=a.createElement("script");t.src=e,t.defer=t.type="text/javascript",a.getElementsByTagName("head")[0].appendChild(t)}for(i=Array("flag","emoji"),t.supports={everything:!0,everythingExceptFlag:!0},o=0;o<i.length;o++)t.supports[i[o]]=l(i[o]),t.supports.everything=t.supports.everything&&t.supports[i[o]],"flag"!==i[o]&&(t.supports.everythingExceptFlag=t.supports.everythingExceptFlag&&t.supports[i[o]]);t.supports.everythingExceptFlag=t.supports.everythingExceptFlag&&!t.supports.flag,t.DOMReady=!1,t.readyCallback=function(){t.DOMReady=!0},t.supports.everything||(n=function(){t.readyCallback()},a.addEventListener?(a.addEventListener("DOMContentLoaded",n,!1),e.addEventListener("load",n,!1)):(e.attachEvent("onload",n),a.attachEvent("onreadystatechange",function(){"complete"===a.readyState&&t.readyCallback()})),(r=t.source||{}).concatemoji?d(r.concatemoji):r.wpemoji&&r.twemoji&&(d(r.twemoji),d(r.wpemoji)))}(window,document,window._wpemojiSettings);
+		</script><script src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/wp-emoji-release.js" type="text/javascript" defer="defer"></script>
+		<style type="text/css">
+img.wp-smiley,
+img.emoji {
+	display: inline !important;
+	border: none !important;
+	box-shadow: none !important;
+	height: 1em !important;
+	width: 1em !important;
+	margin: 0 .07em !important;
+	vertical-align: -0.1em !important;
+	background: none !important;
+	padding: 0 !important;
+}
+</style>
+	<link rel="stylesheet" id="wp-block-library-css" href="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/style.css" type="text/css" media="all">
+<link rel="stylesheet" id="twentyfourteen-lato-css" href="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/css.css" type="text/css" media="all">
+<link rel="stylesheet" id="genericons-css" href="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/genericons.css" type="text/css" media="all">
+<link rel="stylesheet" id="twentyfourteen-style-css" href="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/style_002.css" type="text/css" media="all">
+<!--[if lt IE 9]>
+<link rel='stylesheet' id='twentyfourteen-ie-css'  href='https://www.aaronswartzday.org/wp-content/themes/twentyfourteen/css/ie.css?ver=20131205' type='text/css' media='all' />
+<![endif]-->
+<script type="text/javascript">
+/* <![CDATA[ */
+var monsterinsights_frontend = {"js_events_tracking":"true","download_extensions":"doc,pdf,ppt,zip,xls,docx,pptx,xlsx","inbound_paths":"[]","home_url":"https:\/\/www.aaronswartzday.org","hash_tracking":"false"};
+/* ]]> */
+</script>
+<script type="text/javascript" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/frontend.js"></script>
+<script type="text/javascript" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/jquery.js"></script>
+<script type="text/javascript" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/jquery-migrate.js"></script>
+<link rel="https://api.w.org/" href="https://www.aaronswartzday.org/wp-json/">
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://www.aaronswartzday.org/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="https://www.aaronswartzday.org/wp-includes/wlwmanifest.xml"> 
+<link rel="canonical" href="https://www.aaronswartzday.org/lora/">
+<link rel="shortlink" href="https://www.aaronswartzday.org/?p=3033">
+<link rel="alternate" type="application/json+oembed" href="https://www.aaronswartzday.org/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.aaronswartzday.org%2Flora%2F">
+<link rel="alternate" type="text/xml+oembed" href="https://www.aaronswartzday.org/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.aaronswartzday.org%2Flora%2F&amp;format=xml">
+		<style type="text/css" id="wp-custom-css">
+			/* HTML table customization */
+/* vvvvvvvvvvvvvvvvvvvvvvvv */
+table {
+  border-collapse: collapse;
+  border: 2px solid rgb(200,200,200);
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+  margin: auto;
+}
+
+td, th {
+  border: 1px solid rgb(190,190,190);
+  padding: 10px 20px;
+}
+
+th {
+  background-color: rgb(235,235,235);
+}
+
+td {
+  text-align: left;
+}
+
+tr:nth-child(even) td {
+  background-color: rgb(250,250,250);
+}
+
+tr:nth-child(odd) td {
+  background-color: rgb(235,235,235);
+}
+
+tr:nth-child(even):hover td {
+  background-color: rgb(200, 200, 200);
+}
+
+tr:nth-child(odd):hover td {
+  background-color: rgb(200, 200, 200);
+}
+/* ^^^^^^^^^^^^^^^^^^^^^^^^ */
+/* HTML table customization */
+
+/* Increase caption padding */
+caption {
+  padding: 10px;
+}
+
+/* Increase maximum width of full-width page template */
+body.page-template-full-width .site-content .entry-header, body.page-template-full-width .site-content .entry-content, body.page-template-full-width .site-content .entry-summary, body.page-template-full-width .site-content .entry-meta, body.page-template-full-width .page-content {
+	max-width: 700px;
+}
+
+/* Make so images aligned leftward within a full-width page template will remain aligned with the rest of the article body*/
+.full-width .site-content img.size-full.alignleft {
+	margin-left: 0px;
+}
+		</style>
+		</head>
+
+<body class="page-template page-template-page-templates page-template-full-width page-template-page-templatesfull-width-php page page-id-3033 group-blog full-width singular">
+<div id="page" class="hfeed site">
+	
+	<header id="masthead" class="site-header" role="banner">
+		<div class="header-main">
+			<h1 class="site-title"><a href="https://www.aaronswartzday.org/" rel="home">Aaron Swartz Day and International Hackathon</a></h1>
+
+			<div class="search-toggle">
+				<a href="#search-container" class="screen-reader-text" aria-expanded="false" aria-controls="search-container">Search</a>
+			</div>
+
+			<nav id="primary-navigation" class="site-navigation primary-navigation" role="navigation">
+				<button class="menu-toggle">Primary Menu</button>
+				<a class="screen-reader-text skip-link" href="#content">Skip to content</a>
+				<div class="menu-menu-1-container"><ul id="primary-menu" class="nav-menu"><li id="menu-item-2100" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2100"><a href="https://www.aaronswartzday.org/about/">About</a></li>
+<li id="menu-item-2019" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2019"><a href="https://www.aaronswartzday.org/securedrop/">SecureDrop</a></li>
+<li id="menu-item-2018" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2018"><a href="https://www.aaronswartzday.org/aaronswartzfacts/">SETTING THE RECORD STRAIGHT</a></li>
+<li id="menu-item-2274" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2274"><a href="https://www.aaronswartzday.org/vr/">The Swartz Manning VR Destination</a></li>
+<li id="menu-item-2283" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2283"><a href="https://www.aaronswartzday.org/psp/">ASD Police Surveillance Project</a></li>
+<li id="menu-item-2833" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2833"><a href="https://www.aaronswartzday.org/solarsurvival/">ASD Solar Survival Project</a></li>
+<li id="menu-item-2634" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2634"><a href="https://www.aaronswartzday.org/jan11rawthought/">Jan 11 Raw Thought</a></li>
+<li id="menu-item-2513" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2513"><a href="https://www.aaronswartzday.org/speaker-videos/">Speaker Videos</a></li>
+<li id="menu-item-2959" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2959"><a href="https://www.aaronswartzday.org/fabric-covid-19/">Fabric Considerations for DYI COVID-19 Masks</a></li>
+<li id="menu-item-3023" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-3023"><a href="https://www.aaronswartzday.org/2020-index/">Virtual Hackathon: Index of all Pages</a></li>
+<li id="menu-item-3011" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-3011"><a href="https://www.aaronswartzday.org/virtual-hackathon/">Projects: Virtual Hackathon – RF Tech Edition</a></li>
+<li id="menu-item-3021" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-home menu-item-3021"><a href="https://www.aaronswartzday.org/virtual-hackathon-faq/">Virtual Hackathon FAQ</a></li>
+</ul></div>			</nav>
+		</div>
+
+		<div id="search-container" class="search-box-wrapper hide">
+			<div class="search-box">
+				<form role="search" method="get" class="search-form" action="https://www.aaronswartzday.org/">
+				<label>
+					<span class="screen-reader-text">Search for:</span>
+					<input type="search" class="search-field" placeholder="Search …" name="s">
+				</label>
+				<input type="submit" class="search-submit" value="Search">
+			</form>			</div>
+		</div>
+	</header><!-- #masthead -->
+
+	<div id="main" class="site-main">
+
+<div id="main-content" class="main-content">
+
+
+	<div id="primary" class="content-area">
+		<div id="content" class="site-content" role="main">
+			
+<article id="post-3033" class="post-3033 page type-page status-publish hentry">
+	<header class="entry-header"><h1 class="entry-title">Guide to Building an Emergency LoRa Network</h1></header><!-- .entry-header -->
+	<div class="entry-content">
+		<h4>Updated October 14, 2020</h4>
+<p>This page contains an index of background and details about this project.</p>
+<p>If you already understand the basic principles, and just want to <strong><a href="#pocketpylon">grab some hardware</a></strong>, download <strong><a href="https://github.com/AaronSwartzDay-SSP/LoRa">our software</a></strong>, and build a LoRa network, here are our <strong><a href="http://aaronswartzday.org/lorasetup">setup instructions</a></strong>.</p>
+<h4>A map of our network design (Network Topography)</h4>
+<figure id="attachment_3065" aria-describedby="caption-attachment-3065" style="width: 2560px" class="wp-caption aligncenter"><a href="https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-scaled.jpg"><img class="wp-image-3065 size-full" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/LORA-Flow-diagrams-300scale-scaled.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-scaled.jpg 2560w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-300x159.jpg 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-1024x543.jpg 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-768x407.jpg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-1536x814.jpg 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/LORA-Flow-diagrams-300scale-2048x1086.jpg 2048w" sizes="(max-width: 2560px) 100vw, 2560px" width="2560" height="1357"></a><figcaption id="caption-attachment-3065" class="wp-caption-text">(Click to enlarge) Network topology for a LoRa Network LoRa: Low Frequency Radio Network</figcaption></figure>
+<p>(Draft language: In the case of our San Rafael to Richmond connection, a high power antenna will probably be used.)</p>
+<p>Map above shows how we are using arduinos to bridge the LoRa signal 
+between the esp32 modules. Ideally, there will be a bit of overlap 
+between the ranges of the esp32s, to enable anyone with a wifi enabled 
+device to access our text messaging page.</p>
+<h4>Index:</h4>
+<ul>
+<li><a href="#intro">Introduction to this project and what we are trying to build</a></li>
+<li><a href="#systemnetworkrequirements">System Requirements for our LoRa Network</a></li>
+<li><a href="#pocketpylon">Part lists and Software for our “Pylons”:<br>
+“Pocket Pylons” (pocket-sized repeaters that you can carry around with 
+you) and fixed “Pylons” (fixed repeaters that are used to carry the LoRa
+ signal longer distances and act as “bridges” between the wifi-enabled 
+repeaters that anyone with a phone can access).</a><p></p>
+<ul>
+<li><a href="#option1">Option 1 -esp 32 (LoRa Repeater that is wifi-enabled)</a><a href="#option1">(more expensive, but no soldering required)</a></li>
+<li><a href="#option2">Option 2 (cheaper using arduinos but soldering 
+required – also we’ve designed a part that will make it easier to add 
+bluetooth and solar power)</a>
+<ul>
+<li><a href="#kits">Kits from Robots Everywhere with everything needed for the Arduino option (coming soon)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#software">Our LoRa software (for our “pocket node” prototypes &amp; potentially other LoRa-compatible hardware)</a>
+<ul>
+<li><a href="#transceiver">Transceiver Software</a></li>
+<li><a href="#wifitext">Wifi app with texting Software</a></li>
+<li><a href="#licensing">Software Licensing</a></li>
+<li><a href="#captiveportal">Captive Portal Implementation</a></li>
+</ul>
+</li>
+<li><a href="#antennaes">Antennaes</a></li>
+<li><a href="#libraries">Software Libraries</a></li>
+<li><a href="#nextsteps">Next Steps</a>
+<ul>
+<li><a href="#wordcompression">Word compression considerations</a></li>
+</ul>
+</li>
+<li><a href="#additionalfeatures">Additional Features for next version</a></li>
+<li><a href="#definitions">Definitions of some basic terms to help people new to the project understand what we are doing</a></li>
+<li><a href="#references">LoRa References</a>
+<ul>
+<li><a href="#tutorials">Tutorials</a></li>
+<li><a href="#standards">Standards</a></li>
+</ul>
+</li>
+</ul>
+<p><strong>Coming soon:</strong></p>
+<ul>
+<li><a href="#otherhardware">Other hardware that might work with LoRa</a></li>
+<li><a href="#install">LoRa Install Guide</a></li>
+<li><a href="#troubleshooting">LoRa Troubleshooting Info</a></li>
+<li><a href="#techsupport">Tech Support</a></li>
+</ul>
+<h4 id="intro">Introduction</h4>
+<p><strong>Problem:</strong></p>
+<p>What if the internet and cell phone towers went down for more than a 
+few hours – or during an emergency situation when no communication for 
+several hours could mean lives lost?</p>
+<p><strong>Proposed Solution:</strong></p>
+<p>We propose to build a LoRa (Low Frequency Radio) network using a 
+combination of “pocket pylons” (repeaters that are carried in peoples’ 
+pockets or, with a larger antenna, in backpacks) and “fixed pylons” 
+(fixed repeaters that forward the signal).</p>
+<p>The pocket pylons (esp 32s) will have wifi access points on them for 
+any wifi-enabled device to connect to. The fixed pylons are 
+arduino-based and only have the ability to connect via bluetooth to one 
+device at a time.</p>
+<ol>
+<li>We will build an “Emergency LoRa Network.”</li>
+<li>We have written software <a href="https://github.com/AaronSwartzDay-SSP/LoRa/"><strong>here</strong></a> to enable users to send text messages, either one to one or one to everyone on the network, over their cell phones.</li>
+<li>A LoRa network is a “low power radio network” (using the <strong><a href="https://en.wikipedia.org/wiki/LoRa">LoRa protocol</a></strong>).</li>
+<li>We will design our devices to be easily rechargeable from 5v solar panels.</li>
+<li>To enable our network to function optimally with large crowds in a 
+setting with lots of building, we will create mobile “pocket pylons” – 
+for which we have just built two working prototypes.</li>
+</ol>
+<h4 id="systemnetworkrequirements">System Requirements for LoRa network</h4>
+<p>Our network design utilizes a combination of “fixed pylons” (fixed 
+repeaters) placed mostly on the roofs and outside of buildings and 
+“pocket pylons” (mobile repeaters that live in peoples’ pockets and 
+backpacks) to allow for more “hops” across the network.</p>
+<p>The pocket pylons will also provide wifi so that any wifi-enabled 
+device can connect to the LoRa network and send and receive messages 
+over it.</p>
+<p><strong>Power requirements – Using a Solar panel to recharge the battery<br>
+</strong></p>
+<p>Although we will connect a battery to our pocket and fixed pylon 
+repeaters, the battery will quickly run out if it is not supplemented by
+ a solar panel that recharges the battery during the day. For this 
+reason, we have integrated a solar panel into the design.</p>
+<p>Note that, for the pocket pylons, it is more likely that you will 
+want to use an additional battery or two to keep your pylon going over 
+the course of the day, rather then depend on a solar panel being able to
+ recharge it successfully while you are walking around. For fixed pylons
+ however, especially those living on roof tops, a 5v solar panel will do
+ quite nicely at keeping the battery charged.</p>
+<p>These “pocket pylons” that we are building are able to use a 5v solar panel as-is. (5.6v is also within tolerances)</p>
+<p>Remember to plug in your batteries and let them charge overnight the 
+night before you assemble your repeaters. This will ensure that it’s 
+charged up as much as possible.</p>
+<p>The way this works, is by placing the battery in-between the esp32 
+module and the solar panel, allowing the solar panel to keep the battery
+ charged.</p>
+<p>Note: Neither the ESP32 nor the Arduino is able to be powered 
+directly from the panel, because solar panels don’t collect at a 
+constant voltage. So, if you purchased say, a 5 watt solar panel, it’s 
+really going to be collecting at 4.5 watts on some days and 5.6 watts on
+ other days, but the devices that need to be powered require a 
+consistent 5 watt stream.</p>
+<p><strong>Prototypes</strong></p>
+<p>We have created two different prototypes. A more expensive option 
+that does not require any soldering, and an arduino-based model that 
+requires soldering and, ideally, the use of a special circuitboard that 
+we are designing and potentially mass-producing, to lower the price and 
+make the option easier to implement.<em> (Kits coming soon)</em></p>
+<p>Our “pylons” are very simple devices that do one of three things:</p>
+<p>1. I have a list of phones/computers that are connected to me directly<br>
+2. I have received a message that is for one of these: i will send it to that device<br>
+3. I have received a message that is not for one of these: i’m going to re-transmit it, so that it may get where it has to go”</p>
+<p>The above is true whether there ARE endpoints (phones, pc’s) 
+connected to the node or not, so it can always be the same bit of 
+hardware.</p>
+<p>The “I’m going to re-transmit” part can be done stupidly (everyone 
+spams out what they received as long as they don’t do it more than once)
+ or smart (use timestamp or gps or both to make a good guess of where it
+ has to go).</p>
+<p>In a mesh network like we are describing, each node is also a router, and re-transmitting is handled via routing.</p>
+<p>A node also provides a gateway from other devices (via BLE or WiFi) 
+INTO and OUT OF the mesh network, and also provides routing WITHIN the 
+mesh.</p>
+<p>&nbsp;</p>
+<h4 id="pocketpylon">Part lists and Software for our Prototypes:<br>
+Part lists and Software for our “Pylons”:<br>
+“Pocket Pylons” (pocket-sized repeaters that you can carry around with 
+you) and “Fixed Pylons” (fixed repeaters that are used to carry the LoRa
+ signal longer distances and act as “bridges” between the wifi-enabled 
+repeaters that anyone with a phone can access).</h4>
+<p>Note that for these options below, identical hardware is used for the
+ repeater/transmitter parts – whether you are making a “pocket pylon” – 
+that uses a smaller antenna, a “backpack pylon” with a larger antenna, 
+or a “fixed pylon”(yeah, we couldn’t resist) – that you wish to place on
+ top of a building or somewhere else outside, for better reception and 
+range.</p>
+<h5 id="option1">Option 1 – ESP 32 (LoRa Repeater that is wifi-enabled)</h5>
+<p><strong>Hardware:</strong></p>
+<p><strong>915MHz ESP32 LoRa 0.96 OLED Development Board SX1276 WiFi 
+Bluetooth Transceiver Module + LoRa Antenna +JST Connector for Arduino 
+LoraWan IOT Internet of Thing (Pack of 2)</strong>&nbsp;<strong><a href="https://www.amazon.com/gp/product/B086ZG25DZ/ref=ppx_yo_dt_b_asin_title_o03_s00?ie=UTF8&amp;psc=1"> https://www.amazon.com/gp/product/B086ZG25DZ/ref=ppx_yo_dt_b_asin_title_o03_s00?ie=UTF8&amp;psc=1</a></strong></p>
+<p><strong>ESP32 LoRa 32 (V2), ESP32 Development Board WIFI Bluetooth 
+LoRa Dual Core 240MHz CP2102 with 0.96inch OLED Display included 
+868/915MHZ</strong> Antenna for Smart Cities, Smart Farms, Smart Home, and IoT Makers <strong><a href="https://www.amazon.com/gp/product/B076MSLFC9/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&amp;psc=1">https://www.amazon.com/gp/product/B076MSLFC9/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&amp;psc=1</a></strong></p>
+<p><strong>Software:</strong></p>
+<p>A zip file with software for either the esp32 or arduino models is available here: <a href="https://github.com/AaronSwartzDay-SSP/LoRa"><strong>https://github.com/AaronSwartzDay-SSP/LoRa</strong></a></p>
+<h4 id="kits">Kits from Robots Everywhere with everything needed for the Arduino option</h4>
+<p><strong>COMING SOON<br>
+</strong></p>
+<h5 id="option2">Option 2 – Arduino (LoRa Repeater w single bluetooth connection)</h5>
+<p>The same basic repeater – that literally uses the same software – but
+ this one requires a bit of soldering, and is made using an inexpensive 
+arduino and a semtech chip.</p>
+<p>The nice thing about this particular arduino is that it costs $1 if you buy more than 50.</p>
+<p>We are designing and potentially mass producing a larger, pre-made 
+circuit, for use with the arduino options – will make it easier for 
+people to put together.</p>
+<h4 id="software">Our LoRa software (for our “pocket pylon” prototypes &amp; potentially other LoRa-compatible hardware)</h4>
+<h4 id="transceiver">Transceiver software</h4>
+<p>The Transceiver code is packaged in with everything else on our github here:<br>
+<a href="https://github.com/AaronSwartzDay-SSP/LoRa"><strong>https://github.com/AaronSwartzDay-SSP/LoRa</strong></a></p>
+<div id="a7211007-b09c-4a25-864e-251a0f382c01" class="module-timeline__message-container" role="row" data-row="288">
+<div class="module-message module-message--incoming module-message--group" tabindex="0" role="button">
+<div class="module-message__container module-message__container--incoming module-message__container--incoming-purple">
+<div dir="auto">Install instructions are here: <strong><a href="http://aaronswartzday.org/lorasetup">aaronswartzday.org/lorasetup</a></strong></div>
+<div dir="auto"></div>
+<div class="module-message__text module-message__text--incoming" dir="auto">This is software for a very basic transceiver for either a LoRa heltec module with a display, or an arduino (without a display).</div>
+<div></div>
+</div>
+</div>
+</div>
+<div id="e97c30bc-646f-4167-8342-e2d0fa35309e" class="module-timeline__message-container" role="row" data-row="289">
+<div class="module-message module-message--incoming module-message--group" tabindex="0" role="button">
+<div class="module-message__container module-message__container--incoming module-message__container--incoming-purple">
+<div class="module-message__text module-message__text--incoming" dir="auto">Basically
+ it acts like an old timey XBee series 1 and displays the last packet it
+ got. So, it should be good for debugging /packet sniffing.</div>
+</div>
+</div>
+</div>
+<div id="178cfb99-fc3a-4ace-a5ab-66af2a456001" class="module-timeline__message-container" role="row" data-row="291">
+<div class="module-message module-message--incoming module-message--group" tabindex="0" role="button">
+<div class="module-message__container module-message__container--incoming module-message__container--incoming-purple"></div>
+</div>
+</div>
+<div id="13f30794-db1f-4161-a6e6-84224dfbd84a" class="module-timeline__message-container" role="row" data-row="292">
+<div class="module-message module-message--incoming module-message--group" tabindex="0" role="button">
+<div class="module-message__container module-message__container--incoming module-message__container--incoming-purple">
+<div class="module-message__text module-message__text--incoming" dir="auto">Interestingly it can be a <strong><a href="https://www.aaronswartzday.org/lorasetup/#gateway">wifi gateway</a></strong>.</div>
+<div dir="auto"></div>
+</div>
+<div dir="auto">Picture of Option2:</div>
+<div dir="auto"><img class="aligncenter size-full wp-image-3061" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/finished-arduino-notations-copy.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/finished-arduino-notations-copy.jpg 702w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/finished-arduino-notations-copy-206x300.jpg 206w" sizes="(max-width: 702px) 100vw, 702px" width="702" height="1024"></div>
+</div>
+</div>
+<h4 id="wifitext">Wifi App for Texting Software</h4>
+<div dir="auto"></div>
+<p>This software interconnects between a com port (or more than one), a 
+really derpy website that shows the last 10 messages and lets you input 
+one (over LoRa). The cool thing is that it just works ™ – even on old 
+cell phones. The site even loads on a G1 phone from 2009</p>
+<h5>Link to our software, which includes a wifi app with texting software, on github here: <strong><a href="https://github.com/AaronSwartzDay-SSP/LoRa">https://github.com/AaronSwartzDay-SSP/LoRa</a></strong></h5>
+<p>This firmware, written by Matteo Borri and Riley August, should work on most existing LoRa modules. (We suggest using a <a href="https://www.aaronswartzday.org/lora/#option1"><strong>LoRa 32 heltec modules</strong></a>)</p>
+<p>This software works for up to 8 wifi-enabled devices at a time.</p>
+<p>Here’s a little model of what we are building:</p>
+<p>—-fones<br>
+——gateway<br>
+——–repeater<br>
+——–repeater<br>
+——–repeater<br>
+——gateway<br>
+—-fones</p>
+<figure id="attachment_3043" aria-describedby="caption-attachment-3043" style="width: 897px" class="wp-caption aligncenter"><img class="size-full wp-image-3043" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/image.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/image.png 897w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image-293x300.png 293w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image-768x786.png 768w" sizes="(max-width: 897px) 100vw, 897px" width="897" height="918"><figcaption id="caption-attachment-3043" class="wp-caption-text">These “pocket pylons” that we are building are able to use a 5v solar panel as-is. (5.6v is also within tolerances)</figcaption></figure>
+<p>&nbsp;</p>
+<figure id="attachment_3044" aria-describedby="caption-attachment-3044" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3044" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/image2-576x1024.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/image2-576x1024.png 576w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image2-169x300.png 169w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image2-768x1366.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image2-864x1536.png 864w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image2.png 899w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="843"><figcaption id="caption-attachment-3044" class="wp-caption-text">Above: CellSol in action.<br>This
+ basically bridges LoRa, wifi (via a derpy webpage although i guess we 
+can do telnet/ssh) and the uarts on the controller. Wiring is just 5v to
+ panel, with the zener diode across the leads.<br>Note that the internal resistance of the panel is sufficient to prevent fuckups.<br>Note that the battery in the above photo was harvested from a dead ipad. We added wifi using some 5.1 volt zener diodes.</figcaption></figure>
+<p>&nbsp;</p>
+<figure id="attachment_3045" aria-describedby="caption-attachment-3045" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3045" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/image3-1024x576.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/image3-1024x576.png 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image3-300x169.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image3-768x432.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image3-1536x864.png 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/image3.png 1599w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="267"><figcaption id="caption-attachment-3045" class="wp-caption-text">Above: This is still just super basic – yet already sufficient for coordinating between two areas.</figcaption></figure>
+<h4>Option 2: Arduino-based (requires soldering)</h4>
+<figure id="attachment_3049" aria-describedby="caption-attachment-3049" style="width: 964px" class="wp-caption aligncenter"><img class="size-full wp-image-3049" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/arduino-1-cropped.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-1-cropped.jpg 964w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-1-cropped-300x279.jpg 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-1-cropped-768x713.jpg 768w" sizes="(max-width: 964px) 100vw, 964px" width="964" height="895"><figcaption id="caption-attachment-3049" class="wp-caption-text">arduino pro mini 8mhz 3.3v operation<br>(uint8_t NSSPin = 10, uint8_t NRESETPin = 9<br>nss = pin10 (can be moved)<br>reset = pin9 (can be move)<br>sck = pin13 (cannot be moved)<br>mosi = pin11 (no)<br>miso = pin12 (no)</figcaption></figure>
+<p>&nbsp;</p>
+<figure id="attachment_3050" aria-describedby="caption-attachment-3050" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3050" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/arduino-2-cropped-724x1024.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-724x1024.jpg 724w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-212x300.jpg 212w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-768x1086.jpg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped.jpg 837w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="670"><figcaption id="caption-attachment-3050" class="wp-caption-text">Very simple circuit – for those who can solder. See below for the circuit we are designing to make it even easier to solder :)</figcaption></figure>
+<p>Bluetooth adapters (for the arduino boards)</p>
+<figure id="attachment_3051" aria-describedby="caption-attachment-3051" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3051" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/8-bluetooth-adapters-1-1024x540.jpeg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-1-1024x540.jpeg 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-1-300x158.jpeg 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-1-768x405.jpeg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-1-1536x810.jpeg 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-1.jpeg 1920w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="250"><figcaption id="caption-attachment-3051" class="wp-caption-text">Blue tooth 3.0 adapters – 10 of them :) (for arduino boards)</figcaption></figure>
+<figure id="attachment_3052" aria-describedby="caption-attachment-3052" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3052" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/8-bluetooth-adapters-2-1024x540.jpeg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-2-1024x540.jpeg 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-2-300x158.jpeg 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-2-768x405.jpeg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-2-1536x810.jpeg 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/8-bluetooth-adapters-2.jpeg 1920w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="250"><figcaption id="caption-attachment-3052" class="wp-caption-text">Blue tooth 3.0 adapters – 10 of them :) (for arduino boards)</figcaption></figure>
+<p>Bluetooth modules that are easy to hook up to the arduino: HC05</p>
+<figure id="attachment_3054" aria-describedby="caption-attachment-3054" style="width: 782px" class="wp-caption aligncenter"><img class="wp-image-3054 size-full" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/HC05-cropped.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/HC05-cropped.jpg 782w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/HC05-cropped-280x300.jpg 280w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/HC05-cropped-768x822.jpg 768w" sizes="(max-width: 782px) 100vw, 782px" width="782" height="837"><figcaption id="caption-attachment-3054" class="wp-caption-text">Connect the HC05 to pins 0 and 1 and it will work out of the box.</figcaption></figure>
+<figure id="attachment_3055" aria-describedby="caption-attachment-3055" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3055" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/arduino-working-cropped-702x1024.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-working-cropped-702x1024.jpg 702w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-working-cropped-206x300.jpg 206w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-working-cropped-768x1120.jpg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-working-cropped.jpg 998w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="691"><figcaption id="caption-attachment-3055" class="wp-caption-text">This
+ is the super basic version of the repeater as you see there’s only four
+ points of shoulder that are hard to do and even that one took a few 
+minutes.</figcaption></figure>
+<figure id="attachment_3057" aria-describedby="caption-attachment-3057" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3057" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/arduino-2-cropped-1-627x1024.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-1-627x1024.jpg 627w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-1-184x300.jpg 184w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-1-768x1255.jpg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-1-940x1536.jpg 940w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-2-cropped-1.jpg 1006w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="774"><figcaption id="caption-attachment-3057" class="wp-caption-text">Pretty much the most basic repeater possible</figcaption></figure>
+<p>&nbsp;</p>
+<figure id="attachment_3059" aria-describedby="caption-attachment-3059" style="width: 474px" class="wp-caption aligncenter"><img class="size-large wp-image-3059" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/solarpanel-w-antennae-706x1024.jpg" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/solarpanel-w-antennae-706x1024.jpg 706w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/solarpanel-w-antennae-207x300.jpg 207w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/solarpanel-w-antennae-768x1113.jpg 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/solarpanel-w-antennae.jpg 1010w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="688"><figcaption id="caption-attachment-3059" class="wp-caption-text">A 5v solar panel with antenna.</figcaption></figure>
+<figure id="attachment_3060" aria-describedby="caption-attachment-3060" style="width: 959px" class="wp-caption aligncenter"><img class="size-full wp-image-3060" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/arduino-solarpanel.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-solarpanel.png 959w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-solarpanel-300x230.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/06/arduino-solarpanel-768x589.png 768w" sizes="(max-width: 959px) 100vw, 959px" width="959" height="736"><figcaption id="caption-attachment-3060" class="wp-caption-text">An
+ arduino with bluetooth module soldered on and circuit soldered on for 
+plugging into a solar panel. Note that the bluetooth functionality of 
+these repeaters can be dismantled if desired by “plugging” the bluetooth
+ connector, if desired. [?Note to make sure this “plugging” is explained
+ correctly?]</figcaption></figure>
+<h4 id="licensing">Licensing</h4>
+<p>The RadioHead library uses GPL 3.0, which requires us to make everything we use it with also available under GPL 3.0.</p>
+<h4 id="captiveportal">Captive Portal Implementation</h4>
+<p>We are building capabilities into our little wifi access points so 
+that a user will automatically redirect to our desired homepage upon 
+accessing the network.</p>
+<p>There are several different ways that this can be accomplished (and we’d love to hear more). So far we have:</p>
+<ol>
+<li>There’s an HTTP redirect<br>
+Usually used when people are already using a well known URL that you 
+don’t want to change, rather than a user that is firing up their client 
+for the first time on the network, but still deserves to be on the list 
+until we rule it out.</li>
+<li>User’s can be redirected to our desired IP address at the router 
+level. This is how most “Captive Portals” as these are known as, are 
+implemented. A “captive portal” is what you deal with when you access 
+any corporate network – for instance, at a hotel, the airport, or when 
+you’re somewhere like whole foods – it makes you login or give a code or
+ do whatever so you will be allowed to access anything else on the 
+network.For us, we’re not trying to limit what people can access, since 
+there’s nothing but our stuff on this network – although that might be a
+ useful tool in the future, if resources are limited and a certain page 
+accessible on the LoRa network is hogging all the bandwidth :)For us, 
+we’re just trying to make it easy for new users to find the only page 
+that exists, by taking them there automatically when they fire up their 
+browser.</li>
+</ol>
+<h4 id="antennaes">Antenna Info</h4>
+<p>Matteo has created a 3D printable antennae stand (need link to file 
+here)&nbsp; that also doubles as a ruler for measuring just the right 
+length of wire to use for the best reception of a specific frequency.</p>
+<p>Link to 3D printer file for the antennae stand here</p>
+<p>photo</p>
+<p>idea is that you use the 3d printed part both as the whip antenna holder and as a meaasure to cut the antenna wire with</p>
+<p>Our LoRa network uses 915MZ as its frequency. Different frequencies 
+will use different lengths of wire on our antennae ruler/stand. You can 
+use the ruler to measure exactly the right length of wire for your 
+antennae, before you cut it. (You can use this tool to make a better 
+antennae for your wifi router too this way.)</p>
+<p>1) Print out our antennae stand/ruler for frequency wire length tool</p>
+<p>2) Use the tool to measure the desired length of wire for your antennae, and cut it</p>
+<p>3) Slide the wire through the antennae stand</p>
+<p>4) Connect the antennae to your LoRa repeater or Wifi Router</p>
+<p>Be careful where you place your repeater, as the antennae itself can 
+shadow the solar panel and interfere with it’s ability to capture power 
+from the sun.</p>
+<p>This antennae is supposed to work for longer distances, like 25 miles – and our software is already configured to work with it: <strong><a href="https://www.digikey.com/en/products/detail/digi/XBP9B-XCST-001/3482817">https://www.digikey.com/en/products/detail/digi/XBP9B-XCST-001/3482817</a></strong></p>
+<p>When it’s time to actually make your antennae, go here: <strong><a href="https://www.aaronswartzday.org/givemelora/#antennaes">https://www.aaronswartzday.org/givemelora/#antennaes</a></strong></p>
+<p>More info about antennae here:</p>
+<p>Antennas</p>
+<p><a href="http://www.shopantenas.com.br/antena-movel-uhf-5-8-de-onda-whip-900mhz/p" rel="nofollow">http://www.shopantenas.com.br/antena-movel-uhf-5-8…</a></p>
+<p>Antenna mount:</p>
+<p><a href="http://www.shopantenas.com.br/suporte-magnetico-preto-p--antena-movel/p" rel="nofollow">http://www.shopantenas.com.br/suporte-magnetico-preto-p–antena-movel/p</a></p>
+<p>Note: You generally want to use as big of an an antenna as is 
+possible while still being practical to carry around (in the case of a 
+pocket pylon).</p>
+<p>For the fixed “pylon” repeaters, there is a concern that the antennae
+ aren’t so big as to draw too much attention – as is the reason for 
+keeping the size of the solar panels used as small as possible. (So they
+ don’t get stolen.)</p>
+<h4 id="nextsteps">Next Steps</h4>
+<p>1)&nbsp; make a basic repeater with just an arduino and a semtech chip<br>
+(get a POS $1 arduino to do repeater things) Note: ideally, these will 
+be able to be made cheaper than our original prototype (see pics above) –
+ and, most importantly, will use a lot less power.</p>
+<p>2) Getting an antenna reasonably high up where Matteo is – in San 
+Rafael – (~1.5-2m above building) – so we can try some long range tests.</p>
+<h4 id="additionalfeatures">Additional Features for next version</h4>
+<p><strong>Re: encryption</strong></p>
+<p>Sure. Eventually, it would be nice to have some encryption available 
+for sensitive messages. Right now, we think it would be more useful to 
+be able to say “I’m here help” over an open network than to have no 
+options at all.</p>
+<p><strong>re: bulletin boards</strong></p>
+<p>Since we are dealing with slow model speeds, someone suggested 
+implementing a bulletin board system of sorts. So Matteo build one. This
+ “bulletin board” is just a little website that has only has 10 message 
+slots but there can be up to 255.</p>
+<p>Why a bulletin board system? Because LoRa is as slow as some of the 
+earliest modem speeds – 9600 baud or lower even – so why not go back to 
+the types of communication platforms that were used in the 90’s when 
+bandwidth was going that slow.</p>
+<h4 id="libraries">Software Libraries (we used to write our node software)</h4>
+<p><strong>RadioHead Packet Radio library for embedded microprocessors</strong><br>
+<strong><a href="http://www.airspayce.com/mikem/arduino/RadioHead/">http://www.airspayce.com/mikem/arduino/RadioHead/</a></strong><br>
+This is the RadioHead Packet Radio library for embedded microprocessors.
+ It provides a complete object-oriented library for sending and 
+receiving packetized messages via a variety of common data radios and 
+other transports on a range of embedded microprocessors.</p>
+<p>The version of the package that this documentation refers to can be downloaded from <strong><a href="http://www.airspayce.com/mikem/arduino/RadioHead/RadioHead-1.107.zip">http://www.airspayce.com/mikem/arduino/RadioHead/RadioHead-1.107.zip</a></strong> You can find the latest version of the documentation at <strong><a href="http://www.airspayce.com/mikem/arduino/RadioHead">http://www.airspayce.com/mikem/arduino/RadioHead</a></strong></p>
+<h4 id="definitions">Definitions of some basic terms to help people new to the project understand what we are doing</h4>
+<p>Access point:</p>
+<p>Gateway:</p>
+<p>Router:</p>
+<p>Repeater:</p>
+<p>Wifi:</p>
+<p>Bluetooth:</p>
+<p>LoRa:</p>
+<h4 id="wordcompression">Word Compression Consideration</h4>
+<p>Why might we want word compression for our LoRa network?<br>
+The “commercial code” below is one of several methods that one can use 
+to achieve excellent “word compression” for english words. “Word 
+compression” is a concept that originated during the old days of 
+telegrams and systems where you paid for every word to be transmitted. 
+In our case, every word counts because our network bandwidth is so 
+limited – and is literally as slow as the old dial-up modems of the 90s.
+ (As slow as 9,600 – 12,000 baud modems)</p>
+<p>These codes are examples of what is called “dictionary compression.” 
+An application is written in such a way that it recognizes common 
+phrases, like “what time should we meet?” and assigns it a code that 
+will necessitate transmitting fewer characters.</p>
+<p>The way it works: The application (in this case our texting app &amp;
+ bulletin board app) – recognizes the phrase the person has typed and 
+then uses a shorter abbreviation to represent it – sends the code (that 
+uses less characters) across the network – where it is decoded on the 
+receiver’s side into the original message. This is similar to the 
+autocorrect functions that everyone is used to using on their phones.</p>
+<p>What would creating our own codes involve?</p>
+<p>Creating our own codes would involve determining the 32768 most common words in english – perhaps algorithmically.</p>
+<p>Why don’t we use lossless text compression then instead of codes?</p>
+<p>Because compression not optimized for text doesn’t go very far for 
+short messages. To demonstrate this concept, one can take any one 
+sentence typed here, save it as a text file, zip the text file, and see 
+that it won’t be much shorter.</p>
+<p>Why are we discussing this for this project?</p>
+<p>(This subject came up because there’s a big emphasis in sending as few bytes as possible on the LoRa discussion forums.)</p>
+<p>Let’s say that we take the most common 32768 words in the english 
+language (the other 32767 are pairs of ASCII characters that disallow 
+control characters, so losing one bit out of 16 i not a big problem). 
+Now each word, or even common phrase, if we want, fits two bytes. You 
+can even do a bit of cleanup so that “how are you” and “how r u” and so 
+on map to the same thing, and are printed “how are you” at the receiving
+ end unless tagged “verbatim.” [? (Note: we haven’t discussed tagging 
+messages? let’s! :) ?]</p>
+<p>Note: This is done phone/pc side where you have a lot of hard disk 
+space for a dictionary and a lot of cpu power for realtime substitution.</p>
+<p>Note: Interestingly, you can even XOR the -dictionary- with a crypto 
+key for private messaging, and if you swap those often enough, that’s 
+your encryption solution. (Not unbeatable of course, but since it can be
+ of arbitrary length, you could even have a one time pad, which IS 
+unbeatable by definition). This type of “encryption” won’t slow things 
+down as much, as it’s just a XOR operation that you do once on the 
+dictionary. So, not unbeatable, but decent. And not super secure in that
+ it requires a shared key, but eh.</p>
+<p>Lisa thinks it sounds like a project in itself, but Matteo thinks 
+it’s not necessarily a big job, it’s just a case of finding out what the
+ most common X words in Y language are, and sorting them. Or you can 
+just scrape a dictionary and sort it alphabetically if you are lazy.</p>
+<p>Commercial code (communications)<br>
+https://en.wikipedia.org/wiki/Commercial_code_(communications)<br>
+“In telecommunication, a commercial code is a code once used to save on 
+cablegram costs.[1] Telegraph (and telex) charged per word sent, so 
+companies which sent large volumes of telegrams developed codes to save 
+money on tolls.”</p>
+<p><strong>For Later:</strong></p>
+<h4 id="otherhardware">Other LoRa Hardware</h4>
+<p>Hardware we think might work, if we create a LoRa gateway for it</p>
+<p><strong>The Ark</strong><br>
+<a href="https://github.com/thearkadia/The_Ark/blob/master/README.md">https://github.com/thearkadia/The_Ark/blob/master/README.md</a></p>
+<p><strong>LORA1276|FCC|CE|868 915MHz|100mW|Lora module|wireless RF module| long range transceiver module</strong><br>
+<a href="https://www.nicerf.com/product_146_136.html">https://www.nicerf.com/product_146_136.html</a></p>
+<h4 id="install">LoRa Install Guide</h4>
+<p><strong>Installing <a href="https://github.com/AaronSwartzDay-SSP/LoRa">our LoRa software</a> on your esp32</strong></p>
+<p><strong><a href="https://www.aaronswartzday.org/lorasetup/#arduinofirmware">Arduino firmware install instructions</a></strong></p>
+<p>More detailed instructions for both models are here: <strong><a href="https://www.aaronswartzday.org/lorasetup">https://www.aaronswartzday.org/lorasetup</a></strong></p>
+<p>The esp32 does not have a toolkit, but you can use the arduino 
+toolkit with a plugin module to get it to work on the esp32. (add links)</p>
+<p>1) On your computer, install the arduino toolkit, and the esp 32 plugin that works with the arduino toolkit.</p>
+<p>2) Use the toolkit to put our LoRa software on your device.</p>
+<p>3) Take any web-enabled device and fire up a browser type in the IP address 192.168.x.1</p>
+<p>4) Type in your message in the form field and click “send” – to send a
+ message to everyone on the network that also has the page loaded.</p>
+<p>5) Users can refresh the page to see new messages.</p>
+<p>The page will save and display the last 10 messages sent. (We are 
+working on having a second page that displays the last 100 messages.)</p>
+<p><img class="aligncenter size-large wp-image-3063" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/cellsoll-473x1024.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/07/cellsoll-473x1024.png 473w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/cellsoll-139x300.png 139w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/cellsoll-768x1662.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/cellsoll-710x1536.png 710w, https://www.aaronswartzday.org/wp-content/uploads/2020/07/cellsoll.png 828w" sizes="(max-width: 473px) 100vw, 473px" width="473" height="1024"></p>
+<h4 id="troubleshooting">Troubleshooting Info</h4>
+<p>Troubleshooting Info here</p>
+<h4 id="techsupport">Tech Support</h4>
+<p>contact: &nbsp; cellsol@robots-everywhere.com</p>
+	</div><!-- .entry-content -->
+</article><!-- #post-## -->
+		</div><!-- #content -->
+	</div><!-- #primary -->
+</div><!-- #main-content -->
+
+<div id="secondary">
+		<h2 class="site-description">Virtual Hackathon Starts November 7, 2020</h2>
+	
+	
+		<div id="primary-sidebar" class="primary-sidebar widget-area" role="complementary">
+				<aside id="recent-posts-2" class="widget widget_recent_entries">		<h1 class="widget-title">Recent Posts</h1>		<ul>
+											<li>
+					<a href="https://www.aaronswartzday.org/the-intentionality-of-evil/">The Intentionality of Evil</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/angela-davis/">Angela Davis: This is a very exciting moment.</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/supreme-court-titlevii-decision/">Supreme
+ Court: All federal laws that prohibit discrimination on the basis of 
+sex also outlaw discrimination based on sexual orientation or gender 
+identity</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/bridgefy-tutorial/">How to use Bridgefy as an Emergency Mesh Network</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/surveillance-ordinance-toolkit/">New “Toolkit” from the ACLU &amp; Oakland Privacy Can Help You Get A Surveillance Ordinance Passed</a>
+									</li>
+					</ul>
+		</aside><aside id="categories-2" class="widget widget_categories"><h1 class="widget-title">Categories</h1>		<ul>
+				<li class="cat-item cat-item-36"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2013/">Aaron Swartz Day 2013</a>
+</li>
+	<li class="cat-item cat-item-44"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2014/">Aaron Swartz Day 2014</a>
+</li>
+	<li class="cat-item cat-item-115"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2015/">Aaron Swartz Day 2015</a>
+</li>
+	<li class="cat-item cat-item-223"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2016/">Aaron Swartz Day 2016</a>
+</li>
+	<li class="cat-item cat-item-249"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2017/">Aaron Swartz Day 2017</a>
+</li>
+	<li class="cat-item cat-item-346"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2018/">Aaron Swartz Day 2018</a>
+</li>
+	<li class="cat-item cat-item-387"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2018-projects/">Aaron Swartz Day 2018 – Projects</a>
+</li>
+	<li class="cat-item cat-item-64"><a href="https://www.aaronswartzday.org/category/aaron-swartz-hackathon-2014-projects/">Aaron Swartz Hackathon 2014 – Projects</a>
+</li>
+	<li class="cat-item cat-item-219"><a href="https://www.aaronswartzday.org/category/aaron-swartz-hackathon-2016-projects/">Aaron Swartz Hackathon 2016 – Projects</a>
+</li>
+	<li class="cat-item cat-item-43"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2014/">Aaron Swartz International Hackathon 2014</a>
+</li>
+	<li class="cat-item cat-item-116"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2015/">Aaron Swartz International Hackathon 2015</a>
+</li>
+	<li class="cat-item cat-item-224"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2016/">Aaron Swartz International Hackathon 2016</a>
+</li>
+	<li class="cat-item cat-item-309"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2017/">Aaron Swartz International Hackathon 2017</a>
+</li>
+	<li class="cat-item cat-item-285"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2017-projects/">Aaron Swartz International Hackathon 2017 – Projects</a>
+</li>
+	<li class="cat-item cat-item-349"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2018/">Aaron Swartz International Hackathon 2018</a>
+</li>
+	<li class="cat-item cat-item-196"><a href="https://www.aaronswartzday.org/category/aaron-swartz-memorial-san-francisco/">Aaron Swartz Memorial – San Francisco</a>
+</li>
+	<li class="cat-item cat-item-469"><a href="https://www.aaronswartzday.org/category/aarons-foia-requests/">Aaron's FOIA Requests</a>
+</li>
+	<li class="cat-item cat-item-26"><a href="https://www.aaronswartzday.org/category/aarons-writings/">Aaron's Writings</a>
+</li>
+	<li class="cat-item cat-item-2"><a href="https://www.aaronswartzday.org/category/announcements/">Announcements</a>
+</li>
+	<li class="cat-item cat-item-267"><a href="https://www.aaronswartzday.org/category/art/">Art</a>
+</li>
+	<li class="cat-item cat-item-328"><a href="https://www.aaronswartzday.org/category/asd-next-phase-events/">ASD Next Phase Events</a>
+</li>
+	<li class="cat-item cat-item-381"><a href="https://www.aaronswartzday.org/category/asd-police-surveillance-project/">ASD Police Surveillance Project</a>
+</li>
+	<li class="cat-item cat-item-100"><a href="https://www.aaronswartzday.org/category/audio/">Audio</a>
+</li>
+	<li class="cat-item cat-item-206"><a href="https://www.aaronswartzday.org/category/chelsea-manning/">Chelsea Manning</a>
+</li>
+	<li class="cat-item cat-item-208"><a href="https://www.aaronswartzday.org/category/copyright/">Copyright</a>
+</li>
+	<li class="cat-item cat-item-58"><a href="https://www.aaronswartzday.org/category/creative-commons/">Creative Commons</a>
+</li>
+	<li class="cat-item cat-item-506"><a href="https://www.aaronswartzday.org/category/decentralized-web/">Decentralized Web</a>
+</li>
+	<li class="cat-item cat-item-327"><a href="https://www.aaronswartzday.org/category/digging-deeper/">Digging Deeper</a>
+</li>
+	<li class="cat-item cat-item-65"><a href="https://www.aaronswartzday.org/category/digital-privacy-suggestions/">Digital Privacy Suggestions</a>
+</li>
+	<li class="cat-item cat-item-300"><a href="https://www.aaronswartzday.org/category/documentaries-press-freedoms/">Documentaries – Press Freedoms</a>
+</li>
+	<li class="cat-item cat-item-505"><a href="https://www.aaronswartzday.org/category/dwebcamp/">DWebCamp</a>
+</li>
+	<li class="cat-item cat-item-118"><a href="https://www.aaronswartzday.org/category/electronic-frontier-foundation/">Electronic Frontier Foundation</a>
+</li>
+	<li class="cat-item cat-item-280"><a href="https://www.aaronswartzday.org/category/ethical-algorithms/">Ethical Algorithms</a>
+</li>
+	<li class="cat-item cat-item-401"><a href="https://www.aaronswartzday.org/category/facebook-fake-news-fiasco/">Facebook Fake News Fiasco</a>
+</li>
+	<li class="cat-item cat-item-528"><a href="https://www.aaronswartzday.org/category/facing-the-great-reckoning-head-on/">Facing the Great Reckoning Head On</a>
+</li>
+	<li class="cat-item cat-item-85"><a href="https://www.aaronswartzday.org/category/fight-for-the-future/">Fight For The Future</a>
+</li>
+	<li class="cat-item cat-item-250"><a href="https://www.aaronswartzday.org/category/first-amendment/">First Amendment</a>
+</li>
+	<li class="cat-item cat-item-476"><a href="https://www.aaronswartzday.org/category/foia-lawsuits/">FOIA Lawsuits</a>
+</li>
+	<li class="cat-item cat-item-467"><a href="https://www.aaronswartzday.org/category/foia-requests/">FOIA Requests</a>
+</li>
+	<li class="cat-item cat-item-489"><a href="https://www.aaronswartzday.org/category/freedom-of-the-press/">Freedom of the Press</a>
+</li>
+	<li class="cat-item cat-item-134"><a href="https://www.aaronswartzday.org/category/freedom-of-the-press-foundation/">Freedom of the Press Foundation</a>
+</li>
+	<li class="cat-item cat-item-432"><a href="https://www.aaronswartzday.org/category/game-development/">Game Development</a>
+</li>
+	<li class="cat-item cat-item-499"><a href="https://www.aaronswartzday.org/category/grand-jury-transformation/">Grand Jury Transformation</a>
+</li>
+	<li class="cat-item cat-item-207"><a href="https://www.aaronswartzday.org/category/history/">History</a>
+</li>
+	<li class="cat-item cat-item-174"><a href="https://www.aaronswartzday.org/category/international-rights-treaties/">International Rights Treaties</a>
+</li>
+	<li class="cat-item cat-item-139"><a href="https://www.aaronswartzday.org/category/internet-archive/">Internet Archive</a>
+</li>
+	<li class="cat-item cat-item-156"><a href="https://www.aaronswartzday.org/category/journalists-toolbox/">Journalist's Toolbox</a>
+</li>
+	<li class="cat-item cat-item-162"><a href="https://www.aaronswartzday.org/category/library-freedom-project/">Library Freedom Project</a>
+</li>
+	<li class="cat-item cat-item-238"><a href="https://www.aaronswartzday.org/category/live-streamed-events/">Live Streamed Events</a>
+</li>
+	<li class="cat-item cat-item-62"><a href="https://www.aaronswartzday.org/category/live-webcast-link/">Live Webcast Link</a>
+</li>
+	<li class="cat-item cat-item-18"><a href="https://www.aaronswartzday.org/category/mayday-pac/">MayDay PAC</a>
+</li>
+	<li class="cat-item cat-item-297"><a href="https://www.aaronswartzday.org/category/movies/">Movies</a>
+</li>
+	<li class="cat-item cat-item-415"><a href="https://www.aaronswartzday.org/category/music/">Music</a>
+</li>
+	<li class="cat-item cat-item-91"><a href="https://www.aaronswartzday.org/category/new-hampshire-rebellion-january-walk/">New Hampshire Rebellion January Walk</a>
+</li>
+	<li class="cat-item cat-item-97"><a href="https://www.aaronswartzday.org/category/official-government-responses/">Official Government Responses</a>
+</li>
+	<li class="cat-item cat-item-89"><a href="https://www.aaronswartzday.org/category/opaaronswartz/">OpAaronSwartz</a>
+</li>
+	<li class="cat-item cat-item-436"><a href="https://www.aaronswartzday.org/category/opening-night-party/">Opening Night Party</a>
+</li>
+	<li class="cat-item cat-item-181"><a href="https://www.aaronswartzday.org/category/opsec/">Opsec</a>
+</li>
+	<li class="cat-item cat-item-292"><a href="https://www.aaronswartzday.org/category/pacer/">PACER</a>
+</li>
+	<li class="cat-item cat-item-497"><a href="https://www.aaronswartzday.org/category/police-misconduct/">Police Misconduct</a>
+</li>
+	<li class="cat-item cat-item-226"><a href="https://www.aaronswartzday.org/category/political-ad-archive/">Political Ad Archive</a>
+</li>
+	<li class="cat-item cat-item-184"><a href="https://www.aaronswartzday.org/category/poulsen-v-dhs/">Poulsen v. DHS</a>
+</li>
+	<li class="cat-item cat-item-54"><a href="https://www.aaronswartzday.org/category/press/">Press</a>
+</li>
+	<li class="cat-item cat-item-329"><a href="https://www.aaronswartzday.org/category/privacy-hackathons/">Privacy Hackathons</a>
+</li>
+	<li class="cat-item cat-item-117"><a href="https://www.aaronswartzday.org/category/privacy-enabling-conference-2015/">Privacy-enabling Mini-Conference 2015</a>
+</li>
+	<li class="cat-item cat-item-293"><a href="https://www.aaronswartzday.org/category/public-access-to-the-public-domain/">Public Access to the Public Domain</a>
+</li>
+	<li class="cat-item cat-item-25"><a href="https://www.aaronswartzday.org/category/q-a-with-brian-knappenberger/">Q &amp; A with Brian Knappenberger</a>
+</li>
+	<li class="cat-item cat-item-447"><a href="https://www.aaronswartzday.org/category/raw-thought-at-the-dna-lounge/">Raw Thought at The DNA Lounge</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="https://www.aaronswartzday.org/category/reform-the-cfaa/">Reform the CFAA</a>
+</li>
+	<li class="cat-item cat-item-59"><a href="https://www.aaronswartzday.org/category/remembering-aaron/">Remembering Aaron</a>
+</li>
+	<li class="cat-item cat-item-342"><a href="https://www.aaronswartzday.org/category/remembering-john-perry-barlow/">Remembering John Perry Barlow</a>
+</li>
+	<li class="cat-item cat-item-266"><a href="https://www.aaronswartzday.org/category/save-net-neutrality/">Save Net Neutrality</a>
+</li>
+	<li class="cat-item cat-item-35"><a href="https://www.aaronswartzday.org/category/securedrop/">SecureDrop</a>
+</li>
+	<li class="cat-item cat-item-389"><a href="https://www.aaronswartzday.org/category/solar-survival/">Solar Survival</a>
+</li>
+	<li class="cat-item cat-item-39"><a href="https://www.aaronswartzday.org/category/student-innovator-protections/">Student Innovator Protections</a>
+</li>
+	<li class="cat-item cat-item-537"><a href="https://www.aaronswartzday.org/category/supreme-court-decisions/">Supreme Court Decisions</a>
+</li>
+	<li class="cat-item cat-item-119"><a href="https://www.aaronswartzday.org/category/surveillance/">Surveillance</a>
+</li>
+	<li class="cat-item cat-item-149"><a href="https://www.aaronswartzday.org/category/surveillance-reform/">Surveillance Reform</a>
+</li>
+	<li class="cat-item cat-item-348"><a href="https://www.aaronswartzday.org/category/swartz-manning-vr-destination/">Swartz-Manning VR Destination</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="https://www.aaronswartzday.org/category/takepart-com-articles/">Takepart.com Articles</a>
+</li>
+	<li class="cat-item cat-item-526"><a href="https://www.aaronswartzday.org/category/techs-great-reckoning/">Tech's Great Reckoning</a>
+</li>
+	<li class="cat-item cat-item-111"><a href="https://www.aaronswartzday.org/category/the-constitution/">The Constitution</a>
+</li>
+	<li class="cat-item cat-item-20"><a href="https://www.aaronswartzday.org/category/the-good-fight-with-ben-wikler/">The Good Fight with Ben Wikler</a>
+</li>
+	<li class="cat-item cat-item-460"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy/">The Internet's Own Boy</a>
+</li>
+	<li class="cat-item cat-item-88"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy-awards/">The Internet's Own Boy – Awards</a>
+</li>
+	<li class="cat-item cat-item-6"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy-press/">The Internet's Own Boy – Press</a>
+</li>
+	<li class="cat-item cat-item-5"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy-screenings/">The Internet's Own Boy – Screenings</a>
+</li>
+	<li class="cat-item cat-item-465"><a href="https://www.aaronswartzday.org/category/the-week-in-aaron-swartz-day-land/">The Week In Aaron Swartz Day-Land</a>
+</li>
+	<li class="cat-item cat-item-140"><a href="https://www.aaronswartzday.org/category/tor/">Tor Project</a>
+</li>
+	<li class="cat-item cat-item-154"><a href="https://www.aaronswartzday.org/category/transcripts/">Transcripts</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="https://www.aaronswartzday.org/category/uncategorized/">Uncategorized</a>
+</li>
+	<li class="cat-item cat-item-63"><a href="https://www.aaronswartzday.org/category/video/">Video</a>
+</li>
+	<li class="cat-item cat-item-347"><a href="https://www.aaronswartzday.org/category/virtual-reality/">Virtual Reality</a>
+</li>
+		</ul>
+			</aside><aside id="archives-2" class="widget widget_archive"><h1 class="widget-title">Archives</h1>		<ul>
+				<li><a href="https://www.aaronswartzday.org/2020/10/">October 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2020/06/">June 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2020/05/">May 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2020/01/">January 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/09/">September 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/08/">August 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/07/">July 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/06/">June 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/05/">May 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/03/">March 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/02/">February 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/01/">January 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/12/">December 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/11/">November 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/10/">October 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/08/">August 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/07/">July 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/06/">June 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/05/">May 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/04/">April 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/03/">March 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/02/">February 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/01/">January 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/12/">December 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/11/">November 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/10/">October 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/09/">September 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/07/">July 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/03/">March 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/02/">February 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/01/">January 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/12/">December 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/11/">November 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/10/">October 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/07/">July 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/02/">February 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/01/">January 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/12/">December 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/11/">November 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/10/">October 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/02/">February 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/01/">January 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/11/">November 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/10/">October 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/08/">August 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/07/">July 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/06/">June 2014</a></li>
+		</ul>
+			</aside><aside id="meta-2" class="widget widget_meta"><h1 class="widget-title">Meta</h1>			<ul>
+						<li><a href="https://www.aaronswartzday.org/wp-login.php">Log in</a></li>
+			<li><a href="https://www.aaronswartzday.org/feed/">Entries feed</a></li>
+			<li><a href="https://www.aaronswartzday.org/comments/feed/">Comments feed</a></li>
+			<li><a href="https://wordpress.org/">WordPress.org</a></li>			</ul>
+			</aside>	</div><!-- #primary-sidebar -->
+	</div><!-- #secondary -->
+
+		</div><!-- #main -->
+
+		<footer id="colophon" class="site-footer" role="contentinfo">
+
+			
+			<div class="site-info">
+								<a href="https://wordpress.org/">Proudly powered by WordPress</a>
+			</div><!-- .site-info -->
+		</footer><!-- #colophon -->
+	</div><!-- #page -->
+
+	<script type="text/javascript" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/functions.js"></script>
+<script type="text/javascript" src="Guide%20to%20Building%20an%20Emergency%20LoRa%20Network%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/wp-embed.js"></script>
+
+</body></html>
