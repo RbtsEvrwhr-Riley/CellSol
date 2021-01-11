@@ -1,0 +1,9 @@
+---
+more:
+  - name: Buy Kits
+    ref: "https://www.robots-everywhere.com/products/?category=cellsol"    
+    external: true	
+  - name: "GitHub"
+    ref: "https://github.com/thegeeklab/hugo-geekdoc"
+    external: true
+    icon: "github"

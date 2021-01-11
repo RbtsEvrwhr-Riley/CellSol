@@ -23,6 +23,11 @@ Magenta #ff55ff
 a { color: #1c388e; }
 a:visited { color: #73bfb8 }
 
+/* menu */
+.gdoc-nav__list li a {
+  color: #55ffff;
+}
+
 /* site header */
 .gdoc-header { background: #000000; border-color: #aa00aa;}
 .gdoc-header__link, .gdoc-header__link:visited { color: #ffffff; font-size: 3rem; font-family: Courier; font-weight: bold; }
