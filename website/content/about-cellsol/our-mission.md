@@ -1,8 +1,3 @@
----
-publishdate: 2019-11-17
-lastmod: 2020-11-24
----
-
 ## Introduction
 What if the internet and cell phone towers went down for more than a few hours - or during an emergency situation? No communication could lead to lost lives.
 
