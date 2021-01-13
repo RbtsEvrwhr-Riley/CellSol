@@ -1,7 +1,7 @@
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
-//#define LORA32V2 // Heltec LORA32 V2 (White board). More progmem, screen, no gps, battery ADC. This is the default and development will mostly happen on this board.  Start developing here if you have the esp32 with more progmem
+#define LORA32V2 // Heltec LORA32 V2 (White board). More progmem, screen, no gps, battery ADC. This is the default and development will mostly happen on this board.  Start developing here if you have the esp32 with more progmem
 //#define TBEAM // TTGO T-Beam (Black board with gps). Less progmem, no screen, gps, no battery ADC.
-#define LORA32V1 // Heltec clone (Black board) (TTGO LoRa OLed V1). Less progmem, screen, no gps, no battery ADC. Start developing here if you have the esp32 with less progmem
+//#define LORA32V1 // Heltec clone (Black board) (TTGO LoRa OLed V1). Less progmem, screen, no gps, no battery ADC. Start developing here if you have the esp32 with less progmem
 // If none of these are defined you'll end up with a minimal feature set. To change these settings, use pinout.h
 
 // Physical radio band. Choosing the wrong range WILL DAMAGE YOUR RADIO MODULE. Currently set up to stay a little away from the main LoRa and LoRaWAN radio ranges out of politeness.
