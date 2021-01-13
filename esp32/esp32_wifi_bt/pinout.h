@@ -6,7 +6,6 @@
 #define RST 14
 #define DIO0 26
 
-
 //OLED pins
 #define OLED_SDA 4
 #define OLED_SCL 15
@@ -89,10 +88,6 @@
 #define OLED_RST 16
 #define enablecomstring "COMCHIAVE"
 #endif
-
-
-
-
 
 // binary support undef. must be at end of file
 #ifdef NO_BINARY_SUPPORT

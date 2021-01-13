@@ -61,18 +61,16 @@ const byte DNS_PORT = 53;
 #ifdef MINDISPLAY
 #define NODISPLAY
 #include <Wire.h>
-#include <ACROBOTIC_SSD1306.h>
+//#include "ACROBOTIC_SSD1306_minimal/ACROBOTIC_SSD1306_minimal.h" // pared down SS1306 driver that only has the 5x7 font
+#include "ACROBOTIC_SSD1306_minimal/ACROBOTIC_SSD1306_minimal.cpp" // pared down SS1306 driver that only has the 5x7 font
 #endif
 
 #ifndef NODISPLAY
 //Libraries for OLED Display
 #include <Wire.h>
-//#include <ACROBOTIC_SSD1306.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #endif
-
-
 
 // LORA32 setup variables
 static bool lowpowerstart = false;
@@ -161,6 +159,7 @@ bool displayenabled = true;
 #ifndef NODISPLAY
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 #endif
+
 
 long disptimeout = 0;
 bool display_on_ping = false;
@@ -1405,7 +1404,11 @@ void BlinkMeWhen()
   if (++lploops > LPLOOP_BLINK)
   {
     #ifdef MINDISPLAY
-    oled.clearDisplay();              // Clear screen
+    if (pseudoseconds>3)
+    {
+      oled.clearDisplay();
+      oled.sendCommand(SSD1306_Display_Off_Cmd);
+    }
     #endif
     led(true);
     DoBasicSteps();
@@ -1532,6 +1535,7 @@ unsigned long modefliptime;
 
 void DoWifiSteps()
 {
+
   PetTheWatchdog();
 
 #ifdef BATT_ADC
@@ -1784,17 +1788,33 @@ void ConnectToUpstreamWifi(int pausetime)
 #ifdef MINDISPLAY
 void DoMinDisplay()
 {
+  dodisplaybuf = false;
+  dodisplay = false;
+#ifdef USER_BUTTON_PIN
+if (digitalRead(USER_BUTTON_PIN)==true)
+  return;
+#endif
+  oled.sendCommand(SSD1306_Display_On_Cmd);
   oled.clearDisplay();              // Clear screen
   oled.setTextXY(0,0);              // Set cursor position, start of line 0
-  oled.putString("CellSol " VERSIONSTRING);
+  oled.putString("CellSol" VERSIONSTRING "(" PYLONMODEL ":" PYLONTYPE);
   oled.setTextXY(1,0);              // Set cursor position, start of line 1
-  oled.putString("(" PYLONMODEL ":" PYLONTYPE);
-  oled.setTextXY(2,0);              // Set cursor position, start of line 2
   oled.putString(wifimode?ipstring_a:"Bluetooth");
   #ifdef WIFI_IS_HYBRID
-  oled.setTextXY(3,0);              // Set cursor position, start of line 2
   oled.putString(wifimode?ipstring_c:"");
   #endif
+  oled.setTextXY(2,0);
+  oled.putString(string_rx[2].substring(0,24));
+  oled.setTextXY(3,0);
+  oled.putString(string_rx[2].substring(25,49));
+  oled.setTextXY(4,0);
+  oled.putString(string_rx[1].substring(0,24));
+  oled.setTextXY(5,0);
+  oled.putString(string_rx[1].substring(25,49));
+  oled.setTextXY(6,0);
+  oled.putString(string_rx[0].substring(0,24));
+  oled.setTextXY(7,0);
+  oled.putString(string_rx[0].substring(25,49));
 }
 #endif
 
@@ -2722,12 +2742,7 @@ void debugSentCallback(String data)
 void loop() {
 
 #ifdef MINDISPLAY
-#ifdef USER_BUTTON_PIN
-  if (digitalRead(USER_BUTTON_PIN))
-  {
-    DoMinDisplay();
-  }
-#endif
+DoMinDisplay();
 #endif
 
   if (wifimode)
