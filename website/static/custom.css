@@ -20,8 +20,8 @@ Magenta #ff55ff
 */
 
 /* default link color */
-a { color: #1c388e; }
-a:visited { color: #73bfb8 }
+a { color: #ff55ff; }
+a:visited { color: #aa00aa }
 
 /* site header */
 .gdoc-header { background: #000000; border-color: #aa00aa;}

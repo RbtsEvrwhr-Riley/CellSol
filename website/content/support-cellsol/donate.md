@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-05
-lastmod=2020-11-24
+publishdate: 2019-11-05
+lastmod: 2020-11-24
 ---
 In the near future, we will begin accepting donations to fund further development and expansion of the CellSol project.
 

@@ -1,7 +1,7 @@
 ---
 title: Home
-publishdate=2019-11-05
-lastmod=2020-11-24
+publishdate: 2020-11-05
+lastmod: 2021-01-11
 ---
 # CellSol - A Network for Unity and Resilience
 

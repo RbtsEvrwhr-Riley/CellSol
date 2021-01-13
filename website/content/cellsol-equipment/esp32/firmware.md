@@ -1,6 +1,6 @@
 ---
-publishdate=2019-11-17
-lastmod=2020-11-24
+publishdate: 2019-11-17
+lastmod: 2020-11-24
 ---
 
 The firmware for the ESP32 WiFi Pylon will be available on our GitHub when we make the project public, along with all of our other firmware or software.
@@ -9,7 +9,7 @@ The firmware for the ESP32 WiFi Pylon will be available on our GitHub when we ma
 
 ## Source Zip Download
 
-Source for 0.24 (Beta Release) can be [downloaded here](../esp32_wifi_bt.7z).
+Source for 0.30 (Beta Release) can be [downloaded here](../esp32_wifi_bt.zip).
 
 ## Captive Portal Implementation
 

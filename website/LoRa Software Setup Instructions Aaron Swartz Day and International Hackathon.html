@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<!--[if IE 7]>
+<html class="ie ie7" lang="en-US">
+<![endif]-->
+<!--[if IE 8]>
+<html class="ie ie8" lang="en-US">
+<![endif]-->
+<!--[if !(IE 7) & !(IE 8)]><!-->
+<html lang="en-US"><!--<![endif]--><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<title>LoRa Software Setup Instructions | Aaron Swartz Day and International Hackathon</title>
+	<link rel="profile" href="http://gmpg.org/xfn/11">
+	<link rel="pingback" href="https://www.aaronswartzday.org/xmlrpc.php">
+	<!--[if lt IE 9]>
+	<script src="https://www.aaronswartzday.org/wp-content/themes/twentyfourteen/js/html5.js"></script>
+	<![endif]-->
+	<link rel="dns-prefetch" href="https://fonts.googleapis.com/">
+<link rel="dns-prefetch" href="https://s.w.org/">
+<link href="https://fonts.gstatic.com/" crossorigin="" rel="preconnect">
+<link rel="alternate" type="application/rss+xml" title="Aaron Swartz Day and International Hackathon » Feed" href="https://www.aaronswartzday.org/feed/">
+<link rel="alternate" type="application/rss+xml" title="Aaron Swartz Day and International Hackathon » Comments Feed" href="https://www.aaronswartzday.org/comments/feed/">
+<!-- This site uses the Google Analytics by MonsterInsights plugin v7.10.4 - Using Analytics tracking - https://www.monsterinsights.com/ -->
+<script async="" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/analytics.js"></script><script type="text/javascript" data-cfasync="false">
+	var mi_version         = '7.10.4';
+	var mi_track_user      = true;
+	var mi_no_track_reason = '';
+	
+	var disableStr = 'ga-disable-UA-107371708-1';
+
+	/* Function to detect opted out users */
+	function __gaTrackerIsOptedOut() {
+		return document.cookie.indexOf(disableStr + '=true') > -1;
+	}
+
+	/* Disable tracking if the opt-out cookie exists. */
+	if ( __gaTrackerIsOptedOut() ) {
+		window[disableStr] = true;
+	}
+
+	/* Opt-out function */
+	function __gaTrackerOptout() {
+	  document.cookie = disableStr + '=true; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/';
+	  window[disableStr] = true;
+	}
+	
+	if ( mi_track_user ) {
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+			m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','__gaTracker');
+
+		__gaTracker('create', 'UA-107371708-1', 'auto');
+		__gaTracker('set', 'forceSSL', true);
+		__gaTracker('require', 'displayfeatures');
+		__gaTracker('send','pageview');
+	} else {
+		console.log( "" );
+		(function() {
+			/* https://developers.google.com/analytics/devguides/collection/analyticsjs/ */
+			var noopfn = function() {
+				return null;
+			};
+			var noopnullfn = function() {
+				return null;
+			};
+			var Tracker = function() {
+				return null;
+			};
+			var p = Tracker.prototype;
+			p.get = noopfn;
+			p.set = noopfn;
+			p.send = noopfn;
+			var __gaTracker = function() {
+				var len = arguments.length;
+				if ( len === 0 ) {
+					return;
+				}
+				var f = arguments[len-1];
+				if ( typeof f !== 'object' || f === null || typeof f.hitCallback !== 'function' ) {
+					console.log( 'Not running function __gaTracker(' + arguments[0] + " ....) because you are not being tracked. " + mi_no_track_reason );
+					return;
+				}
+				try {
+					f.hitCallback();
+				} catch (ex) {
+
+				}
+			};
+			__gaTracker.create = function() {
+				return new Tracker();
+			};
+			__gaTracker.getByName = noopnullfn;
+			__gaTracker.getAll = function() {
+				return [];
+			};
+			__gaTracker.remove = noopfn;
+			window['__gaTracker'] = __gaTracker;
+					})();
+		}
+</script>
+<!-- / Google Analytics by MonsterInsights -->
+		<script type="text/javascript">
+			window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/12.0.0-1\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/12.0.0-1\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/www.aaronswartzday.org\/wp-includes\/js\/wp-emoji-release.min.js?ver=5.4.2"}};
+			/*! This file is auto-generated */
+			!function(e,a,t){var r,n,o,i,p=a.createElement("canvas"),s=p.getContext&&p.getContext("2d");function c(e,t){var a=String.fromCharCode;s.clearRect(0,0,p.width,p.height),s.fillText(a.apply(this,e),0,0);var r=p.toDataURL();return s.clearRect(0,0,p.width,p.height),s.fillText(a.apply(this,t),0,0),r===p.toDataURL()}function l(e){if(!s||!s.fillText)return!1;switch(s.textBaseline="top",s.font="600 32px Arial",e){case"flag":return!c([127987,65039,8205,9895,65039],[127987,65039,8203,9895,65039])&&(!c([55356,56826,55356,56819],[55356,56826,8203,55356,56819])&&!c([55356,57332,56128,56423,56128,56418,56128,56421,56128,56430,56128,56423,56128,56447],[55356,57332,8203,56128,56423,8203,56128,56418,8203,56128,56421,8203,56128,56430,8203,56128,56423,8203,56128,56447]));case"emoji":return!c([55357,56424,55356,57342,8205,55358,56605,8205,55357,56424,55356,57340],[55357,56424,55356,57342,8203,55358,56605,8203,55357,56424,55356,57340])}return!1}function d(e){var t=a.createElement("script");t.src=e,t.defer=t.type="text/javascript",a.getElementsByTagName("head")[0].appendChild(t)}for(i=Array("flag","emoji"),t.supports={everything:!0,everythingExceptFlag:!0},o=0;o<i.length;o++)t.supports[i[o]]=l(i[o]),t.supports.everything=t.supports.everything&&t.supports[i[o]],"flag"!==i[o]&&(t.supports.everythingExceptFlag=t.supports.everythingExceptFlag&&t.supports[i[o]]);t.supports.everythingExceptFlag=t.supports.everythingExceptFlag&&!t.supports.flag,t.DOMReady=!1,t.readyCallback=function(){t.DOMReady=!0},t.supports.everything||(n=function(){t.readyCallback()},a.addEventListener?(a.addEventListener("DOMContentLoaded",n,!1),e.addEventListener("load",n,!1)):(e.attachEvent("onload",n),a.attachEvent("onreadystatechange",function(){"complete"===a.readyState&&t.readyCallback()})),(r=t.source||{}).concatemoji?d(r.concatemoji):r.wpemoji&&r.twemoji&&(d(r.twemoji),d(r.wpemoji)))}(window,document,window._wpemojiSettings);
+		</script><script src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/wp-emoji-release.js" type="text/javascript" defer="defer"></script>
+		<style type="text/css">
+img.wp-smiley,
+img.emoji {
+	display: inline !important;
+	border: none !important;
+	box-shadow: none !important;
+	height: 1em !important;
+	width: 1em !important;
+	margin: 0 .07em !important;
+	vertical-align: -0.1em !important;
+	background: none !important;
+	padding: 0 !important;
+}
+</style>
+	<link rel="stylesheet" id="wp-block-library-css" href="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/style.css" type="text/css" media="all">
+<link rel="stylesheet" id="twentyfourteen-lato-css" href="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/css.css" type="text/css" media="all">
+<link rel="stylesheet" id="genericons-css" href="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/genericons.css" type="text/css" media="all">
+<link rel="stylesheet" id="twentyfourteen-style-css" href="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/style_002.css" type="text/css" media="all">
+<!--[if lt IE 9]>
+<link rel='stylesheet' id='twentyfourteen-ie-css'  href='https://www.aaronswartzday.org/wp-content/themes/twentyfourteen/css/ie.css?ver=20131205' type='text/css' media='all' />
+<![endif]-->
+<script type="text/javascript">
+/* <![CDATA[ */
+var monsterinsights_frontend = {"js_events_tracking":"true","download_extensions":"doc,pdf,ppt,zip,xls,docx,pptx,xlsx","inbound_paths":"[]","home_url":"https:\/\/www.aaronswartzday.org","hash_tracking":"false"};
+/* ]]> */
+</script>
+<script type="text/javascript" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/frontend.js"></script>
+<script type="text/javascript" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/jquery.js"></script>
+<script type="text/javascript" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/jquery-migrate.js"></script>
+<link rel="https://api.w.org/" href="https://www.aaronswartzday.org/wp-json/">
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://www.aaronswartzday.org/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="https://www.aaronswartzday.org/wp-includes/wlwmanifest.xml"> 
+<link rel="canonical" href="https://www.aaronswartzday.org/lorasetup/">
+<link rel="shortlink" href="https://www.aaronswartzday.org/?p=3079">
+<link rel="alternate" type="application/json+oembed" href="https://www.aaronswartzday.org/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.aaronswartzday.org%2Florasetup%2F">
+<link rel="alternate" type="text/xml+oembed" href="https://www.aaronswartzday.org/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww.aaronswartzday.org%2Florasetup%2F&amp;format=xml">
+		<style type="text/css" id="wp-custom-css">
+			/* HTML table customization */
+/* vvvvvvvvvvvvvvvvvvvvvvvv */
+table {
+  border-collapse: collapse;
+  border: 2px solid rgb(200,200,200);
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+  margin: auto;
+}
+
+td, th {
+  border: 1px solid rgb(190,190,190);
+  padding: 10px 20px;
+}
+
+th {
+  background-color: rgb(235,235,235);
+}
+
+td {
+  text-align: left;
+}
+
+tr:nth-child(even) td {
+  background-color: rgb(250,250,250);
+}
+
+tr:nth-child(odd) td {
+  background-color: rgb(235,235,235);
+}
+
+tr:nth-child(even):hover td {
+  background-color: rgb(200, 200, 200);
+}
+
+tr:nth-child(odd):hover td {
+  background-color: rgb(200, 200, 200);
+}
+/* ^^^^^^^^^^^^^^^^^^^^^^^^ */
+/* HTML table customization */
+
+/* Increase caption padding */
+caption {
+  padding: 10px;
+}
+
+/* Increase maximum width of full-width page template */
+body.page-template-full-width .site-content .entry-header, body.page-template-full-width .site-content .entry-content, body.page-template-full-width .site-content .entry-summary, body.page-template-full-width .site-content .entry-meta, body.page-template-full-width .page-content {
+	max-width: 700px;
+}
+
+/* Make so images aligned leftward within a full-width page template will remain aligned with the rest of the article body*/
+.full-width .site-content img.size-full.alignleft {
+	margin-left: 0px;
+}
+		</style>
+		</head>
+
+<body class="page-template-default page page-id-3079 group-blog singular">
+<div id="page" class="hfeed site">
+	
+	<header id="masthead" class="site-header" role="banner">
+		<div class="header-main">
+			<h1 class="site-title"><a href="https://www.aaronswartzday.org/" rel="home">Aaron Swartz Day and International Hackathon</a></h1>
+
+			<div class="search-toggle">
+				<a href="#search-container" class="screen-reader-text" aria-expanded="false" aria-controls="search-container">Search</a>
+			</div>
+
+			<nav id="primary-navigation" class="site-navigation primary-navigation" role="navigation">
+				<button class="menu-toggle">Primary Menu</button>
+				<a class="screen-reader-text skip-link" href="#content">Skip to content</a>
+				<div class="menu-menu-1-container"><ul id="primary-menu" class="nav-menu"><li id="menu-item-2100" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2100"><a href="https://www.aaronswartzday.org/about/">About</a></li>
+<li id="menu-item-2019" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2019"><a href="https://www.aaronswartzday.org/securedrop/">SecureDrop</a></li>
+<li id="menu-item-2018" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2018"><a href="https://www.aaronswartzday.org/aaronswartzfacts/">SETTING THE RECORD STRAIGHT</a></li>
+<li id="menu-item-2274" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2274"><a href="https://www.aaronswartzday.org/vr/">The Swartz Manning VR Destination</a></li>
+<li id="menu-item-2283" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2283"><a href="https://www.aaronswartzday.org/psp/">ASD Police Surveillance Project</a></li>
+<li id="menu-item-2833" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2833"><a href="https://www.aaronswartzday.org/solarsurvival/">ASD Solar Survival Project</a></li>
+<li id="menu-item-2634" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2634"><a href="https://www.aaronswartzday.org/jan11rawthought/">Jan 11 Raw Thought</a></li>
+<li id="menu-item-2513" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2513"><a href="https://www.aaronswartzday.org/speaker-videos/">Speaker Videos</a></li>
+<li id="menu-item-2959" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2959"><a href="https://www.aaronswartzday.org/fabric-covid-19/">Fabric Considerations for DYI COVID-19 Masks</a></li>
+<li id="menu-item-3023" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-3023"><a href="https://www.aaronswartzday.org/2020-index/">Virtual Hackathon: Index of all Pages</a></li>
+<li id="menu-item-3011" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-3011"><a href="https://www.aaronswartzday.org/virtual-hackathon/">Projects: Virtual Hackathon – RF Tech Edition</a></li>
+<li id="menu-item-3021" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-home menu-item-3021"><a href="https://www.aaronswartzday.org/virtual-hackathon-faq/">Virtual Hackathon FAQ</a></li>
+</ul></div>			</nav>
+		</div>
+
+		<div id="search-container" class="search-box-wrapper hide">
+			<div class="search-box">
+				<form role="search" method="get" class="search-form" action="https://www.aaronswartzday.org/">
+				<label>
+					<span class="screen-reader-text">Search for:</span>
+					<input type="search" class="search-field" placeholder="Search …" name="s">
+				</label>
+				<input type="submit" class="search-submit" value="Search">
+			</form>			</div>
+		</div>
+	</header><!-- #masthead -->
+
+	<div id="main" class="site-main">
+
+<div id="main-content" class="main-content">
+
+	<div id="primary" class="content-area">
+		<div id="content" class="site-content" role="main">
+
+			
+<article id="post-3079" class="post-3079 page type-page status-publish hentry">
+	<header class="entry-header"><h1 class="entry-title">LoRa Software Setup Instructions</h1></header><!-- .entry-header -->
+	<div class="entry-content">
+		<p><strong>Last Updated: October 14, 2020</strong></p>
+<p>Our main page for indexed LoRa info is here: <strong><a href="http://aaronswartzday.org/LoRa">aaronswartzday.org/LoRa</a></strong></p>
+<ul>
+<li><strong> <a href="#esp32">How to install the software on the Esp32</a><br>
+</strong></li>
+<li><a href="#gateway"><strong>How to configure your pylon as a gateway</strong></a> – so devices can connect over WIFI (instead of directly to the pylon)</li>
+<li><strong> <a href="#cases">Cases for your Esp 32 </a></strong></li>
+<li><strong> <a href="#arduino">How to build an Arduino-based pylon and install &amp; configure its software</a></strong>
+<ul>
+<li><strong><a href="#arduinofirmware">Loading the firmware</a></strong></li>
+</ul>
+</li>
+</ul>
+<p id="esp32"><strong>How to install the software on the Esp32</strong></p>
+<p>Here are <strong><a href="https://www.aaronswartzday.org/lora/#pocketnode">some part lists for building “pylons”</a> (A pylon is: a LoRa receiver/transmitter – whether it lives on a rooftop or in your pocket) –&nbsp; to build your own network</strong></p>
+<p>1. Plug your esp32 into the computer</p>
+<p>2. Download the Arduino SDK from: <a href="https://www.arduino.cc/en/Main/Software">arduino.cc/en/Main/Software </a>and Install it on your computer (PC or Mac)</p>
+<p>Note: You will also need to download and unzip our<strong><a href="https://github.com/AaronSwartzDay-SSP/LoRa"> LoRa software.</a></strong> Setting it up is explained in detail in <a href="#step9"><strong>Step 9</strong></a>.</p>
+<p>3. Open it and go to “Preferences” and cut and paste this URL into the “Additional Board Manager URLS” form field:</p>
+<p>https://dl.espressif.com/dl/package_esp32_index.json</p>
+<p><a href="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Preferences-Arduino-SDK-BoardsManagerURL.png"><img class="aligncenter size-large wp-image-3086" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/Preferences-Arduino-SDK-BoardsManagerURL-1024x699.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Preferences-Arduino-SDK-BoardsManagerURL-1024x699.png 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Preferences-Arduino-SDK-BoardsManagerURL-300x205.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Preferences-Arduino-SDK-BoardsManagerURL-768x525.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Preferences-Arduino-SDK-BoardsManagerURL-1536x1049.png 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Preferences-Arduino-SDK-BoardsManagerURL.png 1596w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="324"></a></p>
+<p>4. Click OK and close &amp; restart the program</p>
+<p>5. Go to “Tools”</p>
+<p>“Board”</p>
+<p>“Board Manager”</p>
+<p>SCREENGRAB SELECTING THIS</p>
+<p>and scroll to the very bottom where it says esp32 by Espressif Systems – and install those libraries</p>
+<p><a href="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Boards-Manager.png"><img class="aligncenter size-large wp-image-3087" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/Boards-Manager-1024x577.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Boards-Manager-1024x577.png 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Boards-Manager-300x169.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Boards-Manager-768x432.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Boards-Manager-1536x865.png 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Boards-Manager.png 1600w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="267"></a></p>
+<p>6. Go to “Tools” “Board” “esp32” and select “Helltec Wifi LoRa 32 (v2)”</p>
+<p>The pic below is a little confusing because you will notice that 
+“Heltec WiFi LoRa 32(V2)” is already loaded in – but I’m still including
+ this grab so you can see how to select it.</p>
+<p>Mouse over where it says “ESP Arduino” and there will be a huge list 
+of boards to choose from. Scroll down near the bottom and select: 
+“Heltec WiFi LoRa 32(V2)”</p>
+<p><a href="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2.png"><img class="aligncenter size-large wp-image-3088" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/Tools-Board-Heltec-Wifi-LoRa-32V2-1024x571.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2-1024x571.png 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2-300x167.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2-768x428.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2-1536x857.png 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2-1038x576.png 1038w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Tools-Board-Heltec-Wifi-LoRa-32V2.png 1574w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="264"></a></p>
+<p>7. There are drivers you need to install before it will compile properly:</p>
+<p>PC drivers are here:</p>
+<p>need to list and find these</p>
+<p>Mac drivers are here:</p>
+<p>need to list these</p>
+<p><strong><a href="https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers">https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers</a></strong></p>
+<p>Esp32 docs here:</p>
+<p><strong><a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html">https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html</a></strong></p>
+<p>8. There will also be libraries that you need to install, which differ, depending whether you are using a PC or a Mac.</p>
+<table>
+<tbody>
+<tr>
+<td><strong>PC</strong></td>
+<td><strong>Mac</strong></td>
+</tr>
+<tr>
+<td>Link to 2:38 of the youtube tutorial on this</td>
+<td>Adafruit GFX Libraries<br>
+Adafruit Bus<br>
+LoRa LibrariesNote: You will have to use your system password to unlock your security preferences to install these libraries.<br>
+(Remember to relock when you’re done :)</td>
+</tr>
+</tbody>
+</table>
+<p>If you’re not sure if you have all the right libraries installed, try
+ to “Open” and “Upload” the software. This will cause the SDK to try to 
+compile the code. You can also go to “Sketch” and then “compile/verify” 
+or (ctrl+R).</p>
+<p>If you don’t have all of the correct libraries installed, the names 
+of what you need will be given to you as compile errors in the lower 
+part of the document window. <strong>(NEED SCREENGRAB)</strong></p>
+<p>Once you have the name, it’s easy to find and install the libraries you need.</p>
+<p>9. Go to “Tools” and then “Manage Libraries” – and search for the 
+library you need using the search box. (You can also scroll down to what
+ you want, but it scrolls very slowly and the libraries aren’t all in 
+alphabetical order! So you’re going to want to use search :)</p>
+<p>When you find the library and mouse over it – you will be shown a version drop down menu and&nbsp; an “Install” button.</p>
+<p>Select the version you wish to install (use the latest version unless there’s a specific reason not to) and click on “Install.”</p>
+<p><a href="https://www.aaronswartzday.org/wp-content/uploads/2020/10/LoRa-Library-Manager.png"><img class="aligncenter size-large wp-image-3090" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/LoRa-Library-Manager-1024x572.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/10/LoRa-Library-Manager-1024x572.png 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/LoRa-Library-Manager-300x168.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/LoRa-Library-Manager-768x429.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/LoRa-Library-Manager-1536x858.png 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/LoRa-Library-Manager.png 1598w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="265"></a></p>
+<p>10. Select the Port –&nbsp; “Port-dev-cu.SLAB_USBtoUART”</p>
+<p><a href="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Port-dev-cu.SLAB_USBtoUART.png"><img class="aligncenter size-large wp-image-3091" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/Port-dev-cu.png" alt="" srcset="https://www.aaronswartzday.org/wp-content/uploads/2020/10/Port-dev-cu.SLAB_USBtoUART-1024x544.png 1024w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Port-dev-cu.SLAB_USBtoUART-300x159.png 300w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Port-dev-cu.SLAB_USBtoUART-768x408.png 768w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Port-dev-cu.SLAB_USBtoUART-1536x816.png 1536w, https://www.aaronswartzday.org/wp-content/uploads/2020/10/Port-dev-cu.SLAB_USBtoUART.png 1691w" sizes="(max-width: 474px) 100vw, 474px" width="474" height="252"></a></p>
+<p id="step9">11.&nbsp;&nbsp; Download the zip file of our LoRa software here, and unzip it on your hard drive:</p>
+<p><a href="https://github.com/AaronSwartzDay-SSP/LoRa"><strong>https://github.com/AaronSwartzDay-SSP/LoRa </strong></a></p>
+<p>What’s in our software package:</p>
+<p><strong>TREE OF SOFTWARE</strong></p>
+<p>&nbsp;</p>
+<p>12.&nbsp; To load the software on to your esp32, go to “File” “Open” and navigate to the “ino” file in the esp32 directory.</p>
+<p>“esp32_wifi_bt_or_gateway.ino”</p>
+<p>&nbsp;</p>
+<h4 id="gateway">Creating a Gateway</h4>
+<p>If you create a gateway, any device connected to your WIFI network can also access the devices on the LoRa network.</p>
+<p>To enable the gateway functionality in your pylon, follow these 
+steps. The code is already included in the file, you just need to take 
+out the “//” characters at the beginning of each line that comments it 
+out.</p>
+<p>Note that gateway mode must be configured manually and will need an open port on the router.</p>
+<ol>
+<li>remove the “//” in front of “//#define WIFI_IS_CLIENT”</li>
+</ol>
+<p>// Uncomment the above to enable use as a gateway.</p>
+<p>2. enter the name of your wifi network and its password in this section: <strong>(RILEY
+ I could use your help explaining where the different numbers come from 
+below – and how folks look them up for their own networks.)</strong></p>
+<p>#define CLIENT_IP_ADDR 192,168,1,200 // client IP address for client or hybrid mode. needs commas instead of periods<br>
+#define GATEWAY_IP_ADDR 192,168,1,1 // router IP address for client or hybrid mode. needs commas instead of periods<br>
+#define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods<br>
+#define WIFI_UPSTREAM_AP “NameOfNetworkHere” // SSID of the router we’re trying to connect to.<br>
+#define WIFI_UPSTREAM_PWD “PasswordForNetworkHere”// password for the router we’re trying to connect to. Use “” for none/open.</p>
+<p>&nbsp;</p>
+<p>3. Click “Save” – and then “upload” to load the software on to your esp32. <em>(It will say “Hard resetting via RTS pin…” when it’s done.)</em></p>
+<p>To check if the gateway has been configured, press the “PROG” button 
+on the gateway pylon. The address should be what you entered into this 
+chunk of code in step 2 above:</p>
+<p>&nbsp;</p>
+<p><strong>PICTURE of IP ADDRESS on screen of esp32</strong></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>4. To access the LoRa network over your existing WiFi network using the gateway, type: “192.168.1.200” – into a browser window.</p>
+<p>Note that this was the same IP address that you programmed in during STEP 2 above. Here is the code again:</p>
+<p>#define CLIENT_IP_ADDR 192,168,1,200 // client IP address for client or hybrid mode. needs commas instead of periods</p>
+<p>SCREENGRAB HERE OF ACCESSING 192.168.1.200 over the gateway.</p>
+<p>Screengrab here of the messages (a) on screen of #3 esp</p>
+<p>Screengrabs here of the messages (a) and (b) on phone 1 &amp; phone 2</p>
+<p>Screengrab of Phone 1 with Login as result of captive portal page</p>
+<p>Screengrab of Phone 1 with messages (a)</p>
+<p>Screengrab of Phone 1 with messages (a) and (b)</p>
+<p>Screengrab of Phone 2 captive portal page with messages (c) showing</p>
+<h4 id="cases">Cases for your esp32</h4>
+<p>We have included an .stl file in the /esp32/case folder in the zip 
+file – “lora32_case_edited.stl” – which can be used to 3D print a case 
+that can fit snugly in your pocket or backpack and protect your pylon.</p>
+<p>Our case is a modification of the esp32’s “product box” – with 
+rounded edges to better fit in one’s pocket (alas, it is a “pocket 
+pylon”).</p>
+<p>A few details for those interested re: 3D printing cases:</p>
+<p>When modifying an existing design, it’s important to first make the 
+measurements of the file 1% bigger before modifying it further. This is 
+because whenever you print 3D objects, the filament squishes a teeny 
+tiny bit; but it can be enough to make what you are printing too small 
+to “fit” whatever you are covering.</p>
+<p>Another Sidenote: This phenomena of enlarging your blueprints by 1% 
+to account for the squishing phenomena has a corollary for laser 
+cutters, which will always cut your object a teeny bit bigger, to 
+account for the length across of the laser beam doing the cutting.</p>
+<p>So for 3D printing – increase your schematic in size by 1%</p>
+<p>For laser cutting – decrease your schematic in size by 1% (or to account perfectly for the size of your laser beam).</p>
+<h4 id="arduino">How to build an Arduino-based pylon and install &amp; configure its software</h4>
+<p><strong>Arduino set up instructions</strong></p>
+<p>Why we created the arduino model:</p>
+<p>1) It is a lot cheaper to build</p>
+<p>2) It runs on a lot less power – Matteo literally left one running in
+ the dark for three days (so the solar panel wasn’t recharching) and it 
+was still running)</p>
+<p>&nbsp;</p>
+<p>The standard Arduino cellsol node can be used as a repeater, or as an access point for one phone or computer.</p>
+<p>A firmware version that has two bluetooth interfaces, and a version 
+that only operates as a repeater but requires less power (and can be 
+airlifted by a cheap drone) also exist; I recommend becoming familiar 
+with the standard version first.</p>
+<p>BLOCK DIAGRAM (Logic)</p>
+<p>(LoRa transceiver)—-(Arduino)—-(Bluetooth/serial module)</p>
+<p>BLOCK DIAGRAM (Power)</p>
+<p>Power input —– 3.7v switching reg ——– 3.3v LDO linear reg —- active components<br>
+\– battery</p>
+<p>POWERING THE NODE</p>
+<p>The node is designed to be very tolerant when it comes to input 
+power, so that it can be run in a variety of emergency situations.</p>
+<p>The node takes 4 to 6.5V power. You can provide this from USB, a solar panel, or a number of other sources such as:</p>
+<p>* USB power bank. It has to be plugged into the USB power input port.
+ You can break down a USB cable to do this and connect the red and black
+ wires.</p>
+<p>* 6V lead-acid battery, connected to the USB power input port.</p>
+<p>* 6V bike dynamo. Using a diode in series with the node power input 
+is recommended (1N4004 or similar). If you use this, the node MUST have a
+ secondary battery.</p>
+<p>* 3 alkaline cells (AAA to D cells) in series. Important: these must be NON-rechargeable!</p>
+<p>* Anything that outputs USB (car adapter, wall plug, spare USB port 
+on a wifi router, 10 pounds of potatos connected in series, etc)</p>
+<p>* USB hand crank. If you use this, the node MUST have a secondary battery.</p>
+<p>Connect the power source to the P+ and P- terminals on the node, or 
+use the micro usb plug. RESPECT POLARITIES. The node does NOT have 
+reverse polarity protection in its current incarnation.</p>
+<p>BATTERY TYPES FOR THE NODE</p>
+<p>You will need a 3.5 to 4 volt battery to keep the node operating 
+overnight (or when its primary power input is off). The node has been 
+designed to be compatible with a variety of battery typologies. Any one 
+of these will work. If you want to use more than one battery, connect 
+them in parallel. In this case you may NOT mix battery types!</p>
+<p>* None. The node has a two stage voltage regulator (switching to 3.7v
+ and linear to 3.3v) and a filter capacitor, so it’s safe to run it 
+without a battery if it has continuous power coming in. The exception, 
+as noted above, is if you have a USB hand crank or bike dynamo.</p>
+<p>* 3.7V LiPo battery. Any type is fine (18650, old quadcopter battery, etc). If it has no protection circuit, it’s fine.</p>
+<p>* 3.6V lithium battery. Any type is fine (Old cell phone battery, etc).</p>
+<p>* 3 rechargeable cells (AAA to D cells) in series. Important: these must be rechargeable!</p>
+<p>* 4V lead-acid battery, connected to the battery terminals. 
+Optionally, add a 47 ohm resistor between solar in+ and battery in+. 
+(Note that this also applies to a 6V lead-acid battery that has a dead 
+cell: the node uses little continuous power, so this is safe to do! Good
+ for emergencies.)</p>
+<p>* A supercapacitor (if you want to show off) A 5V supercap will work 
+just fine as if it was a battery. Warning: A 3.3V supercap will NOT! If 
+you have one of those, connect it between 3V3 and GND.</p>
+<p>* If all you have available is a 3.3V LiFePo4 cell, you can still use
+ it if you connect a capacitor to the battery terminals, and connect the
+ battery itself to the 3V3 and GND terminals on the Arduino. Connect a 
+47 ohm resistor between B+ on the battery charger board and 3V3. This 
+one is at your own risk and the battery will never get a full charge, 
+but it will work in an emergency.</p>
+<p>Connect the battery to the B+ and B- terminals on the node. RESPECT 
+POLARITIES. The node does NOT have reverse polarity protection in its 
+current incarnation. If a battery has other connectors other than + or –
+ you should be able to just ignore them (this is common with cell phone 
+batteries).</p>
+<p><strong>Building the Arduino Pylon</strong></p>
+<p>You will have to know how to solder in order to build the Arduino pylon from scratch.</p>
+<p>I recommend soldering the SX1276 module in first, because it’s the fiddliest part and requires the most focus.</p>
+<p>Solder a wire on the base board where the closely spaced holes are, 
+then cut it at about 3mm (1/8in) and let it stick up. Repeat for either 
+all the holes, or if you are in a hurry, the holes that you see a PCB 
+trace coming out of (They are all on the top side of the board except 
+the one near the bluetooth connector). They are 1,4,5,6,7,11, and 12. If
+ you have a proper 1.27mm header, use that instead.</p>
+<p>Next, take the SX1276 module, slide into the header you just made, and solder it in place.</p>
+<p>The next part that has to go in is the L3338 regulator. Solder it in 
+place. It can only go one way. The large tab isn’t connected to 
+anything, so you can skip it if you are in a hurry; the node doesn’t eat
+ up enough current for the regulator to need a heatsink.</p>
+<p>Solder the capacitor and the resistor next. They don’t have a 
+polarity, so it doesn’t matter which way you put them in the board.</p>
+<p>Next, solder the Arduino in place, in the same way that you soldered 
+in the SX1276. The holes are more spaced, so it should be easier. If you
+ don’t want to solder and cut wire, you can use a 2.54mm header (also 
+known as a 100 mil header or a 0.1 inch header). In general, if you 
+bought an Arduino Nano or compatible, it should have come with the 
+header. If you are in a hurry, you can only solder the pins you need 
+(GND, 3V3, 0, 1, 7, 10, 11, 12, 13).</p>
+<p>Now it’s time to connect the power control board; you will once again
+ have to use the wire-sitting-up trick, or you can use single pegs of a 
+0.1in header. Place the power control board on the base board so that 
+its USB port is on top, and connect the pins according to where they are
+ on both boards.</p>
+<p>B+ and B- go on the JST connector that goes to your battery (or directly to the battery).<br>
+P+ and P- go to your solar panel or other non-USB power source 
+(including 6V batteries, do NOT connect a 6V battery to B+ and B-)<br>
+OUT+ and OUT- are feeding the node.</p>
+<p>The next thing you have to do is solder the antenna to the SX1276. 
+How to do it depends on your antenna. For a simple wire antenna, just 
+solder the GND pin on the far side of the SX1276 to the base board 
+ground, and the ANT pin to a piece of solid (not stranded) wire. I 
+recommend cutting it to 8.5cm (3.5in), soldering it, and then cutting it
+ again so that the part that actually sticks out of the SX1276 is 
+exactly 7.8cm (3.1in) long. Wire length MATTERS since this is an antenna
+ – take some time to measure carefully!</p>
+<p>Finally, you have to decide whether you want to permanently solder in
+ the bluetooth to serial module or not (or skip it entirely if you are 
+just making a repeater). Note that if you are soldering in a HC05 or 
+HC06 module, which is the most common module, you will want to connect 
+it so that its SMD board is facing AWAY from the Arduino! If you bend 
+the socket or the module pins to fold it on top of the Arduino, the LED 
+should come up on top.</p>
+<p>Upon deploying a repeater with a bare-wire antenna, if you can, the 
+ground pin should go to earth ground, this will improve the radio range.</p>
+<h4 id="arduinofirmware">Loading the Firmware</h4>
+<p>Now you need to flash the firmware. It’s a regular Arduino sketch, so
+ all you need to do is follow the tutorial that should have come with 
+the Arduino, except that you will be loading the CellSol sketch. You 
+will have to get the Lora.h library from the repository.</p>
+<p>The node firmware will work with a 8Mhz Arduino and a 16Mhz Arduino 
+alike; be sure to select the right clock speed in the Arduino IDE. If 
+you get it wrong, nothing will break (so, if you are in doubt, try again
+ with the ohther setting), but the Bluetooth module will not be ble to 
+talk to the Arduino.</p>
+<p>If you want to load the firmware with two serial ports, and want to 
+use the second serial port, it will be on pins 8 and 9. You will need a 
+16Mhz Arduino unless you set the Bluetooth module to operate at 4800bps 
+beforehand.</p>
+<p>CONNECTING TO THE PYLON AND SENDING MESSAGES TO IT</p>
+<p>You can use either the Arduino serial port programmer to send and 
+receive data from the LoRa mesh, or use the Bluetooth module. For a 
+computer, any serial terminal will work in either case; just set it to 
+9600bps.</p>
+<p>For Android phones, you can download the Bluetooth chat app from an 
+ESP32 CellSol node or get it from us (TODO: Put on android market also).</p>
+<p>For iPhone, you will likewise have to find a Bluetooth terminal app.</p>
+<p>For Blackberry, S40, S60 and older phones, you CAN use this! 
+Bluetooth terminal apps are available! (For example 
+http://appworld.blackberry.com/webstore/content/59970357 )</p>
+<p>The node is pass-through; you will get packets as they come in, and 
+send packets immediately after you hit enter. Unlike the ESP32, it does 
+not have enough memory to hold any message history.</p>
+<p>When a packet comes in, you will be told its RSSI, which should give 
+you an idea about how far it’s coming from. This is the RSSI of the last
+ repeater, not of the originating node.</p>
+<p>CARE AND FEEDING</p>
+<p>The node has no moving parts and will operate pretty much 
+indefinitely on solar power. Be sure that it gets as much sun as 
+possible! Every other year, consider replacing the battery. Every six 
+months or so, clean the solar panel. If you have the whole thing earthed
+ via the ground pin, check for corrosion on the earth peg.</p>
+<p>&nbsp;</p>
+	</div><!-- .entry-content -->
+</article><!-- #post-## -->
+
+		</div><!-- #content -->
+	</div><!-- #primary -->
+	<div id="content-sidebar" class="content-sidebar widget-area" role="complementary">
+	<aside id="text-6" class="widget widget_text"><h1 class="widget-title">Movie Trailer – From DeadDrop to SecureDrop</h1>			<div class="textwidget"><iframe src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/gLE6kOOz4l0.html" allowfullscreen="" frameborder="0"></iframe></div>
+		</aside><aside id="text-2" class="widget widget_text"><h1 class="widget-title">The Internet’s Own Boy</h1>			<div class="textwidget"><a href="https://archive.org/details/TheInternetsOwnBoyTheStoryOfAaronSwartz">WATCH IT NOW</a>.
+ <iframe src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/TheInternetsOwnBoyTheStoryOfAaronSwartz.html" webkitallowfullscreen="true" mozallowfullscreen="true" allowfullscreen="" frameborder="0"></iframe></div>
+		</aside></div><!-- #content-sidebar -->
+</div><!-- #main-content -->
+
+<div id="secondary">
+		<h2 class="site-description">Virtual Hackathon Starts November 7, 2020</h2>
+	
+	
+		<div id="primary-sidebar" class="primary-sidebar widget-area" role="complementary">
+				<aside id="recent-posts-2" class="widget widget_recent_entries">		<h1 class="widget-title">Recent Posts</h1>		<ul>
+											<li>
+					<a href="https://www.aaronswartzday.org/the-intentionality-of-evil/">The Intentionality of Evil</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/angela-davis/">Angela Davis: This is a very exciting moment.</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/supreme-court-titlevii-decision/">Supreme
+ Court: All federal laws that prohibit discrimination on the basis of 
+sex also outlaw discrimination based on sexual orientation or gender 
+identity</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/bridgefy-tutorial/">How to use Bridgefy as an Emergency Mesh Network</a>
+									</li>
+											<li>
+					<a href="https://www.aaronswartzday.org/surveillance-ordinance-toolkit/">New “Toolkit” from the ACLU &amp; Oakland Privacy Can Help You Get A Surveillance Ordinance Passed</a>
+									</li>
+					</ul>
+		</aside><aside id="categories-2" class="widget widget_categories"><h1 class="widget-title">Categories</h1>		<ul>
+				<li class="cat-item cat-item-36"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2013/">Aaron Swartz Day 2013</a>
+</li>
+	<li class="cat-item cat-item-44"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2014/">Aaron Swartz Day 2014</a>
+</li>
+	<li class="cat-item cat-item-115"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2015/">Aaron Swartz Day 2015</a>
+</li>
+	<li class="cat-item cat-item-223"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2016/">Aaron Swartz Day 2016</a>
+</li>
+	<li class="cat-item cat-item-249"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2017/">Aaron Swartz Day 2017</a>
+</li>
+	<li class="cat-item cat-item-346"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2018/">Aaron Swartz Day 2018</a>
+</li>
+	<li class="cat-item cat-item-387"><a href="https://www.aaronswartzday.org/category/aaron-swartz-day-2018-projects/">Aaron Swartz Day 2018 – Projects</a>
+</li>
+	<li class="cat-item cat-item-64"><a href="https://www.aaronswartzday.org/category/aaron-swartz-hackathon-2014-projects/">Aaron Swartz Hackathon 2014 – Projects</a>
+</li>
+	<li class="cat-item cat-item-219"><a href="https://www.aaronswartzday.org/category/aaron-swartz-hackathon-2016-projects/">Aaron Swartz Hackathon 2016 – Projects</a>
+</li>
+	<li class="cat-item cat-item-43"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2014/">Aaron Swartz International Hackathon 2014</a>
+</li>
+	<li class="cat-item cat-item-116"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2015/">Aaron Swartz International Hackathon 2015</a>
+</li>
+	<li class="cat-item cat-item-224"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2016/">Aaron Swartz International Hackathon 2016</a>
+</li>
+	<li class="cat-item cat-item-309"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2017/">Aaron Swartz International Hackathon 2017</a>
+</li>
+	<li class="cat-item cat-item-285"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2017-projects/">Aaron Swartz International Hackathon 2017 – Projects</a>
+</li>
+	<li class="cat-item cat-item-349"><a href="https://www.aaronswartzday.org/category/aaron-swartz-international-hackathon-2018/">Aaron Swartz International Hackathon 2018</a>
+</li>
+	<li class="cat-item cat-item-196"><a href="https://www.aaronswartzday.org/category/aaron-swartz-memorial-san-francisco/">Aaron Swartz Memorial – San Francisco</a>
+</li>
+	<li class="cat-item cat-item-469"><a href="https://www.aaronswartzday.org/category/aarons-foia-requests/">Aaron's FOIA Requests</a>
+</li>
+	<li class="cat-item cat-item-26"><a href="https://www.aaronswartzday.org/category/aarons-writings/">Aaron's Writings</a>
+</li>
+	<li class="cat-item cat-item-2"><a href="https://www.aaronswartzday.org/category/announcements/">Announcements</a>
+</li>
+	<li class="cat-item cat-item-267"><a href="https://www.aaronswartzday.org/category/art/">Art</a>
+</li>
+	<li class="cat-item cat-item-328"><a href="https://www.aaronswartzday.org/category/asd-next-phase-events/">ASD Next Phase Events</a>
+</li>
+	<li class="cat-item cat-item-381"><a href="https://www.aaronswartzday.org/category/asd-police-surveillance-project/">ASD Police Surveillance Project</a>
+</li>
+	<li class="cat-item cat-item-100"><a href="https://www.aaronswartzday.org/category/audio/">Audio</a>
+</li>
+	<li class="cat-item cat-item-206"><a href="https://www.aaronswartzday.org/category/chelsea-manning/">Chelsea Manning</a>
+</li>
+	<li class="cat-item cat-item-208"><a href="https://www.aaronswartzday.org/category/copyright/">Copyright</a>
+</li>
+	<li class="cat-item cat-item-58"><a href="https://www.aaronswartzday.org/category/creative-commons/">Creative Commons</a>
+</li>
+	<li class="cat-item cat-item-506"><a href="https://www.aaronswartzday.org/category/decentralized-web/">Decentralized Web</a>
+</li>
+	<li class="cat-item cat-item-327"><a href="https://www.aaronswartzday.org/category/digging-deeper/">Digging Deeper</a>
+</li>
+	<li class="cat-item cat-item-65"><a href="https://www.aaronswartzday.org/category/digital-privacy-suggestions/">Digital Privacy Suggestions</a>
+</li>
+	<li class="cat-item cat-item-300"><a href="https://www.aaronswartzday.org/category/documentaries-press-freedoms/">Documentaries – Press Freedoms</a>
+</li>
+	<li class="cat-item cat-item-505"><a href="https://www.aaronswartzday.org/category/dwebcamp/">DWebCamp</a>
+</li>
+	<li class="cat-item cat-item-118"><a href="https://www.aaronswartzday.org/category/electronic-frontier-foundation/">Electronic Frontier Foundation</a>
+</li>
+	<li class="cat-item cat-item-280"><a href="https://www.aaronswartzday.org/category/ethical-algorithms/">Ethical Algorithms</a>
+</li>
+	<li class="cat-item cat-item-401"><a href="https://www.aaronswartzday.org/category/facebook-fake-news-fiasco/">Facebook Fake News Fiasco</a>
+</li>
+	<li class="cat-item cat-item-528"><a href="https://www.aaronswartzday.org/category/facing-the-great-reckoning-head-on/">Facing the Great Reckoning Head On</a>
+</li>
+	<li class="cat-item cat-item-85"><a href="https://www.aaronswartzday.org/category/fight-for-the-future/">Fight For The Future</a>
+</li>
+	<li class="cat-item cat-item-250"><a href="https://www.aaronswartzday.org/category/first-amendment/">First Amendment</a>
+</li>
+	<li class="cat-item cat-item-476"><a href="https://www.aaronswartzday.org/category/foia-lawsuits/">FOIA Lawsuits</a>
+</li>
+	<li class="cat-item cat-item-467"><a href="https://www.aaronswartzday.org/category/foia-requests/">FOIA Requests</a>
+</li>
+	<li class="cat-item cat-item-489"><a href="https://www.aaronswartzday.org/category/freedom-of-the-press/">Freedom of the Press</a>
+</li>
+	<li class="cat-item cat-item-134"><a href="https://www.aaronswartzday.org/category/freedom-of-the-press-foundation/">Freedom of the Press Foundation</a>
+</li>
+	<li class="cat-item cat-item-432"><a href="https://www.aaronswartzday.org/category/game-development/">Game Development</a>
+</li>
+	<li class="cat-item cat-item-499"><a href="https://www.aaronswartzday.org/category/grand-jury-transformation/">Grand Jury Transformation</a>
+</li>
+	<li class="cat-item cat-item-207"><a href="https://www.aaronswartzday.org/category/history/">History</a>
+</li>
+	<li class="cat-item cat-item-174"><a href="https://www.aaronswartzday.org/category/international-rights-treaties/">International Rights Treaties</a>
+</li>
+	<li class="cat-item cat-item-139"><a href="https://www.aaronswartzday.org/category/internet-archive/">Internet Archive</a>
+</li>
+	<li class="cat-item cat-item-156"><a href="https://www.aaronswartzday.org/category/journalists-toolbox/">Journalist's Toolbox</a>
+</li>
+	<li class="cat-item cat-item-162"><a href="https://www.aaronswartzday.org/category/library-freedom-project/">Library Freedom Project</a>
+</li>
+	<li class="cat-item cat-item-238"><a href="https://www.aaronswartzday.org/category/live-streamed-events/">Live Streamed Events</a>
+</li>
+	<li class="cat-item cat-item-62"><a href="https://www.aaronswartzday.org/category/live-webcast-link/">Live Webcast Link</a>
+</li>
+	<li class="cat-item cat-item-18"><a href="https://www.aaronswartzday.org/category/mayday-pac/">MayDay PAC</a>
+</li>
+	<li class="cat-item cat-item-297"><a href="https://www.aaronswartzday.org/category/movies/">Movies</a>
+</li>
+	<li class="cat-item cat-item-415"><a href="https://www.aaronswartzday.org/category/music/">Music</a>
+</li>
+	<li class="cat-item cat-item-91"><a href="https://www.aaronswartzday.org/category/new-hampshire-rebellion-january-walk/">New Hampshire Rebellion January Walk</a>
+</li>
+	<li class="cat-item cat-item-97"><a href="https://www.aaronswartzday.org/category/official-government-responses/">Official Government Responses</a>
+</li>
+	<li class="cat-item cat-item-89"><a href="https://www.aaronswartzday.org/category/opaaronswartz/">OpAaronSwartz</a>
+</li>
+	<li class="cat-item cat-item-436"><a href="https://www.aaronswartzday.org/category/opening-night-party/">Opening Night Party</a>
+</li>
+	<li class="cat-item cat-item-181"><a href="https://www.aaronswartzday.org/category/opsec/">Opsec</a>
+</li>
+	<li class="cat-item cat-item-292"><a href="https://www.aaronswartzday.org/category/pacer/">PACER</a>
+</li>
+	<li class="cat-item cat-item-497"><a href="https://www.aaronswartzday.org/category/police-misconduct/">Police Misconduct</a>
+</li>
+	<li class="cat-item cat-item-226"><a href="https://www.aaronswartzday.org/category/political-ad-archive/">Political Ad Archive</a>
+</li>
+	<li class="cat-item cat-item-184"><a href="https://www.aaronswartzday.org/category/poulsen-v-dhs/">Poulsen v. DHS</a>
+</li>
+	<li class="cat-item cat-item-54"><a href="https://www.aaronswartzday.org/category/press/">Press</a>
+</li>
+	<li class="cat-item cat-item-329"><a href="https://www.aaronswartzday.org/category/privacy-hackathons/">Privacy Hackathons</a>
+</li>
+	<li class="cat-item cat-item-117"><a href="https://www.aaronswartzday.org/category/privacy-enabling-conference-2015/">Privacy-enabling Mini-Conference 2015</a>
+</li>
+	<li class="cat-item cat-item-293"><a href="https://www.aaronswartzday.org/category/public-access-to-the-public-domain/">Public Access to the Public Domain</a>
+</li>
+	<li class="cat-item cat-item-25"><a href="https://www.aaronswartzday.org/category/q-a-with-brian-knappenberger/">Q &amp; A with Brian Knappenberger</a>
+</li>
+	<li class="cat-item cat-item-447"><a href="https://www.aaronswartzday.org/category/raw-thought-at-the-dna-lounge/">Raw Thought at The DNA Lounge</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="https://www.aaronswartzday.org/category/reform-the-cfaa/">Reform the CFAA</a>
+</li>
+	<li class="cat-item cat-item-59"><a href="https://www.aaronswartzday.org/category/remembering-aaron/">Remembering Aaron</a>
+</li>
+	<li class="cat-item cat-item-342"><a href="https://www.aaronswartzday.org/category/remembering-john-perry-barlow/">Remembering John Perry Barlow</a>
+</li>
+	<li class="cat-item cat-item-266"><a href="https://www.aaronswartzday.org/category/save-net-neutrality/">Save Net Neutrality</a>
+</li>
+	<li class="cat-item cat-item-35"><a href="https://www.aaronswartzday.org/category/securedrop/">SecureDrop</a>
+</li>
+	<li class="cat-item cat-item-389"><a href="https://www.aaronswartzday.org/category/solar-survival/">Solar Survival</a>
+</li>
+	<li class="cat-item cat-item-39"><a href="https://www.aaronswartzday.org/category/student-innovator-protections/">Student Innovator Protections</a>
+</li>
+	<li class="cat-item cat-item-537"><a href="https://www.aaronswartzday.org/category/supreme-court-decisions/">Supreme Court Decisions</a>
+</li>
+	<li class="cat-item cat-item-119"><a href="https://www.aaronswartzday.org/category/surveillance/">Surveillance</a>
+</li>
+	<li class="cat-item cat-item-149"><a href="https://www.aaronswartzday.org/category/surveillance-reform/">Surveillance Reform</a>
+</li>
+	<li class="cat-item cat-item-348"><a href="https://www.aaronswartzday.org/category/swartz-manning-vr-destination/">Swartz-Manning VR Destination</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="https://www.aaronswartzday.org/category/takepart-com-articles/">Takepart.com Articles</a>
+</li>
+	<li class="cat-item cat-item-526"><a href="https://www.aaronswartzday.org/category/techs-great-reckoning/">Tech's Great Reckoning</a>
+</li>
+	<li class="cat-item cat-item-111"><a href="https://www.aaronswartzday.org/category/the-constitution/">The Constitution</a>
+</li>
+	<li class="cat-item cat-item-20"><a href="https://www.aaronswartzday.org/category/the-good-fight-with-ben-wikler/">The Good Fight with Ben Wikler</a>
+</li>
+	<li class="cat-item cat-item-460"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy/">The Internet's Own Boy</a>
+</li>
+	<li class="cat-item cat-item-88"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy-awards/">The Internet's Own Boy – Awards</a>
+</li>
+	<li class="cat-item cat-item-6"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy-press/">The Internet's Own Boy – Press</a>
+</li>
+	<li class="cat-item cat-item-5"><a href="https://www.aaronswartzday.org/category/the-internets-own-boy-screenings/">The Internet's Own Boy – Screenings</a>
+</li>
+	<li class="cat-item cat-item-465"><a href="https://www.aaronswartzday.org/category/the-week-in-aaron-swartz-day-land/">The Week In Aaron Swartz Day-Land</a>
+</li>
+	<li class="cat-item cat-item-140"><a href="https://www.aaronswartzday.org/category/tor/">Tor Project</a>
+</li>
+	<li class="cat-item cat-item-154"><a href="https://www.aaronswartzday.org/category/transcripts/">Transcripts</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="https://www.aaronswartzday.org/category/uncategorized/">Uncategorized</a>
+</li>
+	<li class="cat-item cat-item-63"><a href="https://www.aaronswartzday.org/category/video/">Video</a>
+</li>
+	<li class="cat-item cat-item-347"><a href="https://www.aaronswartzday.org/category/virtual-reality/">Virtual Reality</a>
+</li>
+		</ul>
+			</aside><aside id="archives-2" class="widget widget_archive"><h1 class="widget-title">Archives</h1>		<ul>
+				<li><a href="https://www.aaronswartzday.org/2020/10/">October 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2020/06/">June 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2020/05/">May 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2020/01/">January 2020</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/09/">September 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/08/">August 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/07/">July 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/06/">June 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/05/">May 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/03/">March 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/02/">February 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2019/01/">January 2019</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/12/">December 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/11/">November 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/10/">October 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/08/">August 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/07/">July 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/06/">June 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/05/">May 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/04/">April 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/03/">March 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/02/">February 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2018/01/">January 2018</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/12/">December 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/11/">November 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/10/">October 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/09/">September 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/07/">July 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/03/">March 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/02/">February 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2017/01/">January 2017</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/12/">December 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/11/">November 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/10/">October 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/07/">July 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/02/">February 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2016/01/">January 2016</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/12/">December 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/11/">November 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/10/">October 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/02/">February 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2015/01/">January 2015</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/11/">November 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/10/">October 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/08/">August 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/07/">July 2014</a></li>
+	<li><a href="https://www.aaronswartzday.org/2014/06/">June 2014</a></li>
+		</ul>
+			</aside><aside id="meta-2" class="widget widget_meta"><h1 class="widget-title">Meta</h1>			<ul>
+						<li><a href="https://www.aaronswartzday.org/wp-login.php">Log in</a></li>
+			<li><a href="https://www.aaronswartzday.org/feed/">Entries feed</a></li>
+			<li><a href="https://www.aaronswartzday.org/comments/feed/">Comments feed</a></li>
+			<li><a href="https://wordpress.org/">WordPress.org</a></li>			</ul>
+			</aside>	</div><!-- #primary-sidebar -->
+	</div><!-- #secondary -->
+
+		</div><!-- #main -->
+
+		<footer id="colophon" class="site-footer" role="contentinfo">
+
+			
+			<div class="site-info">
+								<a href="https://wordpress.org/">Proudly powered by WordPress</a>
+			</div><!-- .site-info -->
+		</footer><!-- #colophon -->
+	</div><!-- #page -->
+
+	<script type="text/javascript" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/functions.js"></script>
+<script type="text/javascript" src="LoRa%20Software%20Setup%20Instructions%20Aaron%20Swartz%20Day%20and%20International%20Hackathon_files/wp-embed.js"></script>
+
+</body></html>

@@ -8,9 +8,7 @@
   This file is used for 32u4-based boards (BSFrance, Flora/Feather, etc).
 *********/
 
-
-
-#define VERSIONSTRING "0.30"
+#define VERSIONSTRING "0.32"
 
 //  Actual running speed is 1Mhz.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
@@ -24,6 +22,10 @@
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
 
 #define DO_NOT_LOG_SYSTEM_PACKETS
+#define REBROADCAST_DISASTER_RADIO_PACKETS
+//#define DISPLAY_DISASTER_RADIO_PACKETS
+
+#define BLINKLED 13
 
 //Libraries for LoRa
 #include <SPI.h>
@@ -89,6 +91,10 @@ void PetTheWatchdog() {
     wdt_reset();
     psm = psm + 125;
     pseudoseconds++;
+#ifdef BLINKLED
+  digitalWrite(BLINKLED,HIGH);
+  digitalWrite(BLINKLED,LOW);
+#endif
   }
 }
 
@@ -177,6 +183,9 @@ void setup() {
   SPI.begin();//SCK, MISO, MOSI, SS);
   //setup LoRa transceiver module
   LoRa.setPins(SS, RST);//, DIO0);
+  LoRa.setSpreadingFactor(9); // default 7
+  LoRa.setSignalBandwidth(62.5E3); //default 125E3
+  //  LoRa.crc(); // we would rather get a damaged packet than no packet at all; maybe some of it will be readable.
 
 
   Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
@@ -316,14 +325,28 @@ void SeeIfAnythingOnRadio() {
       if (FilterIncomingLoRa())//(LoRaData.length() > 1) and (LoRaData.substring(1).equals(LastThingISentViaLora_0.substring(1)) == false))
       {
 
+#ifdef BLINKLED
+  digitalWrite(BLINKLED,HIGH);
+#endif
 #ifdef SHOW_RSSI
         if (rssi < -99)
+        {
           Serial.println(String(rssi) + ":" + LoRaData);
+          Serial1.println(String(rssi) + ":" + LoRaData);
+        }
         else
+        {
           Serial.println(" " + String(rssi) + ":" + LoRaData);
+          Serial1.println(" " + String(rssi) + ":" + LoRaData);
+        }
 #else
         Serial.println(LoRaData);
+        Serial1.println(LoRaData);
 #endif
+#ifdef BLINKLED
+digitalWrite(BLINKLED,LOW);
+#endif
+
         if (LoRaData.startsWith(":SYS:") == false) // avoid spamming
           LoraSendAndUpdate(LoRaData);
         AddToLastAndPrune(LoRaData);
@@ -339,9 +362,34 @@ inline bool IsValidChar(char i) {
 inline bool IsHex(char i) {
   return ((i > 64 && i < 71) || (i > 96 && i < 103) || (i > 47 && i < 58)); // AF, af, 09
 }
+
 bool FilterIncomingLoRa() {
+
+
+  byte lenlen = LoRaData.length();
+
+#ifdef REBROADCAST_DISASTER_RADIO_PACKETS // what it says on the tin: do we also want to display it?
+  //Byte 0   Byte 1        Byte 2 - 5  Byte 6 - 9  Byte 10   Byte 11 - 14  Byte 15   Byte 16   Byte 17 - 255
+  //ttl      totalLength   sender      receiver    sequence  source        hopCount  metric    datagram
+  //https://github.com/sudomesh/disaster-radio/wiki/Protocol#packet-structure
+  if (lenlen == LoRaData.charAt(1) and (LoRaData.charAt(0) > LoRaData.charAt(15)) and (lenlen > 16))
+  {
+    LoRaData.setCharAt(15, (LoRaData.charAt(15) + 1) % 256); // increment the hop count
+    LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
+#ifdef DISPLAY_DISASTER_RADIO_PACKETS // only do this if we are rebroadcasting them, nobody likes a stalker
+    String drstring = "(DR)" + TAG_END_SYMBOL + LoRaData.substring(16, 176);
+    Serial.println(drstring);
+    AddToLastAndPrune(drstring);
+#endif
+    return false; // send here, but don't cycle strings or output to serial(s)
+  }
+#endif
+
+
+
+
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
-  if (LoRaData.length() < 5) // too short
+  if (lenlen < 5) // too short
     return false;
   if (LoRaData.charAt(0) == hextag.charAt(0) && LoRaData.charAt(1) == hextag.charAt(1) && LoRaData.charAt(2) == hextag.charAt(2))
     return false; // stop broadcast storms
@@ -352,7 +400,7 @@ bool FilterIncomingLoRa() {
   if (LoRaData.charAt(4) != TAG_END_SYMBOL) // not our format
     return false;
 #else
-  if (LoRaData.length() < 2) // too short
+  if (lenlen < 2) // too short
     return false;
 #endif
   long chk = LongChecksum(LoRaData);
@@ -384,7 +432,7 @@ bool FilterIncomingLoRa() {
   
   byte i = 0;
   byte testbyte = 0;
-  for (i = 0; i < LoRaData.length(); i++)
+  for (i = 0; i < lenlen; i++)
   {
     if (IsValidChar(LoRaData.charAt(i)) == false)
       testbyte++;
@@ -513,6 +561,7 @@ int numloops = 0;
     return size;
   }
 */
+
 void loop() {
 
   //Serial.println(availableMemory());
@@ -521,6 +570,7 @@ void loop() {
   ReadFromStream(Serial, receivedChars, charcounter, readytosend); // add other streams as needed.
   ReadFromStream(Serial1, receivedChar2, charcounte2, readytosen2); // add other streams as needed.
   SendSerialIfReady();
+
 
   if (++numloops > 10000)
   {

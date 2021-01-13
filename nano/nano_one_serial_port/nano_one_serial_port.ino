@@ -8,7 +8,7 @@
   This file is used for Atmel328-based boards (Arduino Uno, Mini, Nano, etc).
 *********/
 
-#define VERSIONSTRING "0.30"
+#define VERSIONSTRING "0.32"
 
 // Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
 //#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
@@ -23,6 +23,8 @@
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
 
 #define DO_NOT_LOG_SYSTEM_PACKETS
+#define REBROADCAST_DISASTER_RADIO_PACKETS
+//#define DISPLAY_DISASTER_RADIO_PACKETS
 
 //Libraries for LoRa
 #include <SPI.h>
@@ -162,8 +164,8 @@ void setup() {
   hextag = fourhex(UniqueID8[6] * 256 + UniqueID8[7]) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
 #endif
 
-  if (hextag.charAt(3)=='0') // this unit is not set up to do service tasks, so don't end in 0
-      hextag.setCharAt(3, '1'); 
+  if (hextag.charAt(3) == '0') // this unit is not set up to do service tasks, so don't end in 0
+    hextag.setCharAt(3, '1');
 
   // we want to run this at 0.5Mhz regardless if we are starting at 8 or 16.
 #ifdef GO_A_LOT_SLOWER
@@ -207,6 +209,10 @@ void setup() {
   SPI.begin();//SCK, MISO, MOSI, SS);
   //setup LoRa transceiver module
   LoRa.setPins(SS, RST);//, DIO0);
+
+  LoRa.setSpreadingFactor(9); // default 7
+  LoRa.setSignalBandwidth(62.5E3); //default 125E3
+  //  LoRa.crc(); // we would rather get a damaged packet than no packet at all; maybe some of it will be readable.
 
   wdt_enable(WDTO_8S); // note that this is independent of clock speed.
 
@@ -262,7 +268,7 @@ void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
       buf[1] = 0;
       buf[2] = 0;
       sendout = false;
-      st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " VER:" VERSIONSTRING " UPT"+(broadcast_twice?";":":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
+      st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
       if (LastWeGot.length() > 0)
       {
         if (recalldots)
@@ -318,9 +324,9 @@ void AddToLastAndPrune(String st) { // warning: may modify st
 }
 
 #ifdef SEND_TWICE
-int RSSI_0=RSSI_TRE_HI;//start neutral
-int RSSI_1=RSSI_TRE_HI;//start neutral
-int RSSI_2=RSSI_TRE_HI;//start neutral
+int RSSI_0 = RSSI_TRE_HI; //start neutral
+int RSSI_1 = RSSI_TRE_HI; //start neutral
+int RSSI_2 = RSSI_TRE_HI; //start neutral
 #endif
 
 void SeeIfAnythingOnRadio() {
@@ -329,15 +335,15 @@ void SeeIfAnythingOnRadio() {
   if (packetSize) {
     //received a packet
     rssi = LoRa.packetRssi();
-//put the filter here so that it also evaluates garbage packets, in the hope of reducing said garbage later.
+    //put the filter here so that it also evaluates garbage packets, in the hope of reducing said garbage later.
 #ifdef SEND_TWICE
-  RSSI_2 = RSSI_1;
-  RSSI_1 = RSSI_0;
-  RSSI_0 = rssi;
-  if (RSSI_2 < RSSI_TRE_LO or RSSI_1 < RSSI_TRE_LO or RSSI_0 < RSSI_TRE_LO or rssi < RSSI_TRE_LO)
-    broadcast_twice = true;
-  else if (RSSI_2 > RSSI_TRE_HI and RSSI_1 > RSSI_TRE_HI and RSSI_0 > RSSI_TRE_HI and rssi > RSSI_TRE_HI)
-    broadcast_twice = false;
+    RSSI_2 = RSSI_1;
+    RSSI_1 = RSSI_0;
+    RSSI_0 = rssi;
+    if (RSSI_2 < RSSI_TRE_LO or RSSI_1 < RSSI_TRE_LO or RSSI_0 < RSSI_TRE_LO or rssi < RSSI_TRE_LO)
+      broadcast_twice = true;
+    else if (RSSI_2 > RSSI_TRE_HI and RSSI_1 > RSSI_TRE_HI and RSSI_0 > RSSI_TRE_HI and rssi > RSSI_TRE_HI)
+      broadcast_twice = false;
 #endif
 
     //read packet
@@ -346,7 +352,7 @@ void SeeIfAnythingOnRadio() {
       LoRaData.trim();
       if (FilterIncomingLoRa())//(LoRaData.length() > 1) and (LoRaData.substring(1).equals(LastThingISentViaLora_0.substring(1)) == false))
       {
-        
+
 #ifdef SHOW_RSSI
         if (rssi < -99)
           Serial.println(String(rssi) + ":" + LoRaData);
@@ -371,8 +377,30 @@ inline bool IsHex(char i) {
   return ((i > 64 && i < 71) || (i > 96 && i < 103) || (i > 47 && i < 58)); // AF, af, 09
 }
 bool FilterIncomingLoRa() {
+  byte lenlen = LoRaData.length();
+
+#ifdef REBROADCAST_DISASTER_RADIO_PACKETS // what it says on the tin: do we also want to display it?
+  //Byte 0   Byte 1        Byte 2 - 5  Byte 6 - 9  Byte 10   Byte 11 - 14  Byte 15   Byte 16   Byte 17 - 255
+  //ttl      totalLength   sender      receiver    sequence  source        hopCount  metric    datagram
+  //https://github.com/sudomesh/disaster-radio/wiki/Protocol#packet-structure
+  if (lenlen == LoRaData.charAt(1) and (LoRaData.charAt(0) > LoRaData.charAt(15)) and (lenlen > 16))
+  {
+    LoRaData.setCharAt(15, (LoRaData.charAt(15) + 1) % 256); // increment the hop count
+    LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
+#ifdef DISPLAY_DISASTER_RADIO_PACKETS // only do this if we are rebroadcasting them, nobody likes a stalker
+    String drstring = "(DR)" + TAG_END_SYMBOL + LoRaData.substring(16, 176);
+    Serial.println(drstring);
+    AddToLastAndPrune(drstring);
+#endif
+    return false; // send here, but don't cycle strings or output to serial(s)
+  }
+#endif
+
+
+
+
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
-  if (LoRaData.length() < 5) // too short
+  if (lenlen < 5) // too short
     return false;
   if (LoRaData.charAt(0) == hextag.charAt(0) && LoRaData.charAt(1) == hextag.charAt(1) && LoRaData.charAt(2) == hextag.charAt(2))
     return false; // stop broadcast storms
@@ -383,7 +411,7 @@ bool FilterIncomingLoRa() {
   if (LoRaData.charAt(4) != TAG_END_SYMBOL) // not our format
     return false;
 #else
-  if (LoRaData.length() < 2) // too short
+  if (lenlen < 2) // too short
     return false;
 #endif
   long chk = LongChecksum(LoRaData);
@@ -412,10 +440,10 @@ bool FilterIncomingLoRa() {
     }
   }
 
-    
+
   byte i = 0;
   byte testbyte = 0;
-  for (i = 0; i < LoRaData.length(); i++)
+  for (i = 0; i < lenlen; i++)
   {
     if (IsValidChar(LoRaData.charAt(i)) == false)
       testbyte++;
