@@ -9,7 +9,7 @@
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.30"
+#define VERSIONSTRING "0.32"
 
 #include "config.h" // Please make config changes in config.h and pinout.h instead of here!
 
@@ -57,13 +57,20 @@ const byte DNS_PORT = 53;
 
 #include "pinout.h" // LORA32 Pinout by default, change this file to change the pinout!
 
+
+#ifdef MINDISPLAY
+#define NODISPLAY
+#include <Wire.h>
+//#include "ACROBOTIC_SSD1306_minimal/ACROBOTIC_SSD1306_minimal.h" // pared down SS1306 driver that only has the 5x7 font
+#include "ACROBOTIC_SSD1306_minimal/ACROBOTIC_SSD1306_minimal.cpp" // pared down SS1306 driver that only has the 5x7 font
+#endif
+
 #ifndef NODISPLAY
 //Libraries for OLED Display
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #endif
-
 
 // LORA32 setup variables
 static bool lowpowerstart = false;
@@ -88,7 +95,6 @@ String ssid = SSIDROOT;
 String tempstring = ""; // internal function use only
 
 bool wifimode = true; // bluetooth or wifi
-
 
 // serial on/off
 boolean enablecomport = false; // set to false for a solderless fix for UART buffer crosstalk hardware issue
@@ -153,6 +159,7 @@ bool displayenabled = true;
 #ifndef NODISPLAY
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 #endif
+
 
 long disptimeout = 0;
 bool display_on_ping = false;
@@ -302,7 +309,6 @@ String LoRaData;
 // Variable to store the HTTP request
 String header;
 
-#define COMMUNITY_MEMORY_SIZE 50
 #ifdef COMMUNITY_MEMORY_SIZE
 String communitymemory[COMMUNITY_MEMORY_SIZE];
 #endif
@@ -349,17 +355,23 @@ char receivedChars[MAXPKTSIZE]; // an array to store the received data
 char receivedChar2[MAXPKTSIZE]; // an array to store the received data
 int rssi; // last packat received rssi
 
+#ifdef BATT_ADC
 static char RTC_NOINIT_ATTR byteme[10][MAXPKTSIZE]; // save last x sentences in here for posterity
+#endif
 
 void TryStoreSentences()
 {
+#ifdef BATT_ADC
   for (byte i = 0; i < 10; i++)
     string_rx[i].toCharArray(byteme[i], MAXPKTSIZE);
+#endif
 }
 void TryRetrieveSentences()
 {
+#ifdef BATT_ADC
   for (byte i = 0; i < 10; i++)
     string_rx[i] = String(byteme[i]);
+#endif
 }
 
 BluetoothSerial ESP_BT;
@@ -568,8 +580,35 @@ inline bool IsHex(char i) {
 }
 
 bool FilterIncomingLoRa() {
+  byte lenlen = LoRaData.length();
+
+#ifdef REBROADCAST_DISASTER_RADIO_PACKETS // what it says on the tin: do we also want to display it?
+  //Byte 0   Byte 1        Byte 2 - 5  Byte 6 - 9  Byte 10   Byte 11 - 14  Byte 15   Byte 16   Byte 17 - 255
+  //ttl      totalLength   sender      receiver    sequence  source        hopCount  metric    datagram
+  //https://github.com/sudomesh/disaster-radio/wiki/Protocol#packet-structure
+  if (lenlen == LoRaData.charAt(1) and (LoRaData.charAt(0) > LoRaData.charAt(15)) and (lenlen > 16))
+  {
+    LoRaData.setCharAt(15, (LoRaData.charAt(15) + 1) % 256); // increment the hop count
+    LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
+#ifdef DISPLAY_DISASTER_RADIO_PACKETS // only do this if we are rebroadcasting them, nobody likes a stalker
+    String drstring = "(DR)" + TAG_END_SYMBOL + fourhex(LoRaData.charAt(2), LoRaData.charAt(3)) + fourhex(LoRaData.charAt(4), LoRaData.charAt(5)) + TAG_END_SYMBOL + LoRaData.substring(16, 176);
+    Serial.println(drstring);
+    cyclestrings(drstring);
+    if (has_bluetooth_been_initialized)
+      ESP_BT.println(drstring);
+#ifdef IRC_SERVER
+    irc_broadcast( drstring);
+#endif
+#endif
+    return false; // send here, but don't cycle strings or output to serial(s)
+  }
+#endif
+
+
+
+
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
-  if (LoRaData.length() < 5) // too short
+  if (lenlen < 5) // too short
     return false;
 #ifdef REQUIRE_TAG_FOR_REBROADCAST_STRICT
   if (IsHex(LoRaData.charAt(0)) == false || IsHex(LoRaData.charAt(1)) == false || IsHex(LoRaData.charAt(2)) == false || IsHex(LoRaData.charAt(3)) == false)
@@ -578,7 +617,7 @@ bool FilterIncomingLoRa() {
   if (LoRaData.charAt(4) != TAG_END_SYMBOL) // not our format
     return false;
 #else
-  if (LoRaData.length() < 2) // too short
+  if (lenlen < 2) // too short
     return false;
 #endif
 
@@ -588,7 +627,7 @@ bool FilterIncomingLoRa() {
     return false;
 
 #ifndef GPS_SERIAL_1 // if we already have our own gps, use it. otherwise do this
-  if (LoRaData.charAt(3) == '0' and LoRaData.charAt(5) == 'U' and LoRaData.charAt(6) == 'T' and LoRaData.charAt(7) == 'C' and LoRaData.charAt(8) == ':') // Do a bunch of checks to make sure we're getting a good packet
+  if (lenlen > 14 and LoRaData.charAt(3) == '0' and LoRaData.charAt(5) == 'U' and LoRaData.charAt(6) == 'T' and LoRaData.charAt(7) == 'C' and LoRaData.charAt(8) == ':') // Do a bunch of checks to make sure we're getting a good packet
   {
     if (LoRaData.charAt(9) == '1' or LoRaData.charAt(9) == '2')
     {
@@ -616,7 +655,7 @@ bool FilterIncomingLoRa() {
     return false;
   byte i = 0;
   byte testbyte = 0;
-  for (i = 0; i < LoRaData.length(); i++)
+  for (i = 0; i < lenlen; i++)
   {
     if (IsValidChar(LoRaData.charAt(i)) == false)
       testbyte++;
@@ -672,9 +711,13 @@ void SeeIfAnythingOnRadio() {
     //put the filter here so that it also evaluates garbage packets, in the hope of reducing said garbage later. the logic is that if i'm away from someone, they are away from me, and they may benefit from erxtra loudness.
 #ifdef SEND_TWICE
     if (RSSI_2 < RSSI_TRE_LO or RSSI_1 < RSSI_TRE_LO or RSSI_0 < RSSI_TRE_LO or rssi < RSSI_TRE_LO)
+    {
       broadcast_twice = true;
+    }
     else if (RSSI_2 > RSSI_TRE_HI and RSSI_1 > RSSI_TRE_HI and RSSI_0 > RSSI_TRE_HI and rssi > RSSI_TRE_HI)
+    {
       broadcast_twice = false;
+    }
 #endif
 
 
@@ -685,7 +728,6 @@ void SeeIfAnythingOnRadio() {
       LoRaData.trim();
       if (FilterIncomingLoRa())//(LoRaData.length() > 1) and (LoRaData.substring(1).equals(LastThingISentViaLora_0.substring(1)) == false))
       {
-
 #ifdef SHOW_RSSI
         if (rssi < -99)
           tempstring = String(rssi) + ":" + LoRaData;
@@ -746,9 +788,9 @@ void DoUTC(bool changed_pseudosecond) // harvests UTC time since that's all we c
       {
         String utcstring = fourhex(derpme, spare_id_nibble + 0) + TAG_END_SYMBOL + "UTC:" + String(UTC_Seconds);
         LoraSendAndUpdate(utcstring);
-        cyclestrings(utcstring);
+        //cyclestrings(utcstring); // do not spam yourself
 #ifdef IRC_SERVER
-        irc_broadcast( utcstring);
+        //irc_broadcast( utcstring); // do not spam IRC
 #endif
         next_utc_to_send = pseudoseconds + (GPS_SERIAL_1 - 1); // one hour should do it
       }
@@ -757,7 +799,7 @@ void DoUTC(bool changed_pseudosecond) // harvests UTC time since that's all we c
 }
 #else
 #ifdef WIFI_IS_CLIENT
-void DoUTC(bool changed_pseudosecond)// harvests UTC time since that's all we care about
+void DoUTC(bool changed_pseudosecond)// use NTP here maybe? for now, harvests UTC time since that's all we care about
 {
   // keep up until the next UTC message
   if (changed_pseudosecond)
@@ -801,6 +843,7 @@ void SendSerialIfReady()
       if (String(receivedChars).startsWith(enablecomstring))
       {
 #ifdef REPEATER_ONLY
+
 #else
 #ifdef DEBUG_OPTION_PAGE
         if (String(receivedChars).startsWith(enablecomstring "#"))
@@ -920,6 +963,8 @@ void SendSerialIfReady()
   }
 }
 
+
+#ifndef NO_BINARY_SUPPORT
 // the binary file must be imported as a header using bin2c because I don't want a filesystem on this build, it's too much overhead rn
 void SendBinaryFile(String contenttype, const unsigned char file[], const long int filesize)
 {
@@ -972,6 +1017,7 @@ void SendBinaryFile(String contenttype, const unsigned char file[], const long i
   wificlient1.flush();
   wificlient1.println();
 }
+#endif
 
 
 void Start_LORA(bool trydisplay)
@@ -982,6 +1028,10 @@ void Start_LORA(bool trydisplay)
   Stop_LORA();
   SPI.begin(SCK, MISO, MOSI, SS);
   LoRa.setPins(SS, RST, DIO0);
+
+  LoRa.setSpreadingFactor(9); // default 7
+  LoRa.setSignalBandwidth(62.5E3); //default 125E3
+  //  LoRa.crc(); // we would rather get a damaged packet than no packet at all; maybe some of it will be readable.
 
   //  bool changeclock = (getCpuFrequencyMhz() < CLKFREQ);
 
@@ -1139,8 +1189,10 @@ void DoRepeaterSteps()
   //  Serial.println(""+String(has_serial_been_initialized)+String(has_lora_been_initialized)+String(has_display_been_initialized));
   DoBasicSteps();
 
+#ifdef BATT_ADC
   if (currbatterylevel < (BATT_TOO_LOW_FOR_ANYTHING))
     SleepLowBatt();
+#endif
 
 #ifdef USER_BUTTON_PIN
   if (digitalRead(USER_BUTTON_PIN) == false)
@@ -1211,6 +1263,7 @@ void displayonoff(bool onoff)
 #ifdef WIFI_IS_HYBRID
 int displayswitch = 0; // display switch if we are in hybrid mode
 #endif
+
 void DoDisplayIfItExists()
 {
 #ifndef NODISPLAY
@@ -1350,6 +1403,13 @@ void BlinkMeWhen()
 {
   if (++lploops > LPLOOP_BLINK)
   {
+    #ifdef MINDISPLAY
+    if (pseudoseconds>3)
+    {
+      oled.clearDisplay();
+      oled.sendCommand(SSD1306_Display_Off_Cmd);
+    }
+    #endif
     led(true);
     DoBasicSteps();
     lploops = 0;
@@ -1394,6 +1454,7 @@ void  ReadBatteryADC(bool force)
 
 void SleepLowBatt()
 {
+#ifdef BATT_ADC
   tempstring = ":SYS:SLEEP " + String(derpme) + ":" + status_string();
   Watchdog(false);
   led(true);
@@ -1423,6 +1484,7 @@ void SleepLowBatt()
   dnsServer.stop();
   TryStoreSentences();
   esp_deep_sleep_start();
+#endif
 }
 
 /**
@@ -1448,6 +1510,7 @@ void DoBtSteps()
   PetTheWatchdog();
 
 
+#ifdef BATT_ADC
   ReadBatteryADC(false);
   if (currbatterylevel < (BATT_TOO_LOW_FOR_ANYTHING))
     SleepLowBatt();
@@ -1456,6 +1519,7 @@ void DoBtSteps()
     LowPowerLoop();
     HighPowerSetup(true);
   }
+#endif
   SeeIfAnythingOnRadio();
   ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);
   ReadFromStream(ESP_BT, receivedChar2, charcounte2, readytosen2, has_bluetooth_been_initialized, 14);
@@ -1471,8 +1535,10 @@ unsigned long modefliptime;
 
 void DoWifiSteps()
 {
+
   PetTheWatchdog();
 
+#ifdef BATT_ADC
   ReadBatteryADC(false);
   if (currbatterylevel < (BATT_TOO_LOW_FOR_ANYTHING))
     SleepLowBatt();
@@ -1481,6 +1547,7 @@ void DoWifiSteps()
     LowPowerLoop();
     HighPowerSetup(true);
   }
+#endif
 
 #ifdef MODEFLIP // switch between full AP and repeater according to a timer, but only if there are no wifi clients.
   if ((MODEFLIP < 60000) && (millis() > (modefliptime + MODEFLIP)))
@@ -1717,6 +1784,41 @@ void ConnectToUpstreamWifi(int pausetime)
 #endif
 
 
+
+#ifdef MINDISPLAY
+void DoMinDisplay()
+{
+  dodisplaybuf = false;
+  dodisplay = false;
+#ifdef USER_BUTTON_PIN
+if (digitalRead(USER_BUTTON_PIN)==true)
+  return;
+#endif
+  oled.sendCommand(SSD1306_Display_On_Cmd);
+  oled.clearDisplay();              // Clear screen
+  oled.setTextXY(0,0);              // Set cursor position, start of line 0
+  oled.putString("CellSol" VERSIONSTRING "(" PYLONMODEL ":" PYLONTYPE);
+  oled.setTextXY(1,0);              // Set cursor position, start of line 1
+  oled.putString(wifimode?ipstring_a:"Bluetooth");
+  #ifdef WIFI_IS_HYBRID
+  oled.putString(wifimode?ipstring_c:"");
+  #endif
+  oled.setTextXY(2,0);
+  oled.putString(string_rx[2].substring(0,24));
+  oled.setTextXY(3,0);
+  oled.putString(string_rx[2].substring(25,49));
+  oled.setTextXY(4,0);
+  oled.putString(string_rx[1].substring(0,24));
+  oled.setTextXY(5,0);
+  oled.putString(string_rx[1].substring(25,49));
+  oled.setTextXY(6,0);
+  oled.putString(string_rx[0].substring(0,24));
+  oled.setTextXY(7,0);
+  oled.putString(string_rx[0].substring(25,49));
+}
+#endif
+
+
 void HighPowerSetup(bool echo)
 {
   Watchdog(false);
@@ -1735,6 +1837,10 @@ void HighPowerSetup(bool echo)
   WiFi.softAP(string2char(ssid), NULL, (1 + (derpme % 12)), false, 8); // the derpme thing is to set a channel
 
   low_batt_announce = POWER_STATE_CHANGE_ANNOUNCE;
+
+  if (enablecomstring == "")
+    enablecomport = true; // for tbeam etc.
+
 
   //  Stop_LORA();
 
@@ -1802,7 +1908,7 @@ void HighPowerSetup(bool echo)
 #endif
 
   }
-  tempstring = ":SYS:" PYLONTYPE " " + String(derpme) + ":" + status_string();
+  tempstring = ":SYS:(" PYLONMODEL ";" PYLONTYPE " " + String(derpme) + ":" + status_string();
   if (low_batt_announce)
   {
     LoraSendAndUpdate(tempstring);
@@ -1899,6 +2005,16 @@ void HighPowerSetup(bool echo)
 #endif
 
 
+
+#ifdef MINDISPLAY
+  pinMode(OLED_RST, OUTPUT);
+  digitalWrite(OLED_RST, LOW);
+  delay(20);
+  digitalWrite(OLED_RST, HIGH);
+  Wire.begin(OLED_SDA,OLED_SCL);  
+  oled.init();                      // Initialze SSD1306 OLED display
+  DoMinDisplay();
+#endif
 }
 
 /****************************************************************
@@ -1986,7 +2102,7 @@ void send_faq_page()
   wificlient1.println( "<style> html{text-align: start;}</style>"
                        "<body><h1>CellSol WiFi Pylon " VERSIONSTRING " Help</h1>"
                        "<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
-                       "<h2>About the Chat<h2>"
+                       "<h2>About the Chat</h2>"
                        "<p>By using the chat in the main page, you will be able to communicate with people who are in range of the CellSol network, or people who are using CellSol gateways."
                        "<p>Each message is sent out to neighboring pylons, which can be a few kilometers apart, and rebroadcast."
                        "<p>You can consider this system akin to a single IRC/Discord/Twitch chat channel, except it will work when the internet at large will not."
@@ -1999,8 +2115,21 @@ void send_faq_page()
                        "<p>This is a lot like existing LoRa mesh chat systems, except that it's intended to leave repeaters in place."
                        "<p>The mesh topology prioritizes redundancy over speed or cleanliness, so you may occasionally get a garbled message: we try to display those in case their meaning can be understood despite the garbling."
                        "<p>The best use for a standalone repeater is somewhere between areas with traffic, on a road for example. The best use for a Bluetooth pylon is in someone's pocket or backpack, connected to their phone."
-                       "<p>The best use for a WiFi pylonis somewhere that has a stable internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
+                       "<p>The best use for a WiFi pylon is somewhere that has a stable internet connection (satellite, etc.) or generally somewhere where people go (a waypoint, base camp, etc.)"
                        "<h2>About This Pylon</h2>"
+#ifdef GPS_SERIAL_1
+                       "<p>It has integrated GPS or timebase, and will send a time pulse every 1 hour to other nodes." // we should make the gps fix available...
+#endif
+
+#ifdef DISPLAY_DISASTER_RADIO_PACKETS // only do this if we are rebroadcasting them, nobody likes a stalker
+                       "<p>It will rebroadcast and display Disaster Radio packets."
+#else
+#ifdef REBROADCAST_DISASTER_RADIO_PACKETS // what it says on the tin: do we also want to display it?
+                       "<p>It will rebroadcast Disaster Radio packets."
+#endif
+#endif
+
+
 #ifdef REQUIRE_TAG_FOR_REBROADCAST_STRICT
 #else
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
@@ -2427,9 +2556,9 @@ void ServeWebPagesAsNecessary()
             wificlient1.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
                                 "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
 #ifdef PROVIDE_APK
-                                "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
+                                "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo:(" PYLONMODEL ";"  PYLONTYPE " ");
 #else
-                                "<a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo: " PYLONTYPE " ");
+                                "<a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo:(" PYLONMODEL ";"  PYLONTYPE " ");
 #endif
             wificlient1.print(status_string());
 #ifdef PROVIDE_SOURCE_CODE
@@ -2455,7 +2584,7 @@ void ServeWebPagesAsNecessary()
             {
               send_ok_response();
               send_html_header(0);
-              wificlient1.println("<body>CellSol WiFi Pylon " VERSIONSTRING " " PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main</body></html> ");
+              wificlient1.println("<body>CellSol WiFi Pylon " VERSIONSTRING " (" PYLONMODEL ";" PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main</body></html> ");
               wificlient1.println();
             }
           }
@@ -2545,8 +2674,8 @@ void irc_callback(IRCMessage ircMessage)
     bool validforward = ircMessage.text.startsWith(FWD_PREFIX);
     bool isotherpylon = false;
 #ifdef ALLOW_PYLON_FORWARD
-    if (validforward==false)
-//      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
+    if (validforward == false)
+      //      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
       isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (ircMessage.nick.charAt(ircMessage.nick.length()) == '0') and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
 #endif
     validforward = validforward or isotherpylon;
@@ -2555,7 +2684,7 @@ void irc_callback(IRCMessage ircMessage)
       String gotstring;
       if (isotherpylon)
       {
-//        Serial.println("ADDITIONAL PYLONS");
+        //        Serial.println("ADDITIONAL PYLONS");
         gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(ircMessage.nick.length() - 4) + ">" + ircMessage.text.substring(0, MAXPKTSIZEM);
       }
       else
@@ -2585,6 +2714,8 @@ void irc_callback(IRCMessage ircMessage)
   {
     PetTheWatchdog();
     IRC_NICK = IRC_NICK + "_";
+    if (IRC_NICK.endsWith("___"))
+      IRC_NICK.replace("___", "");
     ircclient.sendRaw("NICK " + IRC_NICK);
     //ircclient.sendRaw("USER " + IRC_USER + " 8 * :Arduino IRC Client");
     //Serial.println(IRC_NICK);
@@ -2607,7 +2738,13 @@ void debugSentCallback(String data)
 
 #endif
 
+
 void loop() {
+
+#ifdef MINDISPLAY
+DoMinDisplay();
+#endif
+
   if (wifimode)
   {
     DoWifiSteps();
@@ -2615,8 +2752,6 @@ void loop() {
 #ifdef IRC_SERVER
     DoIRCStuff();
 #endif
-
-
   }
   else
   {
