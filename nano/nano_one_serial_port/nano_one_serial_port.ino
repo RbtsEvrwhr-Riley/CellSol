@@ -26,6 +26,8 @@
 #define REBROADCAST_DISASTER_RADIO_PACKETS
 //#define DISPLAY_DISASTER_RADIO_PACKETS
 
+#define VOLTAGECUTOFF 3150 // if defined, system will go back to sleep if the system voltage is less than this.
+
 //Libraries for LoRa
 #include <SPI.h>
 #include <LoRa.h>
@@ -121,7 +123,6 @@ void mydelay(int num)
 #endif
 }
 
-// This is currently unused, but we may want to use it in order to get battery level. The arduino pylon is very cheap to run, so we shouldn't have to worry about it. Even so...
 long readVcc() {
   // Read 1.1V reference against AVcc
   // set the reference to Vcc and the measurement to the internal 1.1V reference
@@ -145,7 +146,6 @@ long readVcc() {
   result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
   return result; // Vcc in millivolts
 }
-
 int vcc = 0;
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -534,7 +534,7 @@ bool SendSerialIfReady()
   return false;
 }
 
-int numloops = 0;
+int numloops = 9999;
 
 /*
   // free RAM check for debugging. SRAM for ATmega328p = 2048Kb.
@@ -560,6 +560,16 @@ void loop() {
   if (++numloops > 10000)
   {
     vcc = readVcc();
+#ifdef VOLTAGECUTOFF
+    while (vcc < VOLTAGECUTOFF)
+    {
+      Serial.print(":SYS:LOWPWR!");
+      Serial.println(vcc);
+      Serial.flush();
+      LowPower.idle(SLEEP_8S, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF, SPI_OFF, USART0_OFF, TWI_OFF); // go to sleep and hope that the situation has improved when we wake up; can't really do much else
+      vcc = readVcc();
+    }
+#endif
     numloops = 0;
   }
   else
