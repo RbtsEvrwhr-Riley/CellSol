@@ -156,3 +156,22 @@ Please remember that this is a monopole antenna, and the RF ground pin on the py
 ![CellSol Arduino Repeater Pylon Antenna Cutting Guide with antenna wire taped in place, before cutting](photos/antenna3.jpg)
 4. Cut the wire to the rough 85mm length.
 ![CellSol Arduino Repeater Pylon Antenna Cutting Guide with antenna wire taped in place, after cutting](photos/antenna4.jpg)
+
+## Installing the Firmware
+
+If you are not using a pre-flashed Arduino Nano, you will need to install the firmware. Using either the USB port on the Arduino
+(if any) or a USB FTDI programmer (if no USB port), connect it to your computer. After connecting it, load the firmware using
+the Arduino IDE, and install the required libraries:
+
+* LoRa
+* Arduino LowPower
+* SPI
+* Unique ID
+
+If you encounter other library errors, please ensure you have the core libraries for the Nano installed. All of these libraries
+can be installed via the IDE's Library Manager.
+
+## Verifying Assembly and Firmware
+
+Once you have loaded the firmware on the repeater and given it power, the red LED on pin 13 should stay on continuously, at low
+brightness. When a message is received on the CellSol frequency, it will blink once, retransmit, and then resume low brightness.
