@@ -56,6 +56,16 @@
 #define BAD_CHARACTERS_MAX_DIVIDER 10
 //#define SHOW_RSSI // if enabled, show RSSI for wireless packets coming in.
 
+// Repeat sending the last message until you hear it back. 
+//#define REPEAT_UNTIL_ACK
+//#define REPEAT_DELAY 500 // delay in ms
+
+#ifdef REPEAT_UNTIL_ACK  
+boolean got_lora_ack = false;
+long last_repeat_time = millis();
+String message_to_repeat = "";
+#endif
+
 //packet counter
 byte charcounter = 0;
 boolean readytosend = false;
@@ -491,6 +501,11 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.print(whattosend);
     LoRa.endPacket();
   }
+  #ifdef REPEAT_UNTIL_ACK  
+  boolean got_lora_ack = false;
+  last_repeat_time = millis();
+  message_to_repeat = whattosend;  
+  #endif
 }
 
 // important: this should be copy/pasted exactly between hardware types.
@@ -551,6 +566,20 @@ void loop() {
   //Serial.println(availableMemory());
   PetTheWatchdog();
   SeeIfAnythingOnRadio();
+  #ifdef REPEAT_UNTIL_ACK
+    if(LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+    {
+      got_lora_ack = (LoRaData.equals(message_to_repeat));
+    }
+    if(!got_lora_ack)
+    {       
+      if((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
+      {
+        LoraSendAndUpdate(message_to_repeat);
+      }
+    }    
+  #endif
+  
   ReadFromStream(Serial, receivedChars, charcounter, readytosend); // add other streams as needed.
   if (SendSerialIfReady())
   {
