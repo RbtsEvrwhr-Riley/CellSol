@@ -158,6 +158,7 @@ bool displayenabled = true;
 #ifdef REPEAT_UNTIL_ACK  
 boolean got_lora_ack = false;
 long last_repeat_time = millis();
+String message_to_repeat = "";
 #endif
 
 
@@ -488,6 +489,7 @@ void LoraSendAndUpdate(String whattosend)
   #ifdef REPEAT_UNTIL_ACK  
   boolean got_lora_ack = false;
   last_repeat_time = millis();
+  message_to_repeat = whattosend;  
   #endif
 }
 
@@ -761,14 +763,6 @@ void SeeIfAnythingOnRadio() {
         irc_broadcast( LoRaData);
 #endif
       }
-      
-      #ifdef REPEAT_UNTIL_ACK
-      got_lora_ack = LoRaData.equals(LastThingISentViaLora_0);
-      if(!got_lora_ack and (millis() - last_repeat_time) < REPEAT_DELAY)
-      {
-        LoraSendAndUpdate(LastThingISentViaLora_0);
-      }
-      #endif
     }
     dodisplay = true;
   }
@@ -1181,7 +1175,23 @@ void DoBasicSteps()
   ReadBatteryADC(false);
 
   if (has_lora_been_initialized)
+  {
     SeeIfAnythingOnRadio();
+         
+    #ifdef REPEAT_UNTIL_ACK
+    if(LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+    {
+      got_lora_ack = (LoRaData.equals(message_to_repeat));
+    }
+    if(!got_lora_ack)
+    {       
+      if((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
+      {
+        LoraSendAndUpdate(message_to_repeat);
+      }
+    }    
+    #endif
+  }
 
 
   ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);
