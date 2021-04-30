@@ -155,6 +155,11 @@ boolean dodisplaybuf = false;
 boolean displayexists = false;
 bool displayenabled = true;
 
+#ifdef REPEAT_UNTIL_ACK  
+boolean got_lora_ack = false;
+long last_repeat_time = millis();
+#endif
+
 
 #ifndef NODISPLAY
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
@@ -480,6 +485,10 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.print(whattosend);
     LoRa.endPacket();
   }
+  #ifdef REPEAT_UNTIL_ACK  
+  boolean got_lora_ack = false;
+  last_repeat_time = millis();
+  #endif
 }
 
 
@@ -696,6 +705,7 @@ int RSSI_0 = RSSI_TRE_HI; //start neutral
 int RSSI_1 = RSSI_TRE_HI; //start neutral
 int RSSI_2 = RSSI_TRE_HI; //start neutral
 #endif
+
 void SeeIfAnythingOnRadio() {
   //see if there's anything on the radio, and if there is, be ready to send it
   int packetSize = LoRa.parsePacket();
@@ -750,8 +760,15 @@ void SeeIfAnythingOnRadio() {
 #ifdef IRC_SERVER
         irc_broadcast( LoRaData);
 #endif
-
       }
+      
+      #ifdef REPEAT_UNTIL_ACK
+      got_lora_ack = LoRaData.equals(LastThingISentViaLora_0);
+      if(!got_lora_ack and (millis() - last_repeat_time) < REPEAT_DELAY)
+      {
+        LoraSendAndUpdate(LastThingISentViaLora_0);
+      }
+      #endif
     }
     dodisplay = true;
   }
