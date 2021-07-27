@@ -1792,7 +1792,6 @@ wordlist=[
 'start',
 'stat',
 'state',
-'station',
 'status',
 'stay',
 'steak',
@@ -2371,22 +2370,37 @@ def expword(wrd): # ‰ means backspace
     return words[cpl_to_num(wrd)]
 
 def shrinkphrase(sentence):
-    sentence = sentence.replace(",","")
-    sentence = sentence.replace(":","")
-    sentence = sentence.replace(".","")
-    sentence = sentence.replace(";","")
     sentence = sentence.replace("-"," ")
-    # just strip punctuation for now. logically rn puncts and numbers could pass thru
-    # i don't have the brains to write a pass thru though rn
+    sentence = sentence.replace(",","  ,")
+    sentence = sentence.replace(".","  .")
+    sentence = sentence.replace("!","  !")
+    sentence = sentence.replace("?","  ?")
+    sentence = sentence.replace(";","  ;")
+    sentence = sentence.replace(":","  :")
     wordlist = sentence.split()
     strung=""
     for wrd in wordlist:
         strung+=shrinkword(wrd)
     strung = strung.replace("xyzC","xy") #lyly
-    print (len(sentence),len(strung))
+    
+    strung = strung.replace(", ",",")
+    strung = strung.replace(". ",".")
+    strung = strung.replace("! ","!")
+    strung = strung.replace("? ","?")
+    strung = strung.replace("; ",";")
+    strung = strung.replace(": ",":")
+
+    print ('orig:',len(sentence),' shrunk:',len(strung))
     return strung
 
 def expphrase(shrunk):
+    shrunk = shrunk.replace(",",", ")
+    shrunk = shrunk.replace(".",". ")
+    shrunk = shrunk.replace("!","! ")
+    shrunk = shrunk.replace("?","? ")
+    shrunk = shrunk.replace(";","; ")
+    shrunk = shrunk.replace(":",": ")
+
     out = [(shrunk[i:i+2]) for i in range(0, len(shrunk), 2)]
     expy=""
     passthru=0
@@ -2408,11 +2422,17 @@ def expphrase(shrunk):
     expy = expy.replace("istist","ist") # intersecting rules; fix / prevent waste
     expy = expy.replace("ationation","ation") # intersecting rules; fix / prevent waste
     expy = expy.replace("ateate","ate") # intersecting rules; fix / prevent waste
+    expy = expy.replace(" , ",", ")
+    expy = expy.replace(" : ",": ")
+    expy = expy.replace(" . ",". ")
+    expy = expy.replace(" ; ","; ")
+    expy = expy.replace(" ! ","! ")
+    expy = expy.replace(" ? ","? ")
     return expy
     
 
 print("dict size is",len(wordlist),"max is",52*49)
-testphrase="i am surprised that this works online. do you have any food please. there is no sense in fighting if we can talk i have cookies if you would like to have a conversation over cookies the word blabla does not exist"
+testphrase="i am surprised that this works online. do you have any food please? there is no sense in fighting if we can talk! i have cookies, if you would like to have a conversation over cookies; the word blabla does not exist"
 testcomp=shrinkphrase(testphrase)
 testexp=expphrase(testcomp)
 print(testphrase)
