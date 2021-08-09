@@ -4,6 +4,7 @@
 # CC attribution noncommercial sharealike 2020
 
 wordlist=[
+'aabbaa', # standin for https and http
 'ability',
 'able',
 'about',
@@ -325,7 +326,7 @@ wordlist=[
 'chair',
 'challenge',
 'champ',
-'championship',
+'champion',
 'chance',
 'change',
 'channel',
@@ -678,8 +679,7 @@ wordlist=[
 'evidence',
 'exact',
 'exam',
-'examination',
-'examine',
+'examin',
 'example',
 'excellent',
 'except',
@@ -785,7 +785,6 @@ wordlist=[
 'frequent',
 'fresh',
 'friend',
-'friendship',
 'from',
 'front',
 'fruit',
@@ -879,6 +878,7 @@ wordlist=[
 'heat',
 'heavy',
 'height',
+'helicopter',
 'hell',
 'hello',
 'help',
@@ -1053,7 +1053,6 @@ wordlist=[
 'layer',
 'lead',
 'leader',
-'leadership',
 'league',
 'learn',
 'least',
@@ -1157,7 +1156,6 @@ wordlist=[
 'medium',
 'meet',
 'member',
-'membership',
 'memory',
 'ment',
 'menu',
@@ -1230,7 +1228,6 @@ wordlist=[
 'need',
 'negativ',
 'negotiat',
-'negotiation',
 'neither',
 'nerve',
 'nervous',
@@ -1530,9 +1527,7 @@ wordlist=[
 'regret',
 'regular',
 'rel',
-'relat',
 'relationship',
-'relat',
 'relax',
 'release',
 'relevant',
@@ -1591,6 +1586,7 @@ wordlist=[
 'risk',
 'river',
 'road',
+'robot',
 'rock',
 'role',
 'roll',
@@ -2163,7 +2159,8 @@ wordparts=[
     'ver',
     'ate',
     'al',
-    'e']
+    'e',
+    'ship']
   
 smalletters=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
 
@@ -2282,6 +2279,10 @@ def shrinkword(wrd):
     if (wrd.endswith("ive")):
             wrd=wrd[:-3]
             sufstring="zT"            
+    if (wrd.endswith("ship")):
+            wrd=wrd[:-4]
+            sufstring="zU"            
+    # there can be a number of similar rules, and they can be compacted
     try:
         teststr=num_to_cpl(words.index(wrd.lower()))
     # intercept exception and try to build using parts of words
@@ -2363,20 +2364,29 @@ def expword(wrd): # ‰ means backspace
         return "‰ure"
     if (wrd=="zT"):
         return "‰ive"
+    if (wrd=="zU"):
+        return "‰ship"
     if (wrd[0]=='x'):
         return "‰"+wrd[1]
     if (wrd[0]=='y'):
         return "‡"+wrd[1]
-    return words[cpl_to_num(wrd)]
+    try:
+        return words[cpl_to_num(wrd)]
+    except:
+        return "["+wrd+"]"
 
 def shrinkphrase(sentence):
-    sentence = sentence.replace("-"," ")
-    sentence = sentence.replace(",","  ,")
-    sentence = sentence.replace(".","  .")
-    sentence = sentence.replace("!","  !")
-    sentence = sentence.replace("?","  ?")
-    sentence = sentence.replace(";","  ;")
-    sentence = sentence.replace(":","  :")
+    sentence = sentence.replace("//www.","//")
+    sentence = sentence.replace("http://","aabbaa ")
+    sentence = sentence.replace("https://","aabbaa ")
+    sentence = sentence.replace("-","  - ")
+    sentence = sentence.replace("+","  + ")
+    sentence = sentence.replace(",","  , ")
+    sentence = sentence.replace(".","  . ")
+    sentence = sentence.replace("!","  ! ")
+    sentence = sentence.replace("?","  ? ")
+    sentence = sentence.replace(";","  ; ")
+    sentence = sentence.replace(":","  : ")
     wordlist = sentence.split()
     strung=""
     for wrd in wordlist:
@@ -2389,17 +2399,25 @@ def shrinkphrase(sentence):
     strung = strung.replace("? ","?")
     strung = strung.replace("; ",";")
     strung = strung.replace(": ",":")
+    
+    strung = strung.replace("ya,",",")
+    strung = strung.replace("ya.",".")
+    strung = strung.replace("ya!","!")
+    strung = strung.replace("ya?","?")
+    strung = strung.replace("ya;",";")
+    strung = strung.replace("ya:",":")
 
     print ('orig:',len(sentence),' shrunk:',len(strung))
     return strung
 
 def expphrase(shrunk):
-    shrunk = shrunk.replace(",",", ")
-    shrunk = shrunk.replace(".",". ")
-    shrunk = shrunk.replace("!","! ")
-    shrunk = shrunk.replace("?","? ")
-    shrunk = shrunk.replace(";","; ")
-    shrunk = shrunk.replace(":",": ")
+    shrunk = shrunk.replace(",","ya, ")
+    shrunk = shrunk.replace(".","ya. ")
+    shrunk = shrunk.replace("!","ya! ")
+    shrunk = shrunk.replace("?","ya? ")
+    shrunk = shrunk.replace(";","ya; ")
+    shrunk = shrunk.replace(":","ya: ")
+
 
     out = [(shrunk[i:i+2]) for i in range(0, len(shrunk), 2)]
     expy=""
@@ -2424,10 +2442,15 @@ def expphrase(shrunk):
     expy = expy.replace("ateate","ate") # intersecting rules; fix / prevent waste
     expy = expy.replace(" , ",", ")
     expy = expy.replace(" : ",": ")
-    expy = expy.replace(" . ",". ")
+    expy = expy.replace(" . ",".")
     expy = expy.replace(" ; ","; ")
     expy = expy.replace(" ! ","! ")
     expy = expy.replace(" ? ","? ")
+    expy = expy.replace("  "," ")
+    expy = expy.replace(" + ","+")
+    expy = expy.replace(" - ","-")
+    expy = expy.replace(". ..","...")
+    expy = expy.replace("aabbaa ","https://")
     return expy
     
 
