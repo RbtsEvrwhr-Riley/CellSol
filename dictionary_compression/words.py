@@ -1588,7 +1588,8 @@ wordlist=[
 'road',
 'robot',
 'rock',
-'role',
+'rocket',
+'role', 
 'roll',
 'roof',
 'room',
@@ -2391,6 +2392,7 @@ def shrinkphrase(sentence):
     strung=""
     for wrd in wordlist:
         strung+=shrinkword(wrd)
+
     strung = strung.replace("xyzC","xy") #lyly
     
     strung = strung.replace(", ",",")
@@ -2417,7 +2419,6 @@ def expphrase(shrunk):
     shrunk = shrunk.replace("?","ya? ")
     shrunk = shrunk.replace(";","ya; ")
     shrunk = shrunk.replace(":","ya: ")
-
 
     out = [(shrunk[i:i+2]) for i in range(0, len(shrunk), 2)]
     expy=""
@@ -2455,7 +2456,7 @@ def expphrase(shrunk):
     
 
 print("dict size is",len(wordlist),"max is",52*49)
-testphrase="i am surprised that this works online. do you have any food please? there is no sense in fighting if we can talk! i have cookies, if you would like to have a conversation over cookies; the word blabla does not exist"
+testphrase="i am surprised that this works online. do you have any food please? there is no sense in fighting if we can talk! i have cookies, if you would like to have a conversation over cookies; the word blabla does not exist! https://robots-everywhere.com/"
 testcomp=shrinkphrase(testphrase)
 testexp=expphrase(testcomp)
 print(testphrase)
