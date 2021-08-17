@@ -3,6 +3,8 @@
 # scramble word list for (crappy) encryption
 # CC attribution noncommercial sharealike 2020
 
+#idea: use Zx Zy Zz for "save the 1st 2nd 3rd unprocessed word in case it gets repeated, and repeat it here" since that happens a lot
+
 wordlist=[
 'aabbaa', # standin for https and http
 'ability',
@@ -30,7 +32,7 @@ wordlist=[
 'ad',
 'adapt',
 'add',
-'addition',
+'addi',
 'additional',
 'address',
 'adjust',
@@ -39,8 +41,7 @@ wordlist=[
 'admit',
 'adopt',
 'adult',
-'advance',
-'advanced',
+'advanc',
 'advantage',
 'advertis',
 'advice',
@@ -79,7 +80,7 @@ wordlist=[
 'always',
 'am',
 'amaz',
-'ambition',
+'ambi',
 'americ',
 'among',
 'amount',
@@ -141,7 +142,7 @@ wordlist=[
 'assistant',
 'associ',
 'assume',
-'assumption',
+'assump',
 'ass',
 'at',
 'atmosphere',
@@ -149,7 +150,7 @@ wordlist=[
 'attack',
 'attempt',
 'attend',
-'attention',
+'atten',
 'attitude',
 'attract',
 'audience',
@@ -210,7 +211,7 @@ wordlist=[
 'benefit',
 'best',
 'bet',
-'better',
+'bett',
 'between',
 'beyond',
 'bicycle',
@@ -286,7 +287,6 @@ wordlist=[
 'but',
 'button',
 'buy',
-'buyer',
 'by',
 'cabinet',
 'cake',
@@ -309,7 +309,6 @@ wordlist=[
 'car',
 'card',
 'care',
-'career',
 'careful',
 'carpet',
 'carry',
@@ -403,14 +402,13 @@ wordlist=[
 'complicat',
 'comprehens',
 'compress',
-'computer',
+'comput',
 'concentrate',
 'concept',
 'concern',
-'concerned',
 'concert',
 'conclusion',
-'condition',
+'condi',
 'conference',
 'confidence',
 'confident',
@@ -444,12 +442,11 @@ wordlist=[
 'cookies',
 'cool',
 'copy',
-'corner',
+'corn',
 'correct',
 'cost',
 'could',
 'count',
-'counter',
 'countries',
 'country',
 'county',
@@ -480,7 +477,7 @@ wordlist=[
 'currency',
 'current',
 'curve',
-'customer',
+'custom',
 'cut',
 'cute',
 'cycle',
@@ -499,7 +496,6 @@ wordlist=[
 'day',
 'dead',
 'deal',
-'dealer',
 'dear',
 'death',
 'debate',
@@ -525,10 +521,9 @@ wordlist=[
 'depth',
 'derp',
 'describe',
-'description',
+'descrip',
 'deserv',
 'design',
-'designer',
 'desire',
 'desk',
 'desperat',
@@ -587,12 +582,10 @@ wordlist=[
 'drama',
 'dramatic',
 'draw',
-'drawer',
 'dream',
 'dress',
 'drink',
-'drive',
-'driver',
+'driv',
 'drop',
 'drunk',
 'dry',
@@ -622,7 +615,7 @@ wordlist=[
 'effort',
 'egg',
 'either',
-'election',
+'elec',
 'electrical',
 'electronic',
 'elevator',
@@ -630,13 +623,12 @@ wordlist=[
 'elsewhere',
 'embarrass',
 'emergency',
-'emotion',
+'emo',
 'emotional',
 'emphasis',
 'emphasize',
 'employ',
-'employe',
-'employer',
+'employee',
 'empty',
 'en',
 'encourag',
@@ -644,7 +636,6 @@ wordlist=[
 'energy',
 'engage',
 'engine',
-'engineer',
 'enhance',
 'enjoy',
 'enough',
@@ -697,7 +688,7 @@ wordlist=[
 'experienc',
 'expert',
 'explain',
-'explanation',
+'explana',
 'explor',
 'expos',
 'express',
@@ -707,7 +698,7 @@ wordlist=[
 'external',
 'extra',
 'extreme',
-'eye',
+'ey',
 'face',
 'fact',
 'factor',
@@ -722,7 +713,6 @@ wordlist=[
 'fantastic',
 'far',
 'farm',
-'farmer',
 'fast',
 'fat',
 'father',
@@ -760,7 +750,6 @@ wordlist=[
 'flight',
 'floor',
 'flow',
-'flower',
 'focus',
 'fold',
 'follow',
@@ -774,11 +763,11 @@ wordlist=[
 'forget',
 'form',
 'formal',
-'former',
 'forth',
 'fortune',
 'forward',
 'found',
+'four',
 'frame',
 'free',
 'freedom',
@@ -793,7 +782,7 @@ wordlist=[
 'ful',
 'full',
 'fun',
-'function',
+'func',
 'funeral',
 'funny',
 'fut',
@@ -806,6 +795,7 @@ wordlist=[
 'gas',
 'gate',
 'gather',
+'gay',
 'gear',
 'gene',
 'general',
@@ -820,6 +810,8 @@ wordlist=[
 'glass',
 'global',
 'glove',
+'going',
+'got',
 'go',
 'goal',
 'god',
@@ -927,13 +919,16 @@ wordlist=[
 'hunt',
 'hurry',
 'hurt',
-'husband', "i'm", 'ice',
+'husband',
+'i\'m',
+'ice',
 'idea',
 'ideal',
 'identify',
 'if',
 'ignor',
 'ill',
+'i\'ll',
 'illegal',
 'illustrat',
 'image',
@@ -983,7 +978,7 @@ wordlist=[
 'intelligent',
 'intend',
 'intent',
-'interaction',
+'interac',
 'interest',
 'intern',
 'international',
@@ -995,8 +990,7 @@ wordlist=[
 'invest',
 'investigat',
 'invit',
-'involve',
-'involved',
+'involv',
 'iron',
 'is',
 'island',
@@ -1025,7 +1019,7 @@ wordlist=[
 'kid',
 'kill',
 'kind',
-'kiss',
+'kis', # kiss messes up for some reason
 'kitchen',
 'kitty',
 'knee',
@@ -1039,7 +1033,7 @@ wordlist=[
 'lady',
 'lake',
 'land',
-'landscape',
+'landscap',
 'language',
 'large',
 'last',
@@ -1050,9 +1044,7 @@ wordlist=[
 'law',
 'lawyer',
 'lay',
-'layer',
 'lead',
-'leader',
 'league',
 'learn',
 'least',
@@ -1063,6 +1055,7 @@ wordlist=[
 'leg',
 'legal',
 'length',
+'lesbian',
 'less',
 'lesson',
 'let',
@@ -1077,7 +1070,6 @@ wordlist=[
 'light',
 'like',
 'limit',
-'limited',
 'line',
 'link',
 'lip',
@@ -1098,11 +1090,12 @@ wordlist=[
 'long',
 'look',
 'loose',
-'lose',
+'los',
 'loss',
 'lost',
 'lot',
 'loud',
+'love',
 'lov',
 'low',
 'lower',
@@ -1125,7 +1118,6 @@ wordlist=[
 'manager',
 'manner',
 'manufactur',
-'manufacturer',
 'many',
 'map',
 'march',
@@ -1137,7 +1129,7 @@ wordlist=[
 'mass',
 'master',
 'match',
-'mate',
+'mat',
 'material',
 'math',
 'matter',
@@ -1162,12 +1154,12 @@ wordlist=[
 'mere',
 'mess',
 'message',
-'messages',
 'metal',
 'method',
 'middle',
 'midnight',
 'might',
+'mild',
 'milk',
 'mind',
 'mine',
@@ -1194,7 +1186,7 @@ wordlist=[
 'mood',
 'more',
 'moreover',
-'morn',
+'morning',
 'mortgage',
 'most',
 'mother',
@@ -1216,7 +1208,7 @@ wordlist=[
 'name',
 'narrow',
 'nasty',
-'nation',
+'na',
 'natural',
 'nat',
 'near',
@@ -1226,7 +1218,7 @@ wordlist=[
 'necessary',
 'neck',
 'need',
-'negativ',
+'negative',
 'negotiat',
 'neither',
 'nerve',
@@ -1389,8 +1381,7 @@ wordlist=[
 'poet',
 'poetry',
 'point',
-'police',
-'policy',
+'polic',
 'political',
 'politics',
 'pollution',
@@ -1437,12 +1428,11 @@ wordlist=[
 'prior',
 'priv',
 'prize',
-'probab',
+'probabl',
 'problem',
 'procedure',
 'process',
-'produce',
-'product',
+'produc',
 'profess',
 'professor',
 'profil',
@@ -1465,6 +1455,7 @@ wordlist=[
 'psychological',
 'psychology',
 'public',
+'publish',
 'pull',
 'punch',
 'purchase',
@@ -1508,9 +1499,9 @@ wordlist=[
 'reason',
 'receive',
 'recent',
-'reception',
+'recep',
 'recipe',
-'recognition',
+'recogni',
 'recogniz',
 'recommend',
 'record',
@@ -1520,6 +1511,7 @@ wordlist=[
 'refer',
 'reference',
 'reflect',
+'refrigerat',
 'refrigerator',
 'refuse',
 'region',
@@ -1532,7 +1524,7 @@ wordlist=[
 'release',
 'relevant',
 'relief',
-'relieve',
+'reliev',
 'remain',
 'remark',
 'remember',
@@ -1616,7 +1608,7 @@ wordlist=[
 'sample',
 'sand',
 'sandwich',
-'satisfaction',
+'satisfac',
 'save',
 'savings',
 'say',
@@ -1639,10 +1631,9 @@ wordlist=[
 'second',
 'secret',
 'secretary',
-'section',
+'sec',
 'sector',
 'secur',
-'sec',
 'see',
 'seek',
 'seem',
@@ -1745,7 +1736,7 @@ wordlist=[
 'somehow',
 'someone',
 'something',
-'sometimes',
+'sometim',
 'somewhat',
 'somewhere',
 'son',
@@ -1761,7 +1752,6 @@ wordlist=[
 'space',
 'spare',
 'speak',
-'speaker',
 'special',
 'specialist',
 'specific',
@@ -1861,7 +1851,6 @@ wordlist=[
 'sw',
 'sweet',
 'swim',
-'swimm',
 'switch',
 'sympathy',
 'system',
@@ -1878,7 +1867,6 @@ wordlist=[
 'tax',
 'tea',
 'teach',
-'teacher',
 'team',
 'tear',
 'technical',
@@ -1909,6 +1897,7 @@ wordlist=[
 'then',
 'theory',
 'there',
+'there\'s',
 'therefore',
 'these',
 'they',
@@ -1956,11 +1945,11 @@ wordlist=[
 'tower',
 'town',
 'track',
-'trade',
-'tradition',
+'trad',
 'traffic',
 'train',
-'trainer',
+'trans',
+'transgender',
 'transit',
 'translat',
 'transport',
@@ -1997,7 +1986,7 @@ wordlist=[
 'unique',
 'unit',
 'united',
-'univers',
+'universe',
 'unless',
 'unlike',
 'until',
@@ -2067,6 +2056,7 @@ wordlist=[
 'weird',
 'welcome',
 'well',
+'went',
 'were',
 'west',
 'western',
@@ -2118,7 +2108,6 @@ wordlist=[
 'would',
 'wrap',
 'writ',
-'writer',
 'written',
 'wrong',
 'yard',
@@ -2134,6 +2123,7 @@ wordlist=[
 'yours',
 'yourself',
 'youth',
+'zip',
 'zone']
 
 # not used yet
@@ -2141,6 +2131,7 @@ wordlist=[
 # probably but i don't have the brains for it atm
 wordparts=[
     'ation',
+    'tion',
     'ion',
     'ing',
     '‰ing', #‰ means "duplicate the last letter"
@@ -2161,6 +2152,7 @@ wordparts=[
     'ate',
     'al',
     'e',
+    'er',
     'ship']
   
 smalletters=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
@@ -2198,6 +2190,8 @@ def cpl_to_num(cpl):
     #print(num3)
     return num3
 
+lastderp=""
+
 def shrinkword(wrd):
     wrdo=wrd
     teststr=""
@@ -2232,6 +2226,10 @@ def shrinkword(wrd):
     if (wrd.endswith("ation")):
             wrd=wrd[:-5]
             sufstring="zD" 
+    # there can be a number of similar rules, and they can be compacted
+    if (wrd.endswith("tion")):
+            wrd=wrd[:-4]
+            sufstring="zV" 
     # there can be a number of similar rules, and they can be compacted
     if (wrd.endswith("ion")):
             wrd=wrd[:-3]
@@ -2283,6 +2281,9 @@ def shrinkword(wrd):
     if (wrd.endswith("ship")):
             wrd=wrd[:-4]
             sufstring="zU"            
+    if (wrd.endswith("er")):
+            wrd=wrd[:-2]
+            sufstring="zW"            
     # there can be a number of similar rules, and they can be compacted
     try:
         teststr=num_to_cpl(words.index(wrd.lower()))
@@ -2315,6 +2316,12 @@ def shrinkword(wrd):
             teststr=num_to_cpl(words.index(wrd.lower()))
     # intercept exception and transmit as-is using literal
         except:
+         try: #number?
+          derpnum = int(wrd)
+          if (len(wrd)%2==1):
+               wrd=wrd+" "
+          return wrd
+         except ValueError:
             wrd=wrdo
             ll=len(wrd)-1
             prestring="y"+smalletters[ll]
@@ -2322,6 +2329,8 @@ def shrinkword(wrd):
             if (ll % 2 == 0): # temp fix for it only working on even letterd words
                 wrdo=wrdo+" " # temp fix for it only working on even letterd words
             teststr=wrdo
+            if (len(wrdo)>4):
+                lastderp=wrdo # does not persist but idk how to make that happen
     return prestring+teststr+sufstring
 
 def expword(wrd): # ‰ means backspace
@@ -2339,6 +2348,8 @@ def expword(wrd): # ‰ means backspace
         return "‰ion"
     if (wrd=="zD"):
         return "‰ation"
+    if (wrd=="zV"):
+        return "‰tion"
     if (wrd=="zF"):
         return "‰ist"
     if (wrd=="zG"):
@@ -2367,6 +2378,8 @@ def expword(wrd): # ‰ means backspace
         return "‰ive"
     if (wrd=="zU"):
         return "‰ship"
+    if (wrd=="zW"):
+        return "‰er"
     if (wrd[0]=='x'):
         return "‰"+wrd[1]
     if (wrd[0]=='y'):
@@ -2374,7 +2387,11 @@ def expword(wrd): # ‰ means backspace
     try:
         return words[cpl_to_num(wrd)]
     except:
-        return "["+wrd+"]"
+        try: #number?
+          derpnum = int(wrd)
+          return wrd
+        except ValueError:
+          return "["+wrd+"]"
 
 def shrinkphrase(sentence):
     sentence = sentence.replace("//www.","//")
@@ -2456,7 +2473,7 @@ def expphrase(shrunk):
     
 
 print("dict size is",len(wordlist),"max is",52*49)
-testphrase="i am surprised that this works online. do you have any food please? there is no sense in fighting if we can talk! i have cookies, if you would like to have a conversation over cookies; the word blabla does not exist! https://robots-everywhere.com/"
+testphrase="i am surprised that this works online.do you have any food please? there is no sense in fighting if we can talk! i have cookies, if you would like to have a conversation over cookies; the word blabla does not exist! two plus two equals four; https://robots-everywhere.com/"
 testcomp=shrinkphrase(testphrase)
 testexp=expphrase(testcomp)
 print(testphrase)

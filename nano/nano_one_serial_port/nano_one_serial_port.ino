@@ -112,13 +112,17 @@ void PetTheWatchdog() {
 String hextag = "XXXX:"; // usually the last two IP octets; gives pseudonimity to sender
 String fourhex(int num)
 {
-  if (num < 0x10)
+  num = num | 4096;
+  /*
+  if (num < 10)
     return "000" + String(num, HEX);
-  if (num < 0x100)
+  if (num < 100)
     return "00" + String(num, HEX);
-  if (num < 0x1000)
+  if (num < 1000)
     return "0" + String(num, HEX);
-  return String(num % 65536, HEX);
+  return String((num+0x1000, HEX);
+  */
+  return String(num, HEX);
 }
 
 
