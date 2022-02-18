@@ -731,7 +731,7 @@ void RunApplication()
   static bool is_aero_init = false;
   static bool water_low = false;
 
-  // generates 113KHz for ultrasound
+  // generates 111KHz for ultrasound
   if (is_aero_init == false)
   {
     Timer1.initialize(9);              // initialize timer1, and set a 9 usec period for generating 113KHz
