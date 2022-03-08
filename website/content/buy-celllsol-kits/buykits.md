@@ -5,7 +5,7 @@ lastmod: 2021-01-11
 ---
 
 We aim to make it easy for you to build your own CellSol pylons and truly own your infrastructure. If you would like to purchase fully assembled or partially assembled kits, you can support the project by
-purchasing them directly from Robots Everywhere. Head over to their [product page](http://f3.to/products/?category=cellsol) and choose your preferred pylon type. Robots Everywhere has done the engineering
+purchasing them directly from Robots Everywhere. Head over to their [product page](https://www.robots-everywhere.com/store/index.php?route=product/search&search=cellsol) and choose your preferred pylon type. Robots Everywhere has done the engineering
 and promotion work for CellSol, so by buying kits from them, you are supporting their contribution to the project.
 
 # Compatible Equipment
