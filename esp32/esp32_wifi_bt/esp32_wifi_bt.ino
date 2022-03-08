@@ -155,6 +155,12 @@ boolean dodisplaybuf = false;
 boolean displayexists = false;
 bool displayenabled = true;
 
+#ifdef REPEAT_UNTIL_ACK  
+boolean got_lora_ack = false;
+long last_repeat_time = millis();
+String message_to_repeat = "";
+#endif
+
 
 #ifndef NODISPLAY
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
@@ -480,6 +486,11 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.print(whattosend);
     LoRa.endPacket();
   }
+  #ifdef REPEAT_UNTIL_ACK  
+  boolean got_lora_ack = false;
+  last_repeat_time = millis();
+  message_to_repeat = whattosend;  
+  #endif
 }
 
 
@@ -696,6 +707,7 @@ int RSSI_0 = RSSI_TRE_HI; //start neutral
 int RSSI_1 = RSSI_TRE_HI; //start neutral
 int RSSI_2 = RSSI_TRE_HI; //start neutral
 #endif
+
 void SeeIfAnythingOnRadio() {
   //see if there's anything on the radio, and if there is, be ready to send it
   int packetSize = LoRa.parsePacket();
@@ -750,7 +762,6 @@ void SeeIfAnythingOnRadio() {
 #ifdef IRC_SERVER
         irc_broadcast( LoRaData);
 #endif
-
       }
     }
     dodisplay = true;
@@ -1164,7 +1175,23 @@ void DoBasicSteps()
   ReadBatteryADC(false);
 
   if (has_lora_been_initialized)
+  {
     SeeIfAnythingOnRadio();
+         
+    #ifdef REPEAT_UNTIL_ACK
+    if(LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+    {
+      got_lora_ack = (LoRaData.equals(message_to_repeat));
+    }
+    if(!got_lora_ack)
+    {       
+      if((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
+      {
+        LoraSendAndUpdate(message_to_repeat);
+      }
+    }    
+    #endif
+  }
 
 
   ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);

@@ -92,6 +92,9 @@
 // this affects wifi range. obviously it will affect power consumption. it does not affect lora range. for line powered stuff, it'll be turned up to 11. For default, keep it commented out.
 #define WIFI_POWER_LEVEL 4 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
 
+// Repeat sending the last message until you hear it back. WARNING: high send frequency devices may have issues with this feature.
+// #define REPEAT_UNTIL_ACK
+// #define REPEAT_DELAY 5000 // delay in ms
 
 /**
    BATTERY & SLEEP CONFIGURATION

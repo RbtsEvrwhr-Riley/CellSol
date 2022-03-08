@@ -8,10 +8,11 @@
   This file is used for Atmel328-based boards (Arduino Uno, Mini, Nano, etc).
 *********/
 
-#define VERSIONSTRING "0.32"
+#define VERSIONSTRING "0.33"
 
-// Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
+// Actual running speed is 2 Mhz most of the time. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
 //#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
+//#define GO_FAST // if defined, operate at whatever the actual clock frequency is. Can be useful for applications which presumably use bigger panels anyway
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
@@ -21,6 +22,15 @@
 #define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
 #define RSSI_TRE_LO -120 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
+
+//#define RX_ONLY // if defined, do not ever try to transmit. only really useful to partially salvage damaged radios.
+
+#define APPLICATION // run a secondary application between pseudoseconds?
+// list of possible applications
+//#define AEROPONY // controls a hydroponics/aeroponics cell. see https://www.robots-everywhere.com/re_wiki/pub/web/Main.AeroponicCell.html
+#define BASICPINS // turns available digital pins on and off; reads available analog pins
+
+
 
 #define DO_NOT_LOG_SYSTEM_PACKETS
 #define REBROADCAST_DISASTER_RADIO_PACKETS
@@ -35,6 +45,9 @@
 #include <LowPower.h>
 #include <avr/wdt.h>
 #include <ArduinoUniqueID.h>
+
+// used for scheduling
+#include <TimerOne.h>
 
 //define the pins used by the LoRa transceiver module
 // it's pretty much how you wire the whole thing, too
@@ -56,11 +69,11 @@
 #define BAD_CHARACTERS_MAX_DIVIDER 10
 //#define SHOW_RSSI // if enabled, show RSSI for wireless packets coming in.
 
-// Repeat sending the last message until you hear it back. 
+// Repeat sending the last message until you hear it back.
 //#define REPEAT_UNTIL_ACK
 //#define REPEAT_DELAY 500 // delay in ms
 
-#ifdef REPEAT_UNTIL_ACK  
+#ifdef REPEAT_UNTIL_ACK
 boolean got_lora_ack = false;
 long last_repeat_time = millis();
 String message_to_repeat = "";
@@ -83,12 +96,17 @@ long LTISVL_2_time = 0;
 long LTISVL_1_time = 0;
 long LTISVL_0_time = 0;
 
+int i, j;
 
 bool broadcast_twice = false;
 
 #define MAXPKTSIZE 200
 char receivedChars[MAXPKTSIZE]; // an array to store the received data
 int rssi; // last packat received rss
+
+#ifdef APPLICATION
+char appcommand[16]; // an array to store the received data
+#endif
 
 unsigned long pseudoseconds = 0;
 long UTC_Seconds = -1;
@@ -101,9 +119,16 @@ void PetTheWatchdog() {
 #ifdef GO_A_LOT_SLOWER
     psm = psm + 62; // 1000/16
 #else
+#ifdef GO_FAST
+    psm = psm + 1000; // 1000/1
+#else
     psm = psm + 250; // 1000/4
 #endif
+#endif
     pseudoseconds++;
+#ifdef APPLICATION
+    RunApplication();
+#endif
     //    Serial.println(pseudoseconds);
   }
 }
@@ -114,13 +139,13 @@ String fourhex(int num)
 {
   num = num | 4096;
   /*
-  if (num < 10)
+    if (num < 10)
     return "000" + String(num, HEX);
-  if (num < 100)
+    if (num < 100)
     return "00" + String(num, HEX);
-  if (num < 1000)
+    if (num < 1000)
     return "0" + String(num, HEX);
-  return String((num+0x1000, HEX);
+    return String((num+0x1000, HEX);
   */
   return String(num, HEX);
 }
@@ -181,6 +206,11 @@ void setup() {
   if (hextag.charAt(3) == '0') // this unit is not set up to do service tasks, so don't end in 0
     hextag.setCharAt(3, '1');
 
+#ifdef GO_FAST
+  setClockPrescaler(0);
+  Serial.begin(9600); // actually 2400
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " FULL"));
+#else
   // we want to run this at 0.5Mhz regardless if we are starting at 8 or 16.
 #ifdef GO_A_LOT_SLOWER
 #ifdef F_CPU
@@ -216,8 +246,13 @@ void setup() {
   Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
 #endif
 #endif
+#endif
 
+#ifdef GO_FAST
+  SPI.setClockDivider(SPI_CLOCK_DIV4);
+#else
   SPI.setClockDivider(1); // spi abuse courtesy of the fact that we are running at 2Mhz anyway // SPI_CLOCK_DIV2
+#endif
   //initialize Serial Monitor
   //SPI LoRa pins
   SPI.begin();//SCK, MISO, MOSI, SS);
@@ -269,27 +304,47 @@ void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
     if ((cnt > 1 and buf[cnt - 1] == 13))
     {
       sendout = true;
-    }
 
-    // eat ascii 255s that that show up
-    if ((buf[0]<6 or buf[0]>127) and cnt == 1)
-      cnt = 0;
+      // eat ascii 255s that that show up
+      if ((buf[0]<6 or buf[0]>127) and cnt == 1)
+        cnt = 0;
 
-    if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.') and (buf[3] == 13 or buf[3] == 10)) // special: send status string and memory
-    {
-      cnt = 0;
-      buf[0] = 0;
-      buf[1] = 0;
-      buf[2] = 0;
-      sendout = false;
-      st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
-      if (LastWeGot.length() > 0)
+      if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.')) // special strings:
       {
-        if (recalldots)
-          st.print(F("....."));
-        st.println(LastWeGot);
+
+        cnt = 0;
+        sendout = false;
+        if (buf[3] < 14)
+        {
+          buf[0] = 0;
+          buf[1] = 0;
+          buf[2] = 0;
+          buf[3] = 0;
+          st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
+          if (LastWeGot.length() > 0)
+          {
+            if (recalldots)
+              st.print(F("....."));
+            st.println(LastWeGot);
+          }
+        }
+        else
+        {
+#ifdef APPLICATION
+          st.print(":SYS:APPCMD: ");
+          for (i = 0; i < 19; i++)
+          {
+            appcommand[i] = buf[i + 3];
+            st.print(appcommand[i]);
+          }
+          st.println();
+#endif
+        }
+
       }
+
     }
+
     if (buf[0] == 10 or buf[0] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
     {
       cnt = 0;
@@ -495,6 +550,7 @@ void LoraSendAndUpdate(String whattosend)
   LastThingISentViaLora_2 = LastThingISentViaLora_1;
   LastThingISentViaLora_1 = LastThingISentViaLora_0;
   LastThingISentViaLora_0 = LongChecksum(whattosend);
+#ifndef RX_ONLY
   LoRa.beginPacket();
   LoRa.print(whattosend);
   LoRa.endPacket();
@@ -505,11 +561,12 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.print(whattosend);
     LoRa.endPacket();
   }
-  #ifdef REPEAT_UNTIL_ACK  
+#ifdef REPEAT_UNTIL_ACK
   boolean got_lora_ack = false;
   last_repeat_time = millis();
-  message_to_repeat = whattosend;  
-  #endif
+  message_to_repeat = whattosend;
+#endif
+#endif
 }
 
 // important: this should be copy/pasted exactly between hardware types.
@@ -543,7 +600,7 @@ bool SendSerialIfReady()
     AddToLastAndPrune(sendstr);
     readytosend = false;
     charcounter = 0;
-    for (int i = 0; i < MAXPKTSIZE; i++)
+    for (i = 0; i < MAXPKTSIZE; i++)
     {
       receivedChars[i] = 0;
     }
@@ -570,20 +627,20 @@ void loop() {
   //Serial.println(availableMemory());
   PetTheWatchdog();
   SeeIfAnythingOnRadio();
-  #ifdef REPEAT_UNTIL_ACK
-    if(LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+#ifdef REPEAT_UNTIL_ACK
+  if (LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+  {
+    got_lora_ack = (LoRaData.equals(message_to_repeat));
+  }
+  if (!got_lora_ack)
+  {
+    if ((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
     {
-      got_lora_ack = (LoRaData.equals(message_to_repeat));
+      LoraSendAndUpdate(message_to_repeat);
     }
-    if(!got_lora_ack)
-    {       
-      if((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
-      {
-        LoraSendAndUpdate(message_to_repeat);
-      }
-    }    
-  #endif
-  
+  }
+#endif
+
   ReadFromStream(Serial, receivedChars, charcounter, readytosend); // add other streams as needed.
   if (SendSerialIfReady())
   {
@@ -610,3 +667,298 @@ void loop() {
     mydelay(4); // actually 16
   }
 }
+
+
+#ifdef APPLICATION
+void RunApplication()
+{
+#ifdef BASICPINS
+  if (appcommand[0] == 'D' or appcommand[0] == 'd')
+  {
+    switch (appcommand[1])
+    {
+      case '2': pinMode(2, OUTPUT); digitalWrite(2, appcommand[2] == '2'); break;
+      case '3': pinMode(3, OUTPUT); digitalWrite(2, appcommand[2] == '3'); break;
+      case '4': pinMode(4, OUTPUT); digitalWrite(2, appcommand[2] == '4'); break;
+      case '5': pinMode(5, OUTPUT); digitalWrite(2, appcommand[2] == '5'); break;
+      case  '6': pinMode(6, OUTPUT); digitalWrite(2, appcommand[2] == '6'); break;
+      case  '8': pinMode(8, OUTPUT); digitalWrite(2, appcommand[2] == '8'); break;
+      case  '9': pinMode(9, OUTPUT); digitalWrite(2, appcommand[2] == '9'); break;
+      default: break;
+    }
+    appcommand[0]=0;
+  }
+  if (appcommand[0] == 'A' or appcommand[0] == 'a')
+  {
+    Serial.print(":SYS:APP:A");
+    switch (appcommand[1])
+    {
+      case '1': Serial.print("1:"); Serial.println(analogRead(A1)); break;
+      case '2': Serial.print("2:"); Serial.println(analogRead(A2)); break;
+      case '3': Serial.print("3:"); Serial.println(analogRead(A3)); break;
+      case '6': Serial.print("6:"); Serial.println(analogRead(A5)); break;
+      case '7': Serial.print("7:"); Serial.println(analogRead(A6)); break;
+      default: break;
+    }
+//    appcommand[0]=0; // keep reading every second until we get a stop (invalid command), actually
+  }
+#endif
+
+
+
+#ifdef AEROPONY
+
+
+  unsigned static long AEROSOLPWM = 1023; // 512 for 113KHz pwm to send to piezos via irlz44, 1023 for on/off and use external signal generator
+  // needs water alarm
+  // needs humidity sensor
+
+  unsigned static long dayseconds = 12000;// 1 to 86400
+  unsigned static long lights_OFF_time = 79200; // 2200
+  unsigned static long lights_ON_time = 21600; // 0600
+
+  unsigned static long ultrasound_ON_gap = 50;
+  unsigned static long ultrasound_OFF_gap = 10;
+  unsigned static long ultrasound_time_for = 0;
+  static bool is_ultrasound_ON = false;
+
+  unsigned static long pump_ON_gap = 10;
+  unsigned static long pump_OFF_gap = 50;
+  unsigned static long pump_time_for = 0;
+  static bool is_pump_ON = false;
+
+  static bool turn_lights_ON = false;
+  static bool is_aero_init = false;
+  static bool water_low = false;
+
+  // generates 111KHz for ultrasound
+  if (is_aero_init == false)
+  {
+    Timer1.initialize(9);              // initialize timer1, and set a 9 usec period for generating 113KHz
+    pinMode(9, OUTPUT);
+    Timer1.pwm(9, AEROSOLPWM);         // setup pwm on pin 9, 50% duty cycle. set to 0 for off.
+    pinMode(2, OUTPUT);                // lights
+    pinMode(3, OUTPUT);                // pump
+    pinMode(4, OUTPUT);                // water low alarm led, also blink led
+    digitalWrite(2, HIGH);
+    digitalWrite(3, HIGH);
+    digitalWrite(4, LOW);
+    is_aero_init = true;
+    is_ultrasound_ON = true;
+    is_pump_ON = true;
+    Serial.println("SYS:APP_INIT");
+    return;
+  }
+
+  digitalWrite(4, HIGH); // blink led
+
+  if (UTC_Seconds > 0)
+  {
+    dayseconds = UTC_Seconds;
+  }
+
+  // do timing, if it has been initialized
+  if (dayseconds > 0)
+  {
+    dayseconds++;
+
+    if (dayseconds > 90000)
+    {
+      dayseconds = 0;
+      return;
+    }
+
+    if (dayseconds > 86400)
+    {
+      dayseconds = 1;
+    }
+
+
+    // control lights
+    turn_lights_ON = ((dayseconds > lights_ON_time) && (dayseconds < lights_OFF_time));
+    if (lights_ON_time < lights_OFF_time)
+    {
+      //      Serial.print("SYS:LIGHTS:");
+      //      Serial.println(turn_lights_ON + '0');
+      digitalWrite(2, turn_lights_ON);
+    }
+    else
+    {
+      //      Serial.print("SYS:LIGHTS:");
+      //      Serial.println((!turn_lights_ON) + '0');
+      digitalWrite(2, !turn_lights_ON);
+    }
+
+    // control ultrasound
+    if (is_ultrasound_ON)
+    {
+      if (++ultrasound_time_for > ultrasound_ON_gap)
+      {
+        Serial.println("SYS:ultrasound_OFF");
+        Timer1.pwm(9, 0);
+        digitalWrite(3, LOW);
+        ultrasound_time_for = 0;
+        is_ultrasound_ON = false;
+      }
+    }
+    else
+    {
+      if (++ultrasound_time_for > ultrasound_OFF_gap)
+      {
+        Serial.println("SYS:ultrasound_ON");
+        Timer1.pwm(9, AEROSOLPWM);
+        digitalWrite(3, HIGH);
+        ultrasound_time_for = 0;
+        is_ultrasound_ON = true;
+      }
+    }
+
+    // control pump
+    if (is_pump_ON)
+    {
+      if (++pump_time_for > pump_ON_gap)
+      {
+        Serial.println("SYS:pump_OFF");
+        digitalWrite(3, LOW);
+        pump_time_for = 0;
+        is_pump_ON = false;
+      }
+    }
+    else
+    {
+      if (++pump_time_for > pump_OFF_gap)
+      {
+        Serial.println("SYS:pump_ON");
+        digitalWrite(3, HIGH);
+        pump_time_for = 0;
+        is_pump_ON = true;
+      }
+    }
+  }
+
+  // very simple command parser: (lettter)(num)(num)(num)(num)(num)(!)
+  if (appcommand[0] > 0 and appcommand[1] > 47 and appcommand[1] < 58 and appcommand[6] == '!')
+  {
+
+    if (appcommand[0] == 'h' or appcommand[0] == 'H') // set hour
+    {
+      Serial.print(F(":APP:TIME:"));
+      unsigned int tempme;
+      tempme =           (appcommand[1] - '0') * 0 + // display fix type
+                         (appcommand[2] - '0') * 36000 +
+                         (appcommand[3] - '0') * 3600 +
+                         (appcommand[4] - '0') * 600 +
+                         (appcommand[5] - '0') * 60 + 1;
+      if (tempme > 86400)
+      {
+        tempme = dayseconds;
+      }
+      else
+      {
+        dayseconds = tempme;
+      }
+      Serial.println(tempme);
+      appcommand[0] = 0;
+    }
+
+    if (appcommand[0] == 't' or appcommand[0] == 'T') // set time
+    {
+      Serial.print(F(":APP:TIME:"));
+      dayseconds = parseparameter(dayseconds);
+      if (dayseconds > 86400)
+        dayseconds = 0;
+    }
+    if (appcommand[0] == 'L' or appcommand[0] == 'l') // set light
+    {
+      Serial.print(F(":APP:LIGHT:"));
+      lights_ON_time = parseparameter(lights_ON_time);
+    }
+    if (appcommand[0] == 'D' or appcommand[0] == 'd') // set dark
+    {
+      Serial.print(F(":APP:DARK:"));
+      lights_OFF_time = parseparameter(lights_OFF_time);
+    }
+
+    if (appcommand[0] == 'U' or appcommand[0] == 'u') // set ultrasound
+    {
+      Serial.print(F(":APP:ULTRASOUND:"));
+      ultrasound_ON_gap = parseparameter(ultrasound_ON_gap);
+    }
+    if (appcommand[0] == 'Q' or appcommand[0] == 'q') // set quiet
+    {
+      Serial.print(F(":APP:QUIET:"));
+      ultrasound_OFF_gap = parseparameter(ultrasound_OFF_gap);
+    }
+
+    if (appcommand[0] == 'P' or appcommand[0] == 'P') // set quiet
+    {
+      Serial.print(F(":APP:PUMP:"));
+      pump_ON_gap = parseparameter(pump_ON_gap);
+    }
+    if (appcommand[0] == 'N' or appcommand[0] == 'n') // set quiet
+    {
+      Serial.print(F(":APP:NOPUMP:"));
+      pump_OFF_gap = parseparameter(pump_OFF_gap);
+    }
+
+    for (i = 0; i < 16; i++)
+    {
+      appcommand[i] = 0;
+    }
+  }
+
+  // status ,,,?
+  if (appcommand[0] == '?')
+  {
+    Serial.print(F(":APP:STATUS:L:"));
+    Serial.print(dayseconds);
+    Serial.print(':');
+    Serial.print(lights_ON_time);
+    Serial.print(':');
+    Serial.print(lights_OFF_time);
+    Serial.print(":U:");
+    Serial.print(ultrasound_ON_gap);
+    Serial.print(':');
+    Serial.print(ultrasound_OFF_gap);
+    Serial.print(':');
+    Serial.print(ultrasound_time_for);
+    Serial.print(":P:");
+    Serial.print(pump_ON_gap);
+    Serial.print(':');
+    Serial.print(pump_OFF_gap);
+    Serial.print(':');
+    Serial.print(pump_time_for);
+    Serial.print(":B:");
+    Serial.print(digitalRead(2), DEC); // lights
+    Serial.print(is_ultrasound_ON, DEC);
+    Serial.print(is_pump_ON, DEC);
+    Serial.print(water_low, DEC);
+    Serial.println(':');
+    appcommand[0] = 0;
+  }
+
+  mydelay(2); // necessary for blink
+  digitalWrite(4, water_low);
+
+#endif
+}
+unsigned int parseparameter (unsigned int oldparm)
+{
+  unsigned int tempme;
+  if ((appcommand[1] > 47 && appcommand[1] < 58) && (appcommand[2] > 47 && appcommand[2] < 58) && (appcommand[3] > 47 && appcommand[3] < 58) && (appcommand[4] > 47 && appcommand[4] < 58) && (appcommand[5] > 47 && appcommand[5] < 58))
+  {
+    tempme =           (appcommand[1] - '0') * 10000 + // display fix type
+                       (appcommand[2] - '0') * 1000 +
+                       (appcommand[3] - '0') * 100 +
+                       (appcommand[4] - '0') * 10 +
+                       (appcommand[5] - '0') * 1;
+  }
+  else
+  {
+    tempme = oldparm;
+  }
+  Serial.println(tempme);
+  appcommand[0] = 0;
+  return tempme;
+}
+#endif
