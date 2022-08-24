@@ -11,7 +11,7 @@
 #define VERSIONSTRING "0.32"
 
 // Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
-//#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
+#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
