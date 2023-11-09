@@ -542,6 +542,13 @@ void TimeToForget()
 }
 
 unsigned long antispam_timestamp = 0;
+
+void CellsolSend(String whattosend)
+{
+  whattosend = hextag + whattosend;
+  LoraSendAndUpdate(whattosend);
+}
+
 void LoraSendAndUpdate(String whattosend)
 {
   PetTheWatchdog();
