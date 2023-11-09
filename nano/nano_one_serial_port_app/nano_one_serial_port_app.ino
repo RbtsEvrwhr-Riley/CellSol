@@ -8,7 +8,7 @@
   This file is used for Atmel328-based boards (Arduino Uno, Mini, Nano, etc).
 *********/
 
-#define VERSIONSTRING "0.33"
+#define VERSIONSTRING "0.34"
 
 // Actual running speed is 2 Mhz most of the time. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
 //#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
@@ -158,7 +158,11 @@ void mydelay(int num)
 #ifdef GO_A_LOT_SLOWER
   delay((num / 4) | 1);
 #else
+#ifdef GO_FAST
+  delay(num*4);
+#else
   delay(num);
+#endif
 #endif
 }
 
@@ -625,7 +629,7 @@ int numloops = 9999;
 */
 void loop() {
   //Serial.println(availableMemory());
-  PetTheWatchdog();
+  PetTheWatchdog(); // runapplication is in here and triggers every pseudosecond
   SeeIfAnythingOnRadio();
 #ifdef REPEAT_UNTIL_ACK
   if (LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
@@ -678,12 +682,12 @@ void RunApplication()
     switch (appcommand[1])
     {
       case '2': pinMode(2, OUTPUT); digitalWrite(2, appcommand[2] == '2'); break;
-      case '3': pinMode(3, OUTPUT); digitalWrite(2, appcommand[2] == '3'); break;
-      case '4': pinMode(4, OUTPUT); digitalWrite(2, appcommand[2] == '4'); break;
-      case '5': pinMode(5, OUTPUT); digitalWrite(2, appcommand[2] == '5'); break;
-      case  '6': pinMode(6, OUTPUT); digitalWrite(2, appcommand[2] == '6'); break;
-      case  '8': pinMode(8, OUTPUT); digitalWrite(2, appcommand[2] == '8'); break;
-      case  '9': pinMode(9, OUTPUT); digitalWrite(2, appcommand[2] == '9'); break;
+      case '3': pinMode(3, OUTPUT); digitalWrite(3, appcommand[2] == '3'); break;
+      case '4': pinMode(4, OUTPUT); digitalWrite(4, appcommand[2] == '4'); break;
+      case '5': pinMode(5, OUTPUT); digitalWrite(5, appcommand[2] == '5'); break;
+      case  '6': pinMode(6, OUTPUT); digitalWrite(6, appcommand[2] == '6'); break;
+      case  '8': pinMode(8, OUTPUT); digitalWrite(8, appcommand[2] == '8'); break;
+      case  '9': pinMode(9, OUTPUT); digitalWrite(9, appcommand[2] == '9'); break;
       default: break;
     }
     appcommand[0]=0;

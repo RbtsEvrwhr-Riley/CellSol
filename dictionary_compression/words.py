@@ -306,6 +306,7 @@ wordlist=[
 'candy',
 'cap',
 'capital',
+'captain',
 'car',
 'card',
 'care',
@@ -1745,6 +1746,7 @@ wordlist=[
 'sorry',
 'sort',
 'sound',
+'soul',
 'soup',
 'source',
 'south',
@@ -2458,6 +2460,7 @@ def expphrase(shrunk):
     expy = expy.replace("istist","ist") # intersecting rules; fix / prevent waste
     expy = expy.replace("ationation","ation") # intersecting rules; fix / prevent waste
     expy = expy.replace("ateate","ate") # intersecting rules; fix / prevent waste
+    #expy = expy.replace("inging","ing") # (doesn't work with pinging/ringing, needs better logic) intersecting rules; fix / prevent waste
     expy = expy.replace(" , ",", ")
     expy = expy.replace(" : ",": ")
     expy = expy.replace(" . ",".")
