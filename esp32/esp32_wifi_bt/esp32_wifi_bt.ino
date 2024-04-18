@@ -2054,11 +2054,11 @@ void HighPowerSetup(bool echo)
 void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh every x seconds
 {
   PetTheWatchdog();
-  wificlient1.print("<!DOCTYPE html><html><head>"
+  wificlient1.print("<!DOCTYPE html>"
                     "<title>CellSol WiFi Pylon " VERSIONSTRING "</title>"
                     "<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">");
   if (redir == 0)
-    wificlient1.print("<meta http-equiv=\"refresh\" content=\"0;URL='/'\" />");
+    wificlient1.print("<meta http-equiv=\"refresh\" content=\"0;URL='/'\">");
   else if (redir > -1 && redir < 99)
     wificlient1.print("<meta http-equiv=\"refresh\" content=\"" + String(redir) + "\">");
   /*
@@ -2066,11 +2066,11 @@ void send_html_header(int redir = -1) // 0: redirect to root. positive: refresh 
                    "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: " + TEXT_ALIGN_STRING + ";}.button { background-color: #4CAF50; border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 20px; margin: 0px; cursor: pointer;}.button2 {background-color: #555555;}</style>"
                    "</head>");
   */
-  wificlient1.print("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
+  wificlient1.print("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:;base64,UklGRnIAAABXRUJQVlA4TGUAAAAvD8ADEB7HACRJ0kiO4rCszULMPQSJUomTEoGRb4EAodZ/AUTaNlM3/2RSjt//CZAWsHXZP7f+sbbkwv86BriQHgGS5DHnzyUJIEl4nEMAcYd7wpeRPIc5tDzTdtc2saf7SfdfAAA\">"
 
-                    "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: ");
+                    "<style>html{color-scheme:dark light;font-family:Helvetica,sans-serif;display:inline-block;margin:0 auto;text-align:");
   wificlient1.print(TEXT_ALIGN_STRING);
-  wificlient1.println(";}.button {border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 1.2em; margin: 0px; cursor: pointer;}.button2 {}</style></head>");
+  wificlient1.println("}</style>"); /* old css seems unused(?) .button {border: none; color: white; padding: 0px 0px; text-decoration: none; font-size: 1.2em; margin: 0px; cursor: pointer;}.button2 {}*/
 }
 bool client_on_lan = true;
 String hoststring = "/";
@@ -2107,9 +2107,7 @@ void send_form_iframe()
 {
   send_ok_response();
   send_html_header();
-  wificlient1.println("<body>"
-                      "<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>"
-                      "</body></html>");
+  wificlient1.println("<small><small>TX&gt;</small></small> <input id=\"msgfield\" type=\"text\" maxlength=\"160\" name=\"input1\"><button onClick=sendMsg() value=\"Send\">Send</button><br>");
 }
 #endif
 void send_ok_response()
@@ -2126,8 +2124,8 @@ void send_faq_page()
 {
   send_ok_response();
   send_html_header();
-  wificlient1.println( "<style> html{text-align: start;}</style>"
-                       "<body><h1>CellSol WiFi Pylon " VERSIONSTRING " Help</h1>"
+  wificlient1.println( "<style>html{text-align:start}</style>"
+                       "<h1>CellSol WiFi Pylon " VERSIONSTRING " Help</h1>"
                        "<p>The full help/howto is available, when the internet works, at <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a></p><p>"
                        "<h2>About the Chat</h2>"
                        "<p>By using the chat in the main page, you will be able to communicate with people who are in range of the CellSol network, or people who are using CellSol gateways."
@@ -2182,7 +2180,7 @@ void send_faq_page()
 #else
                        "<p>The project is open source and open schematic. You can download everything from <a href=\"http://f3.to/cellsol/\">http://f3.to/cellsol/</a> or from a pylon that carries it (This one doesn't have enough memory to)."
 #endif
-                       "<p><a href=\"/\">Go back</a></body></html>");
+                       "<p><a href=\"/\">Go back</a>");
   PetTheWatchdog();
   wificlient1.println();
 }
@@ -2340,7 +2338,7 @@ void ServeWebPagesAsNecessary()
             // General purpose html header
 
             send_html_header();
-            wificlient1.println( "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
+            wificlient1.println( "CellSol WiFi Pylon " VERSIONSTRING " at ");
             wificlient1.print(ipstring_a);
             wificlient1.println("<div style=\"max-width:100%;\"><p><small>");
             for (int i = COMMUNITY_MEMORY_SIZE - 1; i > -1; i--)
@@ -2354,7 +2352,7 @@ void ServeWebPagesAsNecessary()
             }
             wificlient1.print("<br>");
             sendstrings();
-            wificlient1.println("</small></p><a href=\"http://" + hoststring + "\">Return to main</a></div></body></html>");
+            wificlient1.println("</small></p><a href=\"http://" + hoststring + "\">Return to main</a></div>");
             wificlient1.println();
           }
 #endif
@@ -2381,11 +2379,11 @@ void ServeWebPagesAsNecessary()
             send_ok_response();
             send_html_header(REFRESH_CHAT_EVERY);
             if (UTC_Seconds)
-              wificlient1.println("<body><small><small><small>UTC Time Update:" + UTC_String(UTC_Seconds) + "<br></small></small>");
+              wificlient1.println("<small><small><small>UTC Time Update:" + UTC_String(UTC_Seconds) + "<br></small></small>");
             else
-              wificlient1.print("<body><small>");
+              wificlient1.print("<small>");
             sendstrings();
-            wificlient1.println("</small></body></html>");
+            wificlient1.println("</small>");
           }
 #ifdef TX_IFRAME
           else if (whattoget.equals("/answerform.html")) // answer form iframe
@@ -2513,9 +2511,9 @@ void ServeWebPagesAsNecessary()
             }
             send_ok_response();
             send_html_header(0);
-            wificlient1.print("<body>CellSol WiFi Pylon " VERSIONSTRING " Option: <b>");
+            wificlient1.print("CellSol WiFi Pylon " VERSIONSTRING " Option: <b>");
             wificlient1.print(option);
-            wificlient1.println("</b><br>Redirecting to main</body></html>");
+            wificlient1.println("</b><br>Redirecting to main");
             wificlient1.println();
           }
 #endif
@@ -2547,7 +2545,7 @@ void ServeWebPagesAsNecessary()
                                 "xhttp.open('GET', url+\"?input1=\" + input1, true); xhttp.send();" // we don't care about the response, we are just dumb sending.
                                 "}"
                                 "</script>"
-                                "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
+                                "CellSol WiFi Pylon " VERSIONSTRING " at ");
             wificlient1.print(ipstring_a);
             wificlient1.println("<br>"
 #ifdef COMMUNITY_MEMORY_SIZE
@@ -2593,9 +2591,9 @@ void ServeWebPagesAsNecessary()
 #endif
 
             if (pseudoseconds % 2)
-              wificlient1.println("<small> Deus Nolens Exitus</body></html>");
+              wificlient1.println("<small> Deus Nolens Exitus");
             else
-              wificlient1.println("<small> Vigilo Confido</body></html>");
+              wificlient1.println("<small> Vigilo Confido");
 
 
             // The HTTP response ends with another blank line
@@ -2611,7 +2609,7 @@ void ServeWebPagesAsNecessary()
             {
               send_ok_response();
               send_html_header(0);
-              wificlient1.println("<body>CellSol WiFi Pylon " VERSIONSTRING " (" PYLONMODEL ";" PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main</body></html> ");
+              wificlient1.println("CellSol WiFi Pylon " VERSIONSTRING " (" PYLONMODEL ";" PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main");
               wificlient1.println();
             }
           }
