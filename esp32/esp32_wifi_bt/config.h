@@ -1,7 +1,8 @@
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
+//#define LORA32V3 // Heltec LORA32 V2 (White board). More progmem, screen, no gps, battery ADC. This is the default and development will mostly happen on this board.  Start developing here if you have the esp32 with more progmem
 #define LORA32V2 // Heltec LORA32 V2 (White board). More progmem, screen, no gps, battery ADC. This is the default and development will mostly happen on this board.  Start developing here if you have the esp32 with more progmem
-//#define TBEAM // TTGO T-Beam (Black board with gps). Less progmem, no screen, gps, no battery ADC.
 //#define LORA32V1 // Heltec clone (Black board) (TTGO LoRa OLed V1). Less progmem, screen, no gps, no battery ADC. Start developing here if you have the esp32 with less progmem
+//#define TBEAM // TTGO T-Beam (Black board with gps). Less progmem, no screen, gps, no battery ADC.
 // If none of these are defined you'll end up with a minimal feature set. To change these settings, use pinout.h
 
 // Physical radio band. Choosing the wrong range WILL DAMAGE YOUR RADIO MODULE. Currently set up to stay a little away from the main LoRa and LoRaWAN radio ranges out of politeness.
@@ -10,7 +11,7 @@
 //8661E5 for Europe
 //9151E5 for North America
 //4331E5 for Asia
-#define BAND 9151E5  
+#define BAND 9151E5
 
 // compile time setup stuff. if you aren't sure what these do, leave them alone.
 
@@ -18,6 +19,7 @@
 // the default is that these four are commented out. This gives you the standard wifi access point setup.
 // switching between wifi and bluetooth is done at startup with the normal mode, not here; push the button immediately after a reset.
 // if more than one is uncommented, lowest line wins.
+
 
 // The first mode saves power but makes the AP invisible 45 seconds out of every minute.
 //#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full enough.
@@ -65,7 +67,7 @@
 
 // these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
 // the upstream router will have to either open port 80 to this, or do a redirect.
-#define CLIENT_IP_ADDR 192,168,2,118 // client IP address for client or hybrid mode. needs commas instead of periods
+#define CLIENT_IP_ADDR 192,168,2,119 // client IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_SUBNET 255,255,255,0 // subnet mask for client or hybrid mode. needs commas instead of periods
 #define WIFI_UPSTREAM_AP "RobotsEverywhere_24" // SSID of the router we're trying to connect to. 
@@ -102,7 +104,7 @@
 
 // more timing stuff
 #define SLEEP_TIME 60 // this is in seconds - how long to sleep before waking up and checking power level again? NOT ACCURATE.
-#define DISPLAY_INTERVAL 60 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
+#define DISPLAY_INTERVAL 50 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
 
 // battery stuff
 #define MODEFLIP_BATTERY_FULL 1304 // if modeflip, battery level above this will leave the module running on full. Useful if we are getting good sunlight and the battery is full anyway.

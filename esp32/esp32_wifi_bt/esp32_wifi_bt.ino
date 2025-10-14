@@ -28,7 +28,14 @@
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds. Do not change this. Seriously. */
 
+
+//Libraries for LoRa
+#include "SPI_esp32_33/src/SPI_esp32_33.h" //<SPI.h> // if you are getting weird SPI errors, the only way I know how to fix it is to temporarily rename the folder C:\Users\spiri\OneDrive\Documents\Arduino\libraries\SPI\src to something else and then compile. TODO fix this
+#include <LoRa.h>
+
 // Load Wi-Fi library
+#include <NetworkClient.h>
+#include <WiFiAP.h>
 #include <WiFi.h>
 #include "time.h"
 // taken from genericwifi.h -1dbm to 19.5dbm
@@ -39,11 +46,25 @@ const wifi_power_t wifilevels[] = {WIFI_POWER_MINUS_1dBm, WIFI_POWER_2dBm, WIFI_
 #include <DNSServer.h>
 const byte DNS_PORT = 53;
 #include <esp_wifi.h>
-#include "BluetoothSerial.h"
 
-//Libraries for LoRa
-#include <SPI.h>
-#include <LoRa.h>
+#ifdef LORA32V3
+
+//#include <BLEDevice.h>
+//#include <BLEUtils.h>
+//#include <BLEServer.h>
+//#include <BLE2902.h>
+#include <HardwareBLESerial.h>
+HardwareBLESerial &ESP_BT = HardwareBLESerial::getInstance();
+
+#else
+
+#include "BluetoothSerial.h"
+BluetoothSerial ESP_BT;
+
+#endif
+
+
+// this one is its own thing
 #include <IRCClient.h>
 
 // watchdog
@@ -155,7 +176,7 @@ boolean dodisplaybuf = false;
 boolean displayexists = false;
 bool displayenabled = true;
 
-#ifdef REPEAT_UNTIL_ACK  
+#ifdef REPEAT_UNTIL_ACK
 boolean got_lora_ack = false;
 long last_repeat_time = millis();
 String message_to_repeat = "";
@@ -200,12 +221,30 @@ void PetTheWatchdog() {
 }
 
 bool is_watchdog_on = false;
+#define CONFIG_FREERTOS_NUMBER_OF_CORES 2
 void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion is that we can survive for 5 seconds we hope
 {
+
+  esp_log_level_set("*",ESP_LOG_NONE);  
   if (onoff)
   {
-    esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
+
+    esp_task_wdt_config_t twdt_config = {
+      .timeout_ms = WDT_TIMEOUT * 1000,
+      .idle_core_mask = 0, // resets when it shouldn't, otherwise
+//      .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
+      .trigger_panic = true,
+    };
+    esp_task_wdt_deinit(); //wdt is enabled by default, so we need to deinit it first
+    esp_task_wdt_init(&twdt_config); //enable panic so ESP32 restarts
     esp_task_wdt_add(NULL); //add current thread to WDT watch
+
+    /*
+      #else
+        esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
+        esp_task_wdt_add(NULL); //add current thread to WDT watch
+    */
+
   }
   else
   {
@@ -216,6 +255,9 @@ void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion i
   }
   is_watchdog_on = onoff;
   battimeout = millis() + ADC_INTERVAL; // wait to turn the watchdog back on please
+
+
+  esp_log_level_set("*",ESP_LOG_ERROR);  
 }
 
 /**
@@ -280,7 +322,7 @@ void BuildNicknameTags()
 }
 String status_string()
 {
-  return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") );
+  return (fourhex(derpme, spare_id_nibble) + TAG_END_SYMBOL + "(" + String(currbatterylevel) + "/" + String(batt_delta) + ") " + (is_watchdog_on ? "`" : ",") + String(pseudoseconds) + (broadcast_twice ? "`" : ",") ).c_str();
 }
 /*
    DUMMY METHODS FOR HTML ENCODE/DECODE - TODO: remove this comment as these methods got replaced?
@@ -380,8 +422,6 @@ void TryRetrieveSentences()
 #endif
 }
 
-BluetoothSerial ESP_BT;
-
 void decode_in_place(char *s) {
   char *d = s;
 
@@ -403,6 +443,19 @@ void decode_in_place(char *s) {
   }
 
   *d = '\0'; // always add the terminator
+}
+
+// used to avoid c.str for everything since the bluetooth library for BLE serial is a bit bolted on
+namespace
+{
+template<typename T>
+void ESP_BT_println(T value) {
+#ifdef LORA32V3
+  ESP_BT.println(value.c_str());
+#else
+  ESP_BT.println(value);
+#endif
+}
 }
 
 inline int hexValue(char c) {
@@ -486,11 +539,11 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.print(whattosend);
     LoRa.endPacket();
   }
-  #ifdef REPEAT_UNTIL_ACK  
+#ifdef REPEAT_UNTIL_ACK
   boolean got_lora_ack = false;
   last_repeat_time = millis();
-  message_to_repeat = whattosend;  
-  #endif
+  message_to_repeat = whattosend;
+#endif
 }
 
 
@@ -582,6 +635,72 @@ void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout, bool strea
   }
 }
 
+#ifdef LORA32V3
+void ReadFromStream(HardwareBLESerial &st, char buf[], byte &cnt, bool &sendout, bool streamexists, int whichtag)
+{
+
+  if (streamexists)
+  {
+    while (st.available() > 0)
+    {
+      buf[cnt++] = st.read();
+      UpdateCharCounterIfDisplayExists();
+      if (cnt > MAXPKTSIZE)
+      {
+        dodisplay = true;
+        sendout = true;
+        return;
+      }
+      if ((cnt > 1 and buf[cnt - 1] == 13))
+      {
+        dodisplay = true;
+        sendout = true;
+      }
+
+
+      // eat ascii 255s that that show up
+      if ((buf[0]<6 or buf[0]>127) and cnt == 1)
+        cnt = 0;
+
+      if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.') and (buf[3] == 13 or buf[3] == 10)) // special: send status string and memory
+      {
+        cnt = 0;
+        buf[0] = 0;
+        buf[1] = 0;
+        buf[2] = 0;
+        sendout = false;
+        dodisplay = false;
+        hextag = fourhex(derpme, spare_id_nibble + whichtag);
+        st.println((":SYS: TAG:" + hextag + " BAT:" + String(currbatterylevel) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:").c_str()); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
+        if (string_rx[0].length() > 0)
+        {
+          for (int i = 10; i > 0; i--)
+          {
+            PetTheWatchdog();
+            tempstring = string_rx[i - 1];
+            tempstring.replace(";lt", "<");
+
+            if (tempstring.length() > 0)
+              st.println(tempstring.c_str());
+          }
+        }
+      }
+
+      if (buf[0] == 10 or buf[0] == 13 or buf[1] == 10 or buf[1] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
+      {
+        cnt = 0;
+        buf[0] = 0;
+        buf[1] = 0;
+        sendout = false;
+        dodisplay = false;
+      }
+    }
+  }
+}
+
+
+#endif
+
 // decide whether to actually deal with this packet or not
 inline bool IsValidChar(char i) {
   return (i == 13 || i == 10 || (i > 31 && i < 128));
@@ -606,7 +725,7 @@ bool FilterIncomingLoRa() {
     Serial.println(drstring);
     cyclestrings(drstring);
     if (has_bluetooth_been_initialized)
-      ESP_BT.println(drstring);
+      ESP_BT_println(drstring);
 #ifdef IRC_SERVER
     irc_broadcast( drstring);
 #endif
@@ -748,13 +867,13 @@ void SeeIfAnythingOnRadio() {
         Serial.println(tempstring);
         cyclestrings(tempstring);
         if (has_bluetooth_been_initialized)
-          ESP_BT.println(tempstring);
+          ESP_BT_println(tempstring);
         tempstring = "";
 #else
         Serial.println(LoRaData);
         cyclestrings(LoRaData);
         if (has_bluetooth_been_initialized)
-          ESP_BT.println(LoRaData);
+          ESP_BT_println(LoRaData);
 #endif
         if (LoRaData.startsWith(":SYS:") == false) // avoid spamming
           LoraSendAndUpdate(LoRaData);
@@ -928,7 +1047,7 @@ void SendSerialIfReady()
     if (LongChecksum(serstr) != LastThingISentViaLora_0 && (serstr.length() > 5))
     {
       if (has_bluetooth_been_initialized)
-        ESP_BT.println(serstr);
+        ESP_BT_println(serstr);
       LoraSendAndUpdate(serstr);
       cyclestrings(serstr);
 
@@ -1036,23 +1155,39 @@ void Start_LORA(bool trydisplay)
   if (has_lora_been_initialized)
     return;
 
+  Serial.println("4.0");
   Stop_LORA();
+  Serial.println("4.1");
+
+#ifdef LORA32V3
+// doesn't like being told to start spi explicitly
+  LoRa.setSignalBandwidth(125E3);
+#else
   SPI.begin(SCK, MISO, MOSI, SS);
-  LoRa.setPins(SS, RST, DIO0);
+  LoRa.setPins(SS, RST, DIO0); // causes failure in lora32v3
+  LoRa.setSignalBandwidth(62.5E3); //default 125E3
+#endif
 
   LoRa.setSpreadingFactor(9); // default 7
-  LoRa.setSignalBandwidth(62.5E3); //default 125E3
+
   //  LoRa.crc(); // we would rather get a damaged packet than no packet at all; maybe some of it will be readable.
+  Serial.println("4.5");
 
   //  bool changeclock = (getCpuFrequencyMhz() < CLKFREQ);
 
   //  if (changeclock)
   //    setCpuFrequencyMhz(CLKFREQ);
 
+  Serial.println("4.6");
   has_lora_been_initialized = LoRa.begin(BAND);
   if (has_lora_been_initialized == false)
     has_lora_been_initialized = LoRa.begin(BAND);
+  if (has_lora_been_initialized == false)
+    has_lora_been_initialized = LoRa.begin(BAND);
+  if (has_lora_been_initialized == false)
+    has_lora_been_initialized = LoRa.begin(BAND);
 
+  Serial.println("4.7");
   //  if (changeclock)
   //    setCpuFrequencyMhz(CLKFREQ_LOW);
 
@@ -1079,7 +1214,7 @@ void Start_LORA(bool trydisplay)
   }
   else
   {
-    LoRa.setTxPower(19, 1 ); // PABOOST; for RFO use 14,0
+    LoRa.setTxPower(20, PA_OUTPUT_PA_BOOST_PIN ); // PABOOST; for RFO use 14,0
   }
 }
 
@@ -1090,6 +1225,8 @@ void Start_UART()
   Serial1.begin(9600, SERIAL_8N1, 34, 12);
 #endif
   has_serial_been_initialized = true;
+
+  Serial.println("UART up\n");
 }
 void Stop_UART()
 {
@@ -1104,12 +1241,17 @@ void Stop_UART()
 
 void Start_BT()
 {
+  if (ipstring_b.length() < 2)
+    ipstring_b = String(SSIDROOT) + String("BT") + String(derpme);
+
+#ifdef LORA32V3
+  ESP_BT.beginAndSetupBLE(ipstring_b.c_str());
+#else
   if (!btStarted()) {
     btStart();
   }
-  if (ipstring_b.length() < 2)
-    ipstring_b = String(SSIDROOT) + String("BT") + String(derpme);
   ESP_BT.begin(ipstring_b); //Name of your Bluetooth Signal
+#endif
   has_bluetooth_been_initialized = true;
 }
 
@@ -1177,20 +1319,20 @@ void DoBasicSteps()
   if (has_lora_been_initialized)
   {
     SeeIfAnythingOnRadio();
-         
-    #ifdef REPEAT_UNTIL_ACK
-    if(LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+
+#ifdef REPEAT_UNTIL_ACK
+    if (LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
     {
       got_lora_ack = (LoRaData.equals(message_to_repeat));
     }
-    if(!got_lora_ack)
-    {       
-      if((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
+    if (!got_lora_ack)
+    {
+      if ((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
       {
         LoraSendAndUpdate(message_to_repeat);
       }
-    }    
-    #endif
+    }
+#endif
   }
 
 
@@ -1430,13 +1572,13 @@ void BlinkMeWhen()
 {
   if (++lploops > LPLOOP_BLINK)
   {
-    #ifdef MINDISPLAY
-    if (pseudoseconds>3)
+#ifdef MINDISPLAY
+    if (pseudoseconds > 3)
     {
       oled.clearDisplay();
       oled.sendCommand(SSD1306_Display_Off_Cmd);
     }
-    #endif
+#endif
     led(true);
     DoBasicSteps();
     lploops = 0;
@@ -1462,6 +1604,9 @@ void ReadBatteryADC(bool force)
     if (currbatterylevel > 0)
       lastbatterylevel = currbatterylevel;
     currbatterylevel = (analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC) + analogRead(BATT_ADC)) / 4;
+    #ifdef LORA32V3
+    currbatterylevel = currbatterylevel * 3 / 2;
+    #endif
     if (lastbatterylevel == 0)
       lastbatterylevel = currbatterylevel;
     batt_delta = currbatterylevel - lastbatterylevel;
@@ -1652,6 +1797,9 @@ void DoWifiSteps()
    SETUP METHOD - Called first by the ESP32.
 */
 void setup() {
+
+  Serial.begin(9600);
+
   setCpuFrequencyMhz(CLKFREQ_LOW);
 
 
@@ -1668,7 +1816,6 @@ void setup() {
 #endif
 
   led(false);
-
 
 #ifdef BATT_ADC
 
@@ -1818,43 +1965,44 @@ void DoMinDisplay()
   dodisplaybuf = false;
   dodisplay = false;
 #ifdef USER_BUTTON_PIN
-if (digitalRead(USER_BUTTON_PIN)==true)
-  return;
+  if (digitalRead(USER_BUTTON_PIN) == true)
+    return;
 #endif
   oled.sendCommand(SSD1306_Display_On_Cmd);
   oled.clearDisplay();              // Clear screen
-  oled.setTextXY(0,0);              // Set cursor position, start of line 0
+  oled.setTextXY(0, 0);             // Set cursor position, start of line 0
   oled.putString("CellSol" VERSIONSTRING "(" PYLONMODEL ":" PYLONTYPE);
-  oled.setTextXY(1,0);              // Set cursor position, start of line 1
-  oled.putString(wifimode?ipstring_a:"Bluetooth");
-  #ifdef WIFI_IS_HYBRID
-  oled.putString(wifimode?ipstring_c:"");
-  #endif
-  oled.setTextXY(2,0);
-  oled.putString(string_rx[2].substring(0,24));
-  oled.setTextXY(3,0);
-  oled.putString(string_rx[2].substring(25,49));
-  oled.setTextXY(4,0);
-  oled.putString(string_rx[1].substring(0,24));
-  oled.setTextXY(5,0);
-  oled.putString(string_rx[1].substring(25,49));
-  oled.setTextXY(6,0);
-  oled.putString(string_rx[0].substring(0,24));
-  oled.setTextXY(7,0);
-  oled.putString(string_rx[0].substring(25,49));
+  oled.setTextXY(1, 0);             // Set cursor position, start of line 1
+  oled.putString(wifimode ? ipstring_a : "Bluetooth");
+#ifdef WIFI_IS_HYBRID
+  oled.putString(wifimode ? ipstring_c : "");
+#endif
+  oled.setTextXY(2, 0);
+  oled.putString(string_rx[2].substring(0, 24));
+  oled.setTextXY(3, 0);
+  oled.putString(string_rx[2].substring(25, 49));
+  oled.setTextXY(4, 0);
+  oled.putString(string_rx[1].substring(0, 24));
+  oled.setTextXY(5, 0);
+  oled.putString(string_rx[1].substring(25, 49));
+  oled.setTextXY(6, 0);
+  oled.putString(string_rx[0].substring(0, 24));
+  oled.setTextXY(7, 0);
+  oled.putString(string_rx[0].substring(25, 49));
 }
 #endif
 
 
 void HighPowerSetup(bool echo)
 {
+  Start_UART();
+
   Watchdog(false);
   setCpuFrequencyMhz(CLKFREQ); //Set CPU clock to 80MHz fo example
   led(true);
   ReadBatteryADC(true);
   lowpowerstart = false;
 
-  Start_UART();
 
   wifimode = true; // adjust later
 
@@ -1868,10 +2016,15 @@ void HighPowerSetup(bool echo)
   if (enablecomstring == "")
     enablecomport = true; // for tbeam etc.
 
-
+// esp32v3 so far so good until here
+  
   //  Stop_LORA();
 
   Start_LORA(false);
+
+
+  
+Serial.println("Five");
 
   //reset OLED display via software
   //initialize OLED
@@ -1886,7 +2039,10 @@ void HighPowerSetup(bool echo)
   WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
 
   dnsServer.start(DNS_PORT, "*", AP_IP);
+Serial.println("Six");
   DoBasicSteps();
+Serial.println("Seven");
+
 
 #ifdef WIFI_IS_CLIENT
 #else
@@ -1894,6 +2050,8 @@ void HighPowerSetup(bool echo)
   wificlient1.setTimeout(2);
   server.setTimeout(2);
 #endif
+
+Serial.println("Eight");
 
 #ifdef USER_BUTTON_PIN // true = wifi, false = bluetooth
   int j = 0;
@@ -1907,6 +2065,7 @@ void HighPowerSetup(bool echo)
 
 #endif
   led(false);
+Serial.println("Nine");
 
 #ifdef WIFI_IS_CLIENT
   wifimode = true;
@@ -1929,6 +2088,8 @@ void HighPowerSetup(bool echo)
 #else
     Stop_BT();
 #endif
+
+Serial.println("Ten");
 
 #ifdef WIFI_IS_CLIENT
     ConnectToUpstreamWifi(100);
@@ -2038,7 +2199,7 @@ void HighPowerSetup(bool echo)
   digitalWrite(OLED_RST, LOW);
   delay(20);
   digitalWrite(OLED_RST, HIGH);
-  Wire.begin(OLED_SDA,OLED_SCL);  
+  Wire.begin(OLED_SDA, OLED_SCL);
   oled.init();                      // Initialze SSD1306 OLED display
   DoMinDisplay();
 #endif
@@ -2438,7 +2599,7 @@ void ServeWebPagesAsNecessary()
               {
                 Serial.println(gotstring);
 #ifdef BT_ENABLE_FOR_AP
-                ESP_BT.println(gotstring);
+                ESP_BT_println(gotstring);
 #endif
 
 
@@ -2728,7 +2889,7 @@ void irc_callback(IRCMessage ircMessage)
 
 #ifdef BT_ENABLE_FOR_AP
       if (has_bluetooth_been_initialized)
-        ESP_BT.println(gotstring);
+        ESP_BT_println(gotstring);
 #endif
 
       LoraSendAndUpdate(gotstring);
@@ -2768,8 +2929,10 @@ void debugSentCallback(String data)
 
 void loop() {
 
+//display_on_ping = true; // temporary, for testing
+
 #ifdef MINDISPLAY
-DoMinDisplay();
+  DoMinDisplay();
 #endif
 
   if (wifimode)

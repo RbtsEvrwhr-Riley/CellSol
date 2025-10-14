@@ -10,9 +10,10 @@
 
 #define VERSIONSTRING "0.32"
 
-// Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but it'll run at the wrong baud rate (4800 or 19200).
-#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
+// Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but you will waste power and the serial port will run at the wrong baud rate (4800 or 19200).
+//#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
+//#define USE_THIS_ID "edbd" // overrides above. useful for situations where e.g. there is a drone mounted repeater that should be very different from other devices
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
 #define RECALL_STRAY_CHARS // trim to packet, or keep last packet that went away?
@@ -45,6 +46,7 @@
 #define RST 7 // 8 and 9 are used by altsoftserial
 //#define DIO0 8 // not used right now?
 //#define ANNOUNCE // tell the world we are alive
+
 
 #define TAG_END_SYMBOL ':'
 //433E6 for Asia
@@ -112,6 +114,10 @@ void PetTheWatchdog() {
 String hextag = "XXXX:"; // usually the last two IP octets; gives pseudonimity to sender
 String fourhex(int num)
 {
+
+  #ifdef USE_THIS_ID
+    return String(USE_THIS_ID);
+  #else
   num = num | 4096;
   /*
   if (num < 10)
@@ -123,6 +129,7 @@ String fourhex(int num)
   return String((num+0x1000, HEX);
   */
   return String(num, HEX);
+  #endif
 }
 
 
@@ -178,6 +185,7 @@ void setup() {
   hextag = fourhex(UniqueID8[6] * 256 + UniqueID8[7]) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
 #endif
 
+  
   if (hextag.charAt(3) == '0') // this unit is not set up to do service tasks, so don't end in 0
     hextag.setCharAt(3, '1');
 

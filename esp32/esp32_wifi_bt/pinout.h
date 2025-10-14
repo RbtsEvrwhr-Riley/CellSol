@@ -29,6 +29,40 @@
 #define PYLONMODEL " "
 
 
+#ifdef LORA32V3
+#undef GPS_SERIAL_1 // no gps on the 
+#define EXT_PWR_PIN 36
+#define BATT_ADC 1
+#define SCK 9
+#define MISO 11
+#define MOSI 10
+#define SS 8
+#define RST 12
+#define DIO0 14
+#define USER_BUTTON_PIN 0
+#define USER_LED_PIN 35
+#define PYLONMODEL "L3"
+
+
+
+#define RADIO_DIO_1    14
+#define RADIO_NSS      8
+#define RADIO_RESET    12
+#define RADIO_BUSY     13
+#define LORA_CLK       9
+#define LORA_MISO      11
+#define LORA_MOSI      10
+
+
+//OLED pins
+#define OLED_SDA 17
+#define OLED_SCL 18
+#define OLED_RST 21
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#endif
+
 #ifdef LORA32V2
 #undef GPS_SERIAL_1 // no gps on the 
 #define EXT_PWR_PIN 21
@@ -42,6 +76,18 @@
 #define USER_BUTTON_PIN 0
 #define USER_LED_PIN 25
 #define PYLONMODEL "L2"
+
+#define RADIO_RESET                                14
+
+#define LORA_MOSI                                  27
+#define LORA_MISO                                  19
+#define LORA_CLK                                   5
+#define RADIO_NSS                                  18
+
+#define RADIO_DIO_0                                26
+#define RADIO_DIO_1    35   // GPIO35 -- SX127x's IRQ(Interrupt Request) V2
+
+
 #endif
 
 #ifdef TBEAM
