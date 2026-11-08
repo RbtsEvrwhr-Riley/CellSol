@@ -30,7 +30,21 @@
 
 
 #ifdef LORA32V3
-#undef GPS_SERIAL_1 // no gps on the 
+#undef GPS_SERIAL_1 // no gps on this board
+#undef EXT_PWR_PIN
+#undef BATT_ADC
+#undef SCK
+#undef MISO
+#undef MOSI
+#undef SS
+#undef RST
+#undef DIO0
+#undef USER_BUTTON_PIN
+#undef USER_LED_PIN
+#undef PYLONMODEL
+#undef OLED_SDA
+#undef OLED_SCL
+#undef OLED_RST
 #define EXT_PWR_PIN 36
 #define BATT_ADC 1
 #define SCK 9

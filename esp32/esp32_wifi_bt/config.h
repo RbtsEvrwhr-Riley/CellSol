@@ -1,5 +1,5 @@
 // hardware platform types; pick one and only one. Default is LORA32 V2. If yours is not in here, you'll have to adjust stuff manually. They will override some settings (for example, selecting TTGO will turn off the display since there isn't one)
-//#define LORA32V3 // Heltec LORA32 V2 (White board). More progmem, screen, no gps, battery ADC. This is the default and development will mostly happen on this board.  Start developing here if you have the esp32 with more progmem
+//#define LORA32V3 // Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262). Requires RadioLib and HardwareBLESerial/ArduinoBLE.
 #define LORA32V2 // Heltec LORA32 V2 (White board). More progmem, screen, no gps, battery ADC. This is the default and development will mostly happen on this board.  Start developing here if you have the esp32 with more progmem
 //#define LORA32V1 // Heltec clone (Black board) (TTGO LoRa OLed V1). Less progmem, screen, no gps, no battery ADC. Start developing here if you have the esp32 with less progmem
 //#define TBEAM // TTGO T-Beam (Black board with gps). Less progmem, no screen, gps, no battery ADC.
@@ -13,23 +13,35 @@
 //4331E5 for Asia
 #define BAND 9151E5
 
-// compile time setup stuff. if you aren't sure what these do, leave them alone.
+// On-air compatibility: in 0.32 the SF/BW setters ran BEFORE LoRa.begin(),
+// which hardware-reset the SX127x. Existing pylons therefore normally use
+// the radio reset defaults (SF7, 125 kHz), not the commented SF9/62.5 kHz.
+// Change BOTH values on every node together if you want the intended slower
+// settings; otherwise a new pylon will not hear older ones.
+#define CELLSOL_LORA_SF 7
+#define CELLSOL_LORA_BW_HZ 125000L
+// To use the originally intended longer-range mode, change these to 9 and
+// 62500L respectively on every pylon in the network.
 
-
-// the default is that these four are commented out. This gives you the standard wifi access point setup.
-// switching between wifi and bluetooth is done at startup with the normal mode, not here; push the button immediately after a reset.
-// if more than one is uncommented, lowest line wins.
+// Initial defaults for devices with no saved NVS settings. Once configured,
+// choose WiFi / Bluetooth / upstream / IRC options from the web page instead.
+// Physical radio hardware and power-safety settings remain compile-time.
 
 
 // The first mode saves power but makes the AP invisible 45 seconds out of every minute.
 //#define MODEFLIP 15000 // minimum suggested: 12000. powershare mode operates the pylon on full AP for this many milliseconds every minute, and as a repeater the rest of the time. It is exclusive with the other options. The mode flip will pause if there are clients connected or if the battery is full enough.
 
-// The last three modes use more power than standard mode!
-//#define BT_ENABLE_FOR_AP // Uncomment this to also enable Bluetooth when the pylon is running as an access point. THIS WILL EAT UP A LOT OF POWER! Only enable if you're using a big battery and a big panel, or have line power.
-//#define WIFI_IS_CLIENT // Uncomment this to enable use as a gateway. Bluetooth will be on. Note that gateway mode must be configured manually and will need an open port on the router. If you don't know what this does, leave it alone!
-//#define WIFI_IS_HYBRID // Uncomment this to enable use as BOTH a gateway and an AP. Bluetooth will be on. Performance will be slower than either. Note that this won't allow people to get on the internet through the AP, so it's ideal if you want to let people use cellsol without a password, but not use the internet.
+// Legacy mode macros (optional initial defaults only). These modes draw
+// significantly more power than standard AP operation.
+//#define BT_ENABLE_FOR_AP
+//#define WIFI_IS_CLIENT
+//#define WIFI_IS_HYBRID
 
 //#define REPEATER_ONLY // Uncomment this to bypass everything else and runs as repeater (and serial) only. useful if we are out of arduinos. not useful otherwise.
+
+#if (defined(LORA32V1) + defined(LORA32V2) + defined(LORA32V3) + defined(TBEAM)) != 1
+#error "Select exactly one CellSol board in config.h"
+#endif
 
 //#define NODISPLAY // display is either absent or should be kept off at all times. Saves some power, naturally.
 
@@ -62,10 +74,17 @@
 /**
    NETWORK CONFIGURATION
 */
+// Unlisted local configuration URL: http://<pylon-ip>/derpderp
+// Change this string to change the path. It is NOT authentication.
+#define SETTINGS_PAGE_PATH "derpderp"
+
+// Settings on the web page are persisted in ESP32 NVS. The values below are
+// initial defaults for devices whose NVS has not yet been configured.
 //This is the root name for the AP. It will be used when in AP mode.
 #define SSIDROOT "CellSol "
 
-// these only have an effect in client and hybrid mode; the IP address for AP mode is always 192.168.(autocalculated).1
+// these only affect client and hybrid modes. The local AP uses 192.168.x.1,
+// with x set independently on the settings page or derived from hardware.
 // the upstream router will have to either open port 80 to this, or do a redirect.
 #define CLIENT_IP_ADDR 192,168,2,119 // client IP address for client or hybrid mode. needs commas instead of periods
 #define GATEWAY_IP_ADDR 192,168,2,1 // router IP address for client or hybrid mode. needs commas instead of periods
@@ -77,7 +96,7 @@
 
 // irc relay stuff (only used if wifi is client or hybrid)
 
-#define IRC_SERVER   "irc.rizon.net" // comment this line out to avoid using irc subsystem
+#define IRC_SERVER   "irc.rizon.net" // initial server; enable/disable IRC on the settings page
 #define IRC_PORT     6667
 #define IRC_NICK_ROOT "CellSol" // will add hextag
 #define IRC_CHAN_ROOT "CellSol" // will add hextag if the line below is uncommented
@@ -104,7 +123,7 @@
 
 // more timing stuff
 #define SLEEP_TIME 60 // this is in seconds - how long to sleep before waking up and checking power level again? NOT ACCURATE.
-#define DISPLAY_INTERVAL 50 // In milliseconds, how long to keep the display on after button release, if it's there? NOT ACCURATE.
+#define DISPLAY_INTERVAL 3000 // Milliseconds to keep the OLED on after a button press in AP/BT mode. Upstream WiFi modes keep it on.
 
 // battery stuff
 #define MODEFLIP_BATTERY_FULL 1304 // if modeflip, battery level above this will leave the module running on full. Useful if we are getting good sunlight and the battery is full anyway.
@@ -122,38 +141,15 @@
 /**
    DON'T TOUCH THESE, THEY ARE AUTOMATED
 */
-// consequences of the setup above
-#define PYLONTYPE "AP)"// identifier for how we are running
-#ifdef MODEFLIP
-#define PYLONTYPE "~AP~)"// identifier for how we are running
-#endif
-#ifdef BT_ENABLE_FOR_AP // if both are uncommented, it'll go to HYBRID Mode.
-#undef MODEFLIP
-#define WIFI_POWER_LEVEL 11 // 0 to 11, higher = stronger. lora power level is fixed at 19/20 because 20/20 can mess up some radios.
-#define PYLONTYPE "AP+BT)" // identifier for how we are running
-#endif
-#ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
-#define WIFI_IS_CLIENT // if both are uncommented, it'll go to HYBRID Mode.
-#endif
-#ifdef WIFI_IS_CLIENT // if defined, wifi will attach to an existing AP and act as a web gateway. it may be useful to have a way to get OUT of this mode, but that's for another day
-#undef MODEFLIP
-#define DISPLAY_INTERVAL 2000000000// basically leave the screen on, we're on line power anyway. button is now used to force wifi reconnect.
-#define RECONNECT_EVERY 60000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
-#define WIFI_RESET_CYCLES 1000 // after this many cycles, reset upon wifi disconnect/reconnect
-#define SLEEP_TIME 20  // gateway is line powered, so it stays on
-#define BT_ENABLE_FOR_AP // one implies the other
-#define PYLONTYPE "STA+BT)" // identifier for how we are running
-#ifdef IRC_SERVER
-#define PYLONTYPE "STA+BT+I)"
+// These compile-time mode macros now select only the DEFAULT operating mode.
+// Once set from the web page, the saved NVS mode takes precedence.
+#ifdef WIFI_IS_HYBRID
+#ifndef WIFI_IS_CLIENT
+#define WIFI_IS_CLIENT
 #endif
 #endif
-#ifdef WIFI_IS_HYBRID // if both are uncommented, it'll go to HYBRID Mode.
-#define RECONNECT_EVERY 2000000000 // every this many milliseconds, reconnect to the upstream wifi (useful in case your router is prone to crapping out, or does load balancing)
-#define PYLONTYPE "AP+STA+BT)"// identifier for how we are running
-#ifdef IRC_SERVER
-#define PYLONTYPE "AP+STA+BT+I)"
-#endif
-#endif
+#define RECONNECT_EVERY 60000UL
+#define PYLONTYPE "AP)" // legacy display fallback; runtime uses activeMode
 
 /**
    FURTHER AUTOMATED STUFF
@@ -170,6 +166,5 @@
 #define PYLONTYPE "RPT)"// identifier for how we are running
 #undef TUTORIALSTRINGS
 #endif
-#ifndef WIFI_IS_CLIENT
-#undef IRC_SERVER // we aren't connecting to the wider internet
-#endif
+// Keep IRC code available even in AP-only builds: the settings page can later
+// enable an upstream WiFi/IRC gateway without reflashing.

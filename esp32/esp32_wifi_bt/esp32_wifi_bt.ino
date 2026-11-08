@@ -9,7 +9,7 @@
 *********/
 
 // Firmware version.
-#define VERSIONSTRING "0.32"
+#define VERSIONSTRING "0.33c"
 
 #include "config.h" // Please make config changes in config.h and pinout.h instead of here!
 
@@ -30,13 +30,21 @@
 
 
 //Libraries for LoRa
-#include "SPI_esp32_33/src/SPI_esp32_33.h" //<SPI.h> // if you are getting weird SPI errors, the only way I know how to fix it is to temporarily rename the folder C:\Users\spiri\OneDrive\Documents\Arduino\libraries\SPI\src to something else and then compile. TODO fix this
-#include <LoRa.h>
+#include <SPI.h>
+#include "pinout.h"
+#ifdef LORA32V3
+#include "CellSolRadioV3.h" // Heltec V3 has an SX1262, not an SX127x
+#else
+#include <LoRa.h> // Sandeep Mistry LoRa, for SX127x-based boards
+#endif
 
 // Load Wi-Fi library
+#include <Network.h>
 #include <NetworkClient.h>
+#include <NetworkServer.h>
 #include <WiFiAP.h>
 #include <WiFi.h>
+#include <Preferences.h>
 #include "time.h"
 // taken from genericwifi.h -1dbm to 19.5dbm
 #ifdef WIFI_POWER_LEVEL
@@ -76,7 +84,7 @@ BluetoothSerial ESP_BT;
 #define CLKFREQ 80 // megahertz when in full mode
 #define CLKFREQ_LOW 20 // megahertz when in repeater mode; can't go any lower, annoyingly
 
-#include "pinout.h" // LORA32 Pinout by default, change this file to change the pinout!
+// pinout.h is loaded before the radio driver, because V3 needs its SX1262 pins.
 
 
 #ifdef MINDISPLAY
@@ -108,7 +116,7 @@ static RTC_NOINIT_ATTR bool centertext = true;// if this, center, otherwise, jus
 
 
 // Wireless UART Configuration
-long LastReconnect = 0;
+uint32_t LastReconnect = 0;
 int currbatterylevel = 0;
 
 #define UART_BAUD_RATE 9600
@@ -117,13 +125,212 @@ String tempstring = ""; // internal function use only
 
 bool wifimode = true; // bluetooth or wifi
 
+// Radio parameters remain compile-time for mesh interoperability. These
+// local-network/IRC preferences are persisted across reboots in NVS.
+enum CellSolMode : uint8_t {
+  CELLSOL_AP = 0,
+  CELLSOL_BT = 1,
+  CELLSOL_AP_BT = 2,
+  CELLSOL_STA_BT = 3,
+  CELLSOL_AP_STA_BT = 4
+};
+
+struct CellSolSettings {
+  uint8_t mode;
+  String nodeID; // optional 4-hex-digit pylon ID; empty uses hardware-derived ID
+  int apThirdOctet; // -1 = derive the local AP subnet from hardware, independent of node ID
+  String apPrefix;
+  String upstreamSSID;
+  String upstreamPassword;
+  bool dhcp;
+  String clientIP;
+  String gatewayIP;
+  String subnet;
+  uint8_t wifiPower;
+  bool ircEnabled;
+  String ircServer;
+  uint16_t ircPort;
+  String ircChannel;
+  String ircNick;
+  String ircPrefix;
+  bool ircChannelTag;
+  bool ircForwardPylons;
+};
+
+CellSolSettings settings;
+uint8_t activeMode = CELLSOL_AP;
+String pendingOldNodeID = ""; // saved before an ID change, announced once radio starts
+
+// The fourth hex digit belongs to attached clients (0=pylon, e=BT, f=serial).
+// Changing the pylon ID therefore changes only the first three hex digits.
+int HexNibble(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+
+bool ParsePylonNodeID(const String &id, uint8_t &idHighByte, uint8_t &clientPrefix) {
+  if (id.length() != 4) return false;
+  int n[4];
+  for (int i = 0; i < 4; ++i) {
+    n[i] = HexNibble(id[i]);
+    if (n[i] < 0) return false;
+  }
+  // The submitted fourth nibble is ignored; the low nibble is for clients.
+  idHighByte = (n[0] << 4) | n[1];
+  clientPrefix = n[2] << 4;
+  return true;
+}
+
+bool UsesUpstreamWifi() {
+  return activeMode == CELLSOL_STA_BT || activeMode == CELLSOL_AP_STA_BT;
+}
+
+bool HasLocalAP() {
+  return activeMode == CELLSOL_AP || activeMode == CELLSOL_AP_BT || activeMode == CELLSOL_AP_STA_BT;
+}
+
+const char *PylonTypeLabel() {
+  switch (activeMode) {
+    case CELLSOL_BT: return "BT)";
+    case CELLSOL_AP_BT: return "AP+BT)";
+    case CELLSOL_STA_BT: return settings.ircEnabled ? "STA+BT+I)" : "STA+BT)";
+    case CELLSOL_AP_STA_BT: return settings.ircEnabled ? "AP+STA+BT+I)" : "AP+STA+BT)";
+    default: return "AP)";
+  }
+}
+
+void LoadCellSolSettings() {
+  Preferences prefs;
+#if defined(WIFI_IS_HYBRID)
+  const uint8_t defaultMode = CELLSOL_AP_STA_BT;
+#elif defined(WIFI_IS_CLIENT)
+  const uint8_t defaultMode = CELLSOL_STA_BT;
+#elif defined(BT_ENABLE_FOR_AP)
+  const uint8_t defaultMode = CELLSOL_AP_BT;
+#else
+  const uint8_t defaultMode = CELLSOL_AP;
+#endif
+  settings.mode = defaultMode;
+  settings.nodeID = "";
+  settings.apThirdOctet = -1;
+  settings.apPrefix = SSIDROOT;
+  settings.upstreamSSID = WIFI_UPSTREAM_AP;
+  settings.upstreamPassword = WIFI_UPSTREAM_PWD;
+#ifdef DHCP
+  settings.dhcp = true;
+#else
+  settings.dhcp = false;
+#endif
+  settings.clientIP = IPAddress(CLIENT_IP_ADDR).toString();
+  settings.gatewayIP = IPAddress(GATEWAY_IP_ADDR).toString();
+  settings.subnet = IPAddress(GATEWAY_SUBNET).toString();
+  settings.wifiPower = WIFI_POWER_LEVEL;
+  if (settings.wifiPower > 11) settings.wifiPower = 11;
+#if defined(WIFI_IS_CLIENT) && defined(IRC_SERVER)
+  settings.ircEnabled = true;
+#else
+  settings.ircEnabled = false;
+#endif
+  settings.ircServer = IRC_SERVER;
+  settings.ircPort = IRC_PORT;
+  settings.ircChannel = IRC_CHAN_ROOT;
+  settings.ircNick = IRC_NICK_ROOT;
+  settings.ircPrefix = FWD_PREFIX;
+#ifdef IRC_CHAN_HEXTAG
+  settings.ircChannelTag = true;
+#else
+  settings.ircChannelTag = false;
+#endif
+#ifdef ALLOW_PYLON_FORWARD
+  settings.ircForwardPylons = true;
+#else
+  settings.ircForwardPylons = false;
+#endif
+
+  if (!prefs.begin("cellsol", true))
+    return; // defaults still work if NVS cannot be opened
+  settings.mode = prefs.getUChar("mode", settings.mode);
+  if (settings.mode > CELLSOL_AP_STA_BT) settings.mode = CELLSOL_AP;
+  String savedID = prefs.getString("nodeid", "");
+  uint8_t savedIP, savedPrefix;
+  if (ParsePylonNodeID(savedID, savedIP, savedPrefix)) {
+    savedID.toLowerCase();
+    savedID.setCharAt(3, '0');
+    if (savedID != "0000") settings.nodeID = savedID;
+  }
+  // A v0.33b manual ID also chose the AP subnet. Preserve that subnet on
+  // upgrade, but let later ID changes leave it alone.
+  const int storedAPOctet = prefs.getInt("apoct", -2);
+  if (storedAPOctet >= 0 && storedAPOctet <= 254)
+    settings.apThirdOctet = storedAPOctet;
+  else if (storedAPOctet == -2 && settings.nodeID.length())
+    settings.apThirdOctet = savedIP;
+  settings.apPrefix = prefs.getString("aproot", settings.apPrefix);
+  settings.upstreamSSID = prefs.getString("upssid", settings.upstreamSSID);
+  settings.upstreamPassword = prefs.getString("uppass", settings.upstreamPassword);
+  settings.dhcp = prefs.getBool("dhcp", settings.dhcp);
+  settings.clientIP = prefs.getString("clientip", settings.clientIP);
+  settings.gatewayIP = prefs.getString("gateway", settings.gatewayIP);
+  settings.subnet = prefs.getString("subnet", settings.subnet);
+  settings.wifiPower = prefs.getUChar("wifipwr", settings.wifiPower);
+  if (settings.wifiPower > 11) settings.wifiPower = 11;
+  settings.ircEnabled = prefs.getBool("ircon", settings.ircEnabled);
+  settings.ircServer = prefs.getString("ircserver", settings.ircServer);
+  settings.ircPort = prefs.getUShort("ircport", settings.ircPort);
+  settings.ircChannel = prefs.getString("ircchan", settings.ircChannel);
+  settings.ircNick = prefs.getString("ircnick", settings.ircNick);
+  settings.ircPrefix = prefs.getString("ircprefix", settings.ircPrefix);
+  settings.ircChannelTag = prefs.getBool("irctag", settings.ircChannelTag);
+  settings.ircForwardPylons = prefs.getBool("ircpeer", settings.ircForwardPylons);
+  String oldID = prefs.getString("idprev", "");
+  if (ParsePylonNodeID(oldID, savedIP, savedPrefix)) {
+    oldID.toLowerCase();
+    pendingOldNodeID = oldID;
+  }
+  prefs.end();
+}
+
+bool SaveCellSolSettings(const CellSolSettings &value, const String &oldID = "") {
+  Preferences prefs;
+  if (!prefs.begin("cellsol", false)) return false;
+  // Record the previous ID first. If power is lost during saving, a reboot
+  // can still notify the network once the new ID actually takes effect.
+  if (oldID.length() && prefs.putString("idprev", oldID) == 0) {
+    prefs.end();
+    return false;
+  }
+  prefs.putUChar("mode", value.mode);
+  prefs.putString("nodeid", value.nodeID);
+  prefs.putInt("apoct", value.apThirdOctet);
+  prefs.putString("aproot", value.apPrefix);
+  prefs.putString("upssid", value.upstreamSSID);
+  prefs.putString("uppass", value.upstreamPassword);
+  prefs.putBool("dhcp", value.dhcp);
+  prefs.putString("clientip", value.clientIP);
+  prefs.putString("gateway", value.gatewayIP);
+  prefs.putString("subnet", value.subnet);
+  prefs.putUChar("wifipwr", value.wifiPower);
+  prefs.putBool("ircon", value.ircEnabled);
+  prefs.putString("ircserver", value.ircServer);
+  prefs.putUShort("ircport", value.ircPort);
+  prefs.putString("ircchan", value.ircChannel);
+  prefs.putString("ircnick", value.ircNick);
+  prefs.putString("ircprefix", value.ircPrefix);
+  prefs.putBool("irctag", value.ircChannelTag);
+  prefs.putBool("ircpeer", value.ircForwardPylons);
+  prefs.end();
+  return true;
+}
+
 // serial on/off
 boolean enablecomport = false; // set to false for a solderless fix for UART buffer crosstalk hardware issue
 
 // Set web server port number to 80
-WiFiServer server(80);
+NetworkServer server(80);
 DNSServer dnsServer;
-WiFiClient wificlient1;
+NetworkClient wificlient1;
 
 // WEB SERVICE CONFIGURATION - What files do we want to serve?
 #ifdef PROVIDE_APK
@@ -142,7 +349,7 @@ extern const unsigned char src_zip[];
 // BATTERY POWER CONFIGURATION
 static RTC_NOINIT_ATTR int lastbatterylevel = 0; // try to save battery levels between runs
 int batt_delta;
-int battimeout = 0;
+uint32_t battimeout = 0;
 bool low_batt_announce = false;
 
 // SERIAL and IP CONFIGURATION
@@ -158,8 +365,10 @@ String hextag  = "XXXX"; // usually the last two IP octets; gives pseudonimity t
 String lasttagimade = "XXXX"; // last one we made for use in checking
 
 // Temp bytes for IP addresses
-byte derpme = 0; // third number of ip address
+byte derpme = 0; // upper byte of the radio node ID (no longer tied to the AP IP)
 byte spare_id_nibble = 0; // upper nibble; lower nibble always 0
+String generatedNodeID = ""; // hardware-derived ID for restoring automatic mode
+byte generatedAPOctet = 0; // independent of manual node identity
 
 
 //packet counter
@@ -188,7 +397,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 #endif
 
 
-long disptimeout = 0;
+uint32_t disptimeout = 0;
 bool display_on_ping = false;
 
 
@@ -198,10 +407,12 @@ bool display_on_ping = false;
 unsigned long pseudoseconds = 0;
 unsigned long psm = 0;
 long UTC_Seconds = 0;
+bool is_watchdog_on = false;
 void PetTheWatchdog() {
-  if (millis() > psm)
+  if ((uint32_t)(millis() - psm) >= 1000)
   {
-    esp_task_wdt_reset();
+    if (is_watchdog_on)
+      esp_task_wdt_reset();
     // apparently the esp32 is smart enough to update tick size
     /*
       if (getCpuFrequencyMhz() < CLKFREQ)
@@ -209,7 +420,7 @@ void PetTheWatchdog() {
       else
         psm=psm+1000;
     */
-    psm = psm + 999;
+    psm = psm + 1000;
     pseudoseconds++;
 
     DoUTC(true);
@@ -220,44 +431,42 @@ void PetTheWatchdog() {
 #endif
 }
 
-bool is_watchdog_on = false;
 #define CONFIG_FREERTOS_NUMBER_OF_CORES 2
 void Watchdog(bool onoff) // gets turned back on by the adc reading, assumtion is that we can survive for 5 seconds we hope
 {
+  if (onoff == is_watchdog_on)
+  {
+    battimeout = millis() + ADC_INTERVAL;
+    return;
+  }
 
-  esp_log_level_set("*",ESP_LOG_NONE);  
   if (onoff)
   {
-
     esp_task_wdt_config_t twdt_config = {
       .timeout_ms = WDT_TIMEOUT * 1000,
-      .idle_core_mask = 0, // resets when it shouldn't, otherwise
-//      .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
+      .idle_core_mask = 0,
       .trigger_panic = true,
     };
-    esp_task_wdt_deinit(); //wdt is enabled by default, so we need to deinit it first
-    esp_task_wdt_init(&twdt_config); //enable panic so ESP32 restarts
-    esp_task_wdt_add(NULL); //add current thread to WDT watch
-
-    /*
-      #else
-        esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
-        esp_task_wdt_add(NULL); //add current thread to WDT watch
-    */
-
+    esp_err_t err = esp_task_wdt_init(&twdt_config);
+    if (err == ESP_ERR_INVALID_STATE) // already initialized by the core
+      err = esp_task_wdt_reconfigure(&twdt_config);
+    if (err == ESP_OK)
+    {
+      if (esp_task_wdt_status(NULL) != ESP_OK)
+        err = esp_task_wdt_add(NULL);
+      is_watchdog_on = (err == ESP_OK);
+    }
+    if (!is_watchdog_on)
+      Serial.println(":SYS:Watchdog registration failed");
   }
   else
   {
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_deinit();
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_deinit();
+    if (esp_task_wdt_status(NULL) == ESP_OK)
+      esp_task_wdt_delete(NULL);
+    is_watchdog_on = false;
+    // Don't deinitialize the system watchdog: other tasks may use it.
   }
-  is_watchdog_on = onoff;
-  battimeout = millis() + ADC_INTERVAL; // wait to turn the watchdog back on please
-
-
-  esp_log_level_set("*",ESP_LOG_ERROR);  
+  battimeout = millis() + ADC_INTERVAL;
 }
 
 /**
@@ -314,10 +523,19 @@ void BuildNicknameTags()
   derpme = dnfor & 255;
   if (derpme == 255) // allows using 192.168.x.1 for the AP which saves a lot of config headaches
     derpme = 0;
-  AP_IP[2] = derpme;
+
+  generatedAPOctet = derpme;
+  generatedNodeID = fourhex(derpme, spare_id_nibble);
+  uint8_t configuredOctet, configuredPrefix;
+  if (ParsePylonNodeID(settings.nodeID, configuredOctet, configuredPrefix)) {
+    // Manual IDs replace both ID bytes, so battery noise has no influence.
+    derpme = configuredOctet;
+    spare_id_nibble = configuredPrefix;
+  }
+  AP_IP[2] = settings.apThirdOctet >= 0 ? settings.apThirdOctet : generatedAPOctet;
   ipstring_a = AP_IP.toString();
   ipstring = ipstring_a;
-  ssid = SSIDROOT + ipstring;
+  ssid = settings.apPrefix + ipstring;
   TEXT_ALIGN_STRING = centertext ? TEXT_ALIGN_STRING_A : TEXT_ALIGN_STRING_B;
 }
 String status_string()
@@ -399,6 +617,7 @@ String gotstring = "";
 #define MAXPKTSIZE  200 // lora packet is 255 bytes and we will need some for the header
 #define MAXPKTSIZEP 201 // lora packet is 255 bytes and we will need some for the header
 #define MAXPKTSIZEM 199 // lora packet is 255 bytes and we will need some for the header
+#define MAX_HTTP_REQUEST_SIZE 768 // includes percent-encoded UTF-8 and browser headers
 char receivedChars[MAXPKTSIZE]; // an array to store the received data
 char receivedChar2[MAXPKTSIZE]; // an array to store the received data
 int rssi; // last packat received rssi
@@ -422,6 +641,8 @@ void TryRetrieveSentences()
 #endif
 }
 
+inline bool IsHex(char i);
+inline int hexValue(char c);
 void decode_in_place(char *s) {
   char *d = s;
 
@@ -431,11 +652,13 @@ void decode_in_place(char *s) {
       case 13: *d++ = ' '; s++; break; // turn CR into space
       case 10: *d++ = ' '; s++; break; // turn LF into space
       case '%':
-        s++; if (!*s) break; // handle malformed input
-        *d = hexValue(*s++) << 4;
-        if (!*s) break; // handle malformed input
-        *d |= hexValue(*s++);
-        d ++;
+        if (IsHex(s[1]) && IsHex(s[2])) {
+          char decoded = (hexValue(s[1]) << 4) | hexValue(s[2]);
+          *d++ = decoded ? decoded : ' '; // don't allow an embedded NUL
+          s += 3;
+        } else {
+          *d++ = *s++; // preserve malformed percent escapes
+        }
         break;
       default:
         *d++ = *s++; break;
@@ -465,18 +688,15 @@ inline int hexValue(char c) {
   return 0;
 }
 
-char* string2char(String command) {
-  if (command.length() != 0) {
-    char *p = const_cast<char*>(command.c_str());
-    return p;
-  }
-}
+// Never return c_str() from a by-value String: its pointer would dangle.
 // moves old strings out
 void cyclestrings(String newone)
 {
   newone.replace('\r', ' ');
   newone.replace('\n', ' ');//0xE2 0x80 0x8B
-  newone.replace("<", "&lt;"); // prevent script injection; doing it here once is more efficient than doing it repeatedly.
+  newone.replace("&", "&amp;"); // HTML-escape once for the web output
+  newone.replace("<", "&lt;");
+  newone.replace(">", "&gt;");
   newone.replace("  ", " ");
   newone.trim();
 
@@ -540,7 +760,7 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.endPacket();
   }
 #ifdef REPEAT_UNTIL_ACK
-  boolean got_lora_ack = false;
+  got_lora_ack = false;
   last_repeat_time = millis();
   message_to_repeat = whattosend;
 #endif
@@ -568,138 +788,80 @@ inline void Stop_LORA()
   {
     SeeIfAnythingOnRadio();
     LoRa.end();
+#ifdef LORA32V3
+    // The RadioLib adapter leaves SPI ownership to the sketch.
     SPI.end();
+#endif
     has_lora_been_initialized = false;
   }
 }
 
 
-void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout, bool streamexists, int whichtag)
+// Both Stream and HardwareBLESerial support these byte and text methods.
+// One implementation avoids the old two copies developing different bugs.
+template <typename T>
+void ReadFromStream(T &st, char buf[], byte &cnt, bool &sendout, bool streamexists, int whichtag)
 {
-  if (streamexists)
+  if (!streamexists || sendout)
+    return; // do not overwrite a complete message before it is transmitted
+
+  while (st.available() > 0)
   {
-    while (st.available() > 0)
+    int incoming = st.read();
+    if (incoming < 0)
+      break;
+    char ch = (char)incoming;
+
+    if (cnt == 0 && ((unsigned char)ch < 6 || (unsigned char)ch > 127))
+      continue; // discard noise at the start of a line
+
+    if (ch == '\r' || ch == '\n')
     {
-      buf[cnt++] = st.read();
-      UpdateCharCounterIfDisplayExists();
-      if (cnt > MAXPKTSIZE)
-      {
-        dodisplay = true;
-        sendout = true;
-        return;
-      }
-      if ((cnt > 1 and buf[cnt - 1] == 13))
-      {
-        dodisplay = true;
-        sendout = true;
-      }
+      if (cnt == 0)
+        continue; // ignore blank lines and the LF half of CRLF
 
-
-      // eat ascii 255s that that show up
-      if ((buf[0]<6 or buf[0]>127) and cnt == 1)
-        cnt = 0;
-
-      if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.') and (buf[3] == 13 or buf[3] == 10)) // special: send status string and memory
+      if (cnt == 3 && buf[0] == ',' && buf[2] == ',' && (buf[1] == ',' || buf[1] == '.'))
       {
         cnt = 0;
-        buf[0] = 0;
-        buf[1] = 0;
-        buf[2] = 0;
-        sendout = false;
-        dodisplay = false;
+        buf[0] = '\0';
         hextag = fourhex(derpme, spare_id_nibble + whichtag);
-        st.println(":SYS: TAG:" + hextag + " BAT:" + String(currbatterylevel) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
-        if (string_rx[0].length() > 0)
+        String status = ":SYS: TAG:" + hextag + " BAT:" + String(currbatterylevel) +
+                        " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") +
+                        String(pseudoseconds) + " MEM:";
+        st.println(status.c_str());
+        for (int i = 9; i >= 0; i--)
         {
-          for (int i = 10; i > 0; i--)
-          {
-            PetTheWatchdog();
-            tempstring = string_rx[i - 1];
-            tempstring.replace(";lt", "<");
-
-            if (tempstring.length() > 0)
-              st.println(tempstring);
-          }
+          PetTheWatchdog();
+          if (string_rx[i].length() == 0)
+            continue;
+          tempstring = string_rx[i];
+          tempstring.replace("&lt;", "<");
+          tempstring.replace("&gt;", ">");
+          tempstring.replace("&amp;", "&");
+          st.println(tempstring.c_str());
         }
       }
-
-      if (buf[0] == 10 or buf[0] == 13 or buf[1] == 10 or buf[1] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
+      else
       {
-        cnt = 0;
-        buf[0] = 0;
-        buf[1] = 0;
-        sendout = false;
-        dodisplay = false;
+        buf[cnt] = '\0';
+        sendout = true;
+        dodisplay = true;
       }
+      return;
     }
-  }
-}
 
-#ifdef LORA32V3
-void ReadFromStream(HardwareBLESerial &st, char buf[], byte &cnt, bool &sendout, bool streamexists, int whichtag)
-{
-
-  if (streamexists)
-  {
-    while (st.available() > 0)
+    if (cnt >= MAXPKTSIZE - 1)
     {
-      buf[cnt++] = st.read();
-      UpdateCharCounterIfDisplayExists();
-      if (cnt > MAXPKTSIZE)
-      {
-        dodisplay = true;
-        sendout = true;
-        return;
-      }
-      if ((cnt > 1 and buf[cnt - 1] == 13))
-      {
-        dodisplay = true;
-        sendout = true;
-      }
-
-
-      // eat ascii 255s that that show up
-      if ((buf[0]<6 or buf[0]>127) and cnt == 1)
-        cnt = 0;
-
-      if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.') and (buf[3] == 13 or buf[3] == 10)) // special: send status string and memory
-      {
-        cnt = 0;
-        buf[0] = 0;
-        buf[1] = 0;
-        buf[2] = 0;
-        sendout = false;
-        dodisplay = false;
-        hextag = fourhex(derpme, spare_id_nibble + whichtag);
-        st.println((":SYS: TAG:" + hextag + " BAT:" + String(currbatterylevel) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:").c_str()); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
-        if (string_rx[0].length() > 0)
-        {
-          for (int i = 10; i > 0; i--)
-          {
-            PetTheWatchdog();
-            tempstring = string_rx[i - 1];
-            tempstring.replace(";lt", "<");
-
-            if (tempstring.length() > 0)
-              st.println(tempstring.c_str());
-          }
-        }
-      }
-
-      if (buf[0] == 10 or buf[0] == 13 or buf[1] == 10 or buf[1] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
-      {
-        cnt = 0;
-        buf[0] = 0;
-        buf[1] = 0;
-        sendout = false;
-        dodisplay = false;
-      }
+      buf[MAXPKTSIZE - 1] = '\0';
+      sendout = true;
+      dodisplay = true;
+      return;
     }
+    buf[cnt++] = ch;
+    buf[cnt] = '\0';
+    UpdateCharCounterIfDisplayExists();
   }
 }
-
-
-#endif
 
 // decide whether to actually deal with this packet or not
 inline bool IsValidChar(char i) {
@@ -716,7 +878,8 @@ bool FilterIncomingLoRa() {
   //Byte 0   Byte 1        Byte 2 - 5  Byte 6 - 9  Byte 10   Byte 11 - 14  Byte 15   Byte 16   Byte 17 - 255
   //ttl      totalLength   sender      receiver    sequence  source        hopCount  metric    datagram
   //https://github.com/sudomesh/disaster-radio/wiki/Protocol#packet-structure
-  if (lenlen == LoRaData.charAt(1) and (LoRaData.charAt(0) > LoRaData.charAt(15)) and (lenlen > 16))
+  if (lenlen > 16 && lenlen == (uint8_t)LoRaData.charAt(1) &&
+      (uint8_t)LoRaData.charAt(0) > (uint8_t)LoRaData.charAt(15))
   {
     LoRaData.setCharAt(15, (LoRaData.charAt(15) + 1) % 256); // increment the hop count
     LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
@@ -853,10 +1016,15 @@ void SeeIfAnythingOnRadio() {
 
 
 
-    //read packet
-    while (LoRa.available()) {
-      LoRaData = LoRa.readString();
-      LoRaData.trim();
+    // Read the actual packet length. readString() stops at a timeout and
+    // trim() would silently corrupt binary Disaster Radio datagrams.
+    if (packetSize > 0 && packetSize <= 255) {
+      char packet[255];
+      size_t count = LoRa.readBytes(packet, packetSize);
+      LoRaData = "";
+      LoRaData.reserve(count);
+      for (size_t n = 0; n < count; n++)
+        LoRaData += packet[n];
       if (FilterIncomingLoRa())//(LoRaData.length() > 1) and (LoRaData.substring(1).equals(LastThingISentViaLora_0.substring(1)) == false))
       {
 #ifdef SHOW_RSSI
@@ -1029,10 +1197,11 @@ void SendSerialIfReady()
     int highbytenums = serstr.length();
     for (int i = 0; i < MAXPKTSIZE; i++)
     {
-      if (receivedChars[i] > 127)
+      if ((unsigned char)receivedChars[i] > 127)
         highbytenums = highbytenums + 50;
       receivedChars[i] = 0;
     }
+    readytosend = false; // including duplicate/short messages
 
     if (highbytenums > MAXPKTSIZE)
     {
@@ -1057,7 +1226,6 @@ void SendSerialIfReady()
 
       antispam_timestamp1 = pseudoseconds + ANTISPAM_TIME_SERIAL;
       dodisplay = true;
-      readytosend = false;
     }
   }
 
@@ -1078,13 +1246,13 @@ void SendSerialIfReady()
     {
       receivedChar2[i] = 0;
     }
+    readytosen2 = false; // including duplicate/short messages
     if (LongChecksum(serstr) != LastThingISentViaLora_0 && (serstr.length() > 5))
     {
       LoraSendAndUpdate(serstr);
       antispam_timestamp2 = pseudoseconds + ANTISPAM_TIME_SERIAL;
       Serial.println(serstr);
       dodisplay = true;
-      readytosen2 = false;
       cyclestrings(serstr);
 #ifdef IRC_SERVER
       irc_broadcast( serstr);
@@ -1131,9 +1299,7 @@ void SendBinaryFile(String contenttype, const unsigned char file[], const long i
       PetTheWatchdog();
 
       ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);
-#ifdef BT_ENABLE_FOR_AP
       ReadFromStream(ESP_BT, receivedChar2, charcounte2, readytosen2, has_bluetooth_been_initialized, 14);
-#endif
     }
     if (i % 512 == 0)
       SeeIfAnythingOnRadio();
@@ -1160,15 +1326,17 @@ void Start_LORA(bool trydisplay)
   Serial.println("4.1");
 
 #ifdef LORA32V3
-// doesn't like being told to start spi explicitly
-  LoRa.setSignalBandwidth(125E3);
+  // RadioLib adapter initializes SPI and the SX1262 in begin().
 #else
   SPI.begin(SCK, MISO, MOSI, SS);
-  LoRa.setPins(SS, RST, DIO0); // causes failure in lora32v3
-  LoRa.setSignalBandwidth(62.5E3); //default 125E3
+  LoRa.setPins(SS, RST, DIO0);
 #endif
 
-  LoRa.setSpreadingFactor(9); // default 7
+#ifdef LORA32V3
+  // This adapter retains settings and applies them during SX1262 begin().
+  LoRa.setSpreadingFactor(CELLSOL_LORA_SF);
+  LoRa.setSignalBandwidth(CELLSOL_LORA_BW_HZ);
+#endif
 
   //  LoRa.crc(); // we would rather get a damaged packet than no packet at all; maybe some of it will be readable.
   Serial.println("4.5");
@@ -1188,13 +1356,24 @@ void Start_LORA(bool trydisplay)
     has_lora_been_initialized = LoRa.begin(BAND);
 
   Serial.println("4.7");
+  if (has_lora_been_initialized)
+  {
+#ifndef LORA32V3
+    // SX127x registers are valid only after begin(), which also resets the
+    // radio. The old pre-begin setters did not survive that reset.
+    LoRa.setSpreadingFactor(CELLSOL_LORA_SF);
+    LoRa.setSignalBandwidth(CELLSOL_LORA_BW_HZ);
+#endif
+  }
   //  if (changeclock)
   //    setCpuFrequencyMhz(CLKFREQ_LOW);
 
   if (has_lora_been_initialized == false)
   {
     LoRa.end();
+#ifdef LORA32V3
     SPI.end();
+#endif
     tempstring = ":SYS:Starting LoRa failed! Trying again after sleep.";
     if (has_serial_been_initialized)
     {
@@ -1214,7 +1393,17 @@ void Start_LORA(bool trydisplay)
   }
   else
   {
-    LoRa.setTxPower(20, PA_OUTPUT_PA_BOOST_PIN ); // PABOOST; for RFO use 14,0
+    LoRa.setTxPower(20); // use the driver's PA boost setting on SX127x
+    if (pendingOldNodeID.length()) {
+      const String activeID = fourhex(derpme, spare_id_nibble);
+      if (pendingOldNodeID != activeID)
+        LoraSendAndUpdate(pendingOldNodeID + TAG_END_SYMBOL + ">>>" + activeID);
+      Preferences prefs;
+      if (prefs.begin("cellsol", false)) {
+        if (prefs.remove("idprev")) pendingOldNodeID = "";
+        prefs.end();
+      }
+    }
   }
 }
 
@@ -1241,24 +1430,23 @@ void Stop_UART()
 
 void Start_BT()
 {
+  if (has_bluetooth_been_initialized)
+    return;
   if (ipstring_b.length() < 2)
-    ipstring_b = String(SSIDROOT) + String("BT") + String(derpme);
+    ipstring_b = settings.apPrefix + String("BT") + String(derpme);
 
 #ifdef LORA32V3
-  ESP_BT.beginAndSetupBLE(ipstring_b.c_str());
+  has_bluetooth_been_initialized = ESP_BT.beginAndSetupBLE(ipstring_b.c_str());
 #else
-  if (!btStarted()) {
-    btStart();
-  }
-  ESP_BT.begin(ipstring_b); //Name of your Bluetooth Signal
+  has_bluetooth_been_initialized = ESP_BT.begin(ipstring_b);
 #endif
-  has_bluetooth_been_initialized = true;
 }
 
 void Stop_BT()
 {
+  if (!has_bluetooth_been_initialized)
+    return;
   ESP_BT.end();
-  btStop(); // we aren't using BT for this one
   has_bluetooth_been_initialized = false;
 }
 
@@ -1315,6 +1503,10 @@ void DoBasicSteps()
 {
   PetTheWatchdog();
   ReadBatteryADC(false);
+#ifdef LORA32V3
+  if (has_bluetooth_been_initialized)
+    ESP_BT.poll();
+#endif
 
   if (has_lora_been_initialized)
   {
@@ -1413,12 +1605,14 @@ void displayonoff(bool onoff)
   {
     if (has_display_been_initialized == false)
       InitDisplayTryAll();
+    if (!displayexists) return;
     display.ssd1306_command(SSD1306_DISPLAYON);
     displayenabled = true;
   }
   else
   {
-    if (has_display_been_initialized)
+    if (!displayenabled) return;
+    if (has_display_been_initialized && displayexists)
     {
       display.clearDisplay();
       display.display();
@@ -1429,27 +1623,33 @@ void displayonoff(bool onoff)
 #endif
 }
 
-#ifdef WIFI_IS_HYBRID
 int displayswitch = 0; // display switch if we are in hybrid mode
-#endif
 
 void DoDisplayIfItExists()
 {
 #ifndef NODISPLAY
+  // Client/gateway mode used to set DISPLAY_INTERVAL to ~23 days at compile
+  // time. Now that modes are runtime-selectable, keep that policy at runtime:
+  // upstream-powered gateway modes show the display continuously, while
+  // local AP/BT modes wake for the button or an explicit display request.
+  const bool keepDisplayOn = UsesUpstreamWifi();
 #ifdef user_button_display
-  if (digitalRead(USER_BUTTON_PIN) == false or display_on_ping == true) // actually button pushed
+  const bool displayRequested = (digitalRead(USER_BUTTON_PIN) == LOW) || display_on_ping;
 #else
-  if (display_on_ping == true)
+  const bool displayRequested = display_on_ping;
 #endif
+  if (displayRequested || (keepDisplayOn && (!displayenabled || !has_display_been_initialized)))
   {
+    const bool wasOff = !displayenabled || !has_display_been_initialized;
     if (has_display_been_initialized == false) // try without hard reset first
       InitDisplayTryAll();
-    dodisplay = true;
     displayonoff(true);
-    disptimeout = millis() + DISPLAY_INTERVAL;
+    if (displayRequested || wasOff) dodisplay = true;
     display_on_ping = false;
   }
-  if (millis() > (disptimeout))
+  if (displayRequested)
+    disptimeout = millis() + DISPLAY_INTERVAL;
+  if (!keepDisplayOn && displayenabled && (int32_t)(millis() - disptimeout) >= 0)
   {
     displayonoff(false);
     dodisplaybuf = false;
@@ -1471,15 +1671,14 @@ void DoDisplayIfItExists()
       display.setCursor(0, 0);
       if (wifimode)
       {
-#ifdef WIFI_IS_CLIENT // getting noise here for some reason
-#ifdef WIFI_IS_HYBRID
-        display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
-#else
-        display.println(ipstring_c);
-#endif
-#else
-        display.println(ipstring_a);
-#endif
+        if (UsesUpstreamWifi()) {
+          if (activeMode == CELLSOL_AP_STA_BT)
+            display.println((++displayswitch % 2) ? ipstring_c : ipstring_a);
+          else
+            display.println(ipstring_c);
+        } else {
+          display.println(ipstring_a);
+        }
       }
       else
       {
@@ -1504,6 +1703,7 @@ void DoDisplayIfItExists()
 void UpdateCharCounterIfDisplayExists()
 {
 #ifndef NODISPLAY
+  if (!displayenabled) return;
   if (has_display_been_initialized == false)
     InitDisplayTryAll();
 
@@ -1598,7 +1798,7 @@ void BlinkMeWhen()
 #ifdef BATT_ADC
 void ReadBatteryADC(bool force)
 {
-  if (force || (millis() > battimeout))
+  if (force || (int32_t)(millis() - battimeout) >= 0)
   {
     Watchdog(true);
     if (currbatterylevel > 0)
@@ -1680,6 +1880,10 @@ void LowPowerLoop()
 void DoBtSteps()
 {
   PetTheWatchdog();
+#ifdef LORA32V3
+  if (has_bluetooth_been_initialized)
+    ESP_BT.poll();
+#endif
 
 
 #ifdef BATT_ADC
@@ -1709,6 +1913,10 @@ void DoWifiSteps()
 {
 
   PetTheWatchdog();
+#ifdef LORA32V3
+  if (has_bluetooth_been_initialized)
+    ESP_BT.poll();
+#endif
 
 #ifdef BATT_ADC
   ReadBatteryADC(false);
@@ -1722,7 +1930,7 @@ void DoWifiSteps()
 #endif
 
 #ifdef MODEFLIP // switch between full AP and repeater according to a timer, but only if there are no wifi clients.
-  if ((MODEFLIP < 60000) && (millis() > (modefliptime + MODEFLIP)))
+  if ((activeMode == CELLSOL_AP) && (MODEFLIP < 60000) && ((uint32_t)(millis() - modefliptime) > MODEFLIP))
   {
     if (WiFi.softAPgetStationNum() > 0)
     {
@@ -1746,7 +1954,7 @@ void DoWifiSteps()
       bool derpp = true;
       LowPowerSetup();
       Watchdog(true);
-      while (millis() < (modefliptime + 60000) && derpp)
+      while ((uint32_t)(millis() - modefliptime) < 60000 && derpp)
       {
         DoRepeaterSteps();
 #ifdef MODEFLIP_BUTTON
@@ -1773,21 +1981,26 @@ void DoWifiSteps()
 
   SeeIfAnythingOnRadio();
   ReadFromStream(Serial, receivedChars, charcounter, readytosend, has_serial_been_initialized, 15);
-#ifdef BT_ENABLE_FOR_AP
   ReadFromStream(ESP_BT, receivedChar2, charcounte2, readytosen2, has_bluetooth_been_initialized, 14);
-#endif
-#ifdef WIFI_IS_CLIENT
-#ifdef user_button_display
-  if (digitalRead(USER_BUTTON_PIN) == false) // actually button pushed
-    if (digitalRead(USER_BUTTON_PIN) == false) // actually button pushed
-      if (digitalRead(USER_BUTTON_PIN) == false) // actually button pushed
-      {
-        ConnectToUpstreamWifi(100); // force the issue; no ping check
-      }
-#endif
-#endif
   DoDisplayIfItExists();
   UpdateCharCounterIfDisplayExists();
+#ifdef user_button_display
+  // A short PROG press wakes the OLED. Only a deliberate 3-second hold
+  // forces an upstream WiFi reconnect, once per press.
+  static uint32_t reconnectPressedAt = 0;
+  static bool reconnectTriggered = false;
+  if (UsesUpstreamWifi() && digitalRead(USER_BUTTON_PIN) == LOW) {
+    if (reconnectPressedAt == 0)
+      reconnectPressedAt = millis();
+    else if (!reconnectTriggered && (uint32_t)(millis() - reconnectPressedAt) >= 3000) {
+      reconnectTriggered = true;
+      ConnectToUpstreamWifi(100);
+    }
+  } else {
+    reconnectPressedAt = 0;
+    reconnectTriggered = false;
+  }
+#endif
   SendSerialIfReady();
 
   BlinkMeWhen();
@@ -1799,6 +2012,8 @@ void DoWifiSteps()
 void setup() {
 
   Serial.begin(9600);
+  Network.begin(); // unified Network API, required before network interfaces
+  LoadCellSolSettings();
 
   setCpuFrequencyMhz(CLKFREQ_LOW);
 
@@ -1854,10 +2069,6 @@ void setup() {
 #endif
 
 
-#ifdef WIFI_POWER_LEVEL
-  WiFi.setTxPower(wifilevels[WIFI_POWER_LEVEL]);
-#endif
-
   BuildNicknameTags();
 
 
@@ -1873,24 +2084,20 @@ void setup() {
 
 bool currentlyserving = false;
 
-unsigned int pausetag;
 void BasicWhileDelay(int pausetime)
 {
-  pausetag = millis();
-  while (millis() < (pausetag + pausetime))
+  const uint32_t started = millis();
+  while ((uint32_t)(millis() - started) < (uint32_t)pausetime)
   {
     DoBasicSteps(); // DoWifiSteps();
   }
 }
 
-#ifdef WIFI_IS_CLIENT // if defined, wifi will attach to an existing AP and act as a web gateway. it may be useful to have a way to get OUT of this mode, but that's for another day
-#ifdef IRC_SERVER
 int failed_irc_connections = 0;
-#endif
 bool CurrentlyConnecting = false;
 void ConnectToUpstreamWifi(int pausetime)
 {
-  if (server.hasClient() || CurrentlyConnecting || wificlient1.connected() || currentlyserving)
+  if (!UsesUpstreamWifi() || server.hasClient() || CurrentlyConnecting || wificlient1.connected() || currentlyserving)
   {
     led(true);
     BasicWhileDelay(1);
@@ -1905,45 +2112,50 @@ void ConnectToUpstreamWifi(int pausetime)
   WiFi.mode(WIFI_OFF);
   BasicWhileDelay(pausetime);
 
-#ifdef WIFI_IS_HYBRID
-  WiFi.mode(WIFI_MODE_APSTA);
+  const bool hybrid = activeMode == CELLSOL_AP_STA_BT;
+  WiFi.mode(hybrid ? WIFI_MODE_APSTA : WIFI_MODE_STA);
+  WiFi.setTxPower(wifilevels[settings.wifiPower]);
   BasicWhileDelay(pausetime);
-#ifndef DHCP
-  WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
-#endif
+  if (!settings.dhcp)
+    WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
+  if (hybrid) {
+    WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP(ssid.c_str(), NULL, 1 + (derpme % 11), false, 8);
+    dnsServer.start(DNS_PORT, "*", AP_IP);
+  }
   BasicWhileDelay(pausetime);
-  WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
-  BasicWhileDelay(pausetime);
-  if (String(WIFI_UPSTREAM_PWD).length() == 0)
-    WiFi.begin(WIFI_UPSTREAM_AP);
+  if (settings.upstreamPassword.length())
+    WiFi.begin(settings.upstreamSSID.c_str(), settings.upstreamPassword.c_str());
   else
-    WiFi.begin(WIFI_UPSTREAM_AP, WIFI_UPSTREAM_PWD);
+    WiFi.begin(settings.upstreamSSID.c_str());
   BasicWhileDelay(pausetime);
-  WiFi.softAP(string2char(ssid), NULL, (1 + (derpme % 12)), false, 8); // the derpme thing is to set a channel
-#else
-  WiFi.mode(WIFI_MODE_STA);
-  BasicWhileDelay(pausetime);
-#ifndef DHCP
-  WiFi.config(Client_IP, Client_Gateway, Client_Subnet, Client_Gateway, Client_Gateway);
-#endif
-  BasicWhileDelay(pausetime);
-  WiFi.begin(WIFI_UPSTREAM_AP, WIFI_UPSTREAM_PWD);
-#endif
-  BasicWhileDelay(pausetime);
-  long i = 0;
+  const uint32_t started = millis();
   led(false);
-  while (WiFi.status() != WL_CONNECTED)
+  while (WiFi.status() != WL_CONNECTED && (uint32_t)(millis() - started) < 12000)
   {
-    if (i++ > WIFI_RESET_CYCLES)
-      ESP.restart();
     led(true);
     BasicWhileDelay(1);
     led(false);
     BasicWhileDelay(pausetime);
   }
-#ifdef DHCP
+  if (WiFi.status() != WL_CONNECTED) {
+    // A typo in the upstream credentials must not lock the user out of the
+    // settings page. Run a temporary local AP until the next power cycle.
+    Serial.println(":SYS:Upstream WiFi unavailable; recovery AP enabled");
+    WiFi.disconnect();
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP(ssid.c_str(), NULL, 1 + (derpme % 11), false, 8);
+    dnsServer.start(DNS_PORT, "*", AP_IP);
+    activeMode = CELLSOL_AP_BT;
+    ipstring = AP_IP.toString();
+    server.begin();
+    CurrentlyConnecting = false;
+    Watchdog(true);
+    return;
+  }
+
   Client_IP = WiFi.localIP();
-#endif
 
   LastReconnect = millis();
   ipstring = ipstring_a;//AP_IP.toString();//"Gateway";//Client_IP.toString()+"G";
@@ -1951,11 +2163,8 @@ void ConnectToUpstreamWifi(int pausetime)
   BasicWhileDelay(pausetime);
   server.begin();
   CurrentlyConnecting = false;
-#ifdef IRC_SERVER
   failed_irc_connections = 0;
-#endif
 }
-#endif
 
 
 
@@ -1971,12 +2180,10 @@ void DoMinDisplay()
   oled.sendCommand(SSD1306_Display_On_Cmd);
   oled.clearDisplay();              // Clear screen
   oled.setTextXY(0, 0);             // Set cursor position, start of line 0
-  oled.putString("CellSol" VERSIONSTRING "(" PYLONMODEL ":" PYLONTYPE);
+  oled.putString(String("CellSol") + VERSIONSTRING "(" PYLONMODEL ":" + PylonTypeLabel());
   oled.setTextXY(1, 0);             // Set cursor position, start of line 1
   oled.putString(wifimode ? ipstring_a : "Bluetooth");
-#ifdef WIFI_IS_HYBRID
-  oled.putString(wifimode ? ipstring_c : "");
-#endif
+  if (UsesUpstreamWifi()) oled.putString(wifimode ? ipstring_c : "");
   oled.setTextXY(2, 0);
   oled.putString(string_rx[2].substring(0, 24));
   oled.setTextXY(3, 0);
@@ -2004,27 +2211,25 @@ void HighPowerSetup(bool echo)
   lowpowerstart = false;
 
 
-  wifimode = true; // adjust later
+  activeMode = settings.mode;
+  wifimode = activeMode != CELLSOL_BT;
 
-  //    esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_LR ); //LR only works between esp32s sadly
-  WiFi.mode(WIFI_AP); // WIFI_AP_STA
-  //  esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_11B ); // LR only works between esp32s sadly
-  WiFi.softAP(string2char(ssid), NULL, (1 + (derpme % 12)), false, 8); // the derpme thing is to set a channel
+  // Resolve saved upstream IPv4 configuration before initiating WiFi.
+  IPAddress configuredIP, configuredGateway, configuredSubnet;
+  if (configuredIP.fromString(settings.clientIP) &&
+      configuredGateway.fromString(settings.gatewayIP) &&
+      configuredSubnet.fromString(settings.subnet)) {
+    Client_IP = configuredIP;
+    Client_Gateway = configuredGateway;
+    Client_Subnet = configuredSubnet;
+  }
 
   low_batt_announce = POWER_STATE_CHANGE_ANNOUNCE;
 
   if (enablecomstring == "")
     enablecomport = true; // for tbeam etc.
 
-// esp32v3 so far so good until here
-  
-  //  Stop_LORA();
-
   Start_LORA(false);
-
-
-  
-Serial.println("Five");
 
   //reset OLED display via software
   //initialize OLED
@@ -2034,69 +2239,49 @@ Serial.println("Five");
   //  InitDisplay(true);
   //  displayonoff(true);
 
-  // Connect to Wi-Fi network with SSID and password
-
-  WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
-
-  dnsServer.start(DNS_PORT, "*", AP_IP);
-Serial.println("Six");
   DoBasicSteps();
-Serial.println("Seven");
-
-
-#ifdef WIFI_IS_CLIENT
-#else
   server.setNoDelay(true);
   wificlient1.setTimeout(2);
   server.setTimeout(2);
-#endif
-
-Serial.println("Eight");
 
 #ifdef USER_BUTTON_PIN // true = wifi, false = bluetooth
+  // PROG at boot: standard AP -> Bluetooth (old behavior); any saved
+  // non-AP mode -> temporary AP. This makes bad NVS choices recoverable.
   int j = 0;
-  for (int i = 0; i < 50; i++)
-  {
+  for (int i = 0; i < 50; i++) {
     BasicWhileDelay(1);
-    if (digitalRead(USER_BUTTON_PIN))
-      j++; // cheapo debouncing
+    if (digitalRead(USER_BUTTON_PIN)) j++;
   }
-  wifimode = (j > 24);
-
+  if (j <= 24) activeMode = activeMode == CELLSOL_AP ? CELLSOL_BT : CELLSOL_AP;
 #endif
   led(false);
-Serial.println("Nine");
+  wifimode = activeMode != CELLSOL_BT;
 
-#ifdef WIFI_IS_CLIENT
-  wifimode = true;
-#endif
-
-  if (wifimode == false)
-  {
+  if (activeMode == CELLSOL_BT) {
     WiFi.mode(WIFI_OFF);
     server.stop();
     dnsServer.stop();
-    ipstring = String(SSIDROOT) + String("BT") + String(derpme);
+    ipstring = settings.apPrefix + String("BT") + String(derpme);
     esp_wifi_stop();
     Start_BT();
     dodisplay = true;
+  } else {
+    if (activeMode == CELLSOL_AP_BT || UsesUpstreamWifi()) Start_BT();
+    else if (has_bluetooth_been_initialized) Stop_BT();
+
+    if (UsesUpstreamWifi()) {
+      ConnectToUpstreamWifi(100);
+    } else {
+      WiFi.mode(WIFI_AP);
+      WiFi.setTxPower(wifilevels[settings.wifiPower]);
+      WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
+      WiFi.softAP(ssid.c_str(), NULL, 1 + (derpme % 11), false, 8);
+      dnsServer.start(DNS_PORT, "*", AP_IP);
+    }
+    server.stop();
+    server.begin();
   }
-  else
-  {
-#ifdef BT_ENABLE_FOR_AP
-    Start_BT();
-#else
-    Stop_BT();
-#endif
-
-Serial.println("Ten");
-
-#ifdef WIFI_IS_CLIENT
-    ConnectToUpstreamWifi(100);
-#endif
-
-  }
-  tempstring = ":SYS:(" PYLONMODEL ";" PYLONTYPE " " + String(derpme) + ":" + status_string();
+  tempstring = String(":SYS:(" PYLONMODEL ";") + PylonTypeLabel() + " " + String(derpme) + ":" + status_string();
   if (low_batt_announce)
   {
     LoraSendAndUpdate(tempstring);
@@ -2109,28 +2294,17 @@ Serial.println("Ten");
     Serial.println(tempstring);
 
   // reset these
-  AP_IP = IPAddress(192, 168, derpme, 1);
-  Client_IP = IPAddress(CLIENT_IP_ADDR);
-#ifdef DHCP
-  Client_IP = WiFi.localIP();
-#else
-  Client_IP = IPAddress(CLIENT_IP_ADDR);
-#endif
+  AP_IP = IPAddress(192, 168, AP_IP[2], 1);
   IP = AP_IP;
   ipstring = IP.toString();
   ipstring_a = AP_IP.toString();
   ipstring_c = Client_IP.toString();
 
-  server.stop();
-  server.begin();
-
-
   //Serial.println(":SYS:IP " + ipstring_a + " " + ipstring_c + " " + ipstring + " " + lwc.toString());
 
-  if (DISPLAY_INTERVAL > 10000)
-  {
-    display_on_ping = true;
-  }
+  // Give every V2 boot a visible status screen. Gateway modes then keep it
+  // on; battery-operated AP/BT modes sleep the OLED after DISPLAY_INTERVAL.
+  display_on_ping = true;
 
 #ifdef TUTORIALSTRINGS
   if (string_rx[2].length() < 3)
@@ -2146,32 +2320,19 @@ Serial.println("Ten");
     else
     {
 
-#ifdef WIFI_IS_CLIENT
       //                                   012345678901234567890
       //              012345678901234567890
-#ifdef WIFI_IS_HYBRID
-      string_rx[2] = ":SYS: AP IP address: " + AP_IP.toString();
-#else
-      string_rx[2] = ":SYS: This unit talks to upstream wifi.";
-#endif
-#ifdef DHCP
-      string_rx[1] = "(D)Client IP address:" + Client_IP.toString();
-#else
-      string_rx[1] = "Client IP address:   " + Client_IP.toString();
-#endif
-#ifdef IRC_SERVER
-      string_rx[0] = "(I)Upstream router:  " + Client_Gateway.toString();
-#else
-      string_rx[0] = "Upstream router:     " + Client_Gateway.toString();
-#endif
-#else
-#ifdef BT_ENABLE_FOR_AP
+      if (UsesUpstreamWifi()) {
+        string_rx[2] = ":SYS: Upstream WiFi: " + settings.upstreamSSID;
+        string_rx[1] = String(settings.dhcp ? "(D)Client IP: " : "Client IP: ") + Client_IP.toString();
+        string_rx[0] = "Router: " + Client_Gateway.toString();
+      } else if (activeMode == CELLSOL_AP_BT) {
       //                                   012345678901234567890
       //              012345678901234567890
-      string_rx[2] = ":SYS: This unit can  also be talked to via";
-      string_rx[1] = "Bluetooth. You can   download the app via";
-      string_rx[0] = "wifi, then reconnect using it.";
-#else
+        string_rx[2] = ":SYS: This unit also supports Bluetooth";
+        string_rx[1] = "You can download a BT app over WiFi";
+        string_rx[0] = "and reconnect over Bluetooth.";
+      } else {
 #ifdef MODEFLIP
       //                                   012345678901234567890
       //              012345678901234567890
@@ -2186,8 +2347,7 @@ Serial.println("Ten");
       string_rx[1] = "unit and immediately press and hold PROG";
       string_rx[0] = "after letting the RST button go.";
 #endif
-#endif
-#endif
+      }
     }
   }
 #endif
@@ -2282,6 +2442,247 @@ void send_ok_response()
   wificlient1.println();
 }
 
+// The settings URL is deliberately unadvertised, not password protected.
+// Keep its path in config.h; never put upstream WiFi passwords into GET URLs.
+#define MAX_SETTINGS_POST 2048
+
+String htmlAttribute(String value) {
+  value.replace("&", "&amp;");
+  value.replace("<", "&lt;");
+  value.replace(">", "&gt;");
+  value.replace("\"", "&quot;");
+  value.replace("'", "&#39;");
+  return value;
+}
+
+void settingsField(const char *label, const char *name, const String &value,
+                   int maxLength, bool password = false) {
+  wificlient1.print("<p><label>");
+  wificlient1.print(label);
+  wificlient1.print(" <input name=\"");
+  wificlient1.print(name);
+  wificlient1.print("\" type=\"");
+  wificlient1.print(password ? "password" : "text");
+  wificlient1.print("\" maxlength=\"");
+  wificlient1.print(maxLength);
+  wificlient1.print("\" value=\"");
+  wificlient1.print(htmlAttribute(value));
+  wificlient1.println("\"></label></p>");
+}
+
+void settingsCheck(const char *label, const char *name, bool checked) {
+  wificlient1.print("<p><label><input type=\"checkbox\" name=\"");
+  wificlient1.print(name);
+  wificlient1.print("\" value=\"1\"");
+  if (checked) wificlient1.print(" checked");
+  wificlient1.print("> ");
+  wificlient1.print(label);
+  wificlient1.println("</label></p>");
+}
+
+void settingsModeOption(uint8_t id, const char *label) {
+  wificlient1.print("<option value=\"");
+  wificlient1.print(id);
+  wificlient1.print("\"");
+  if (settings.mode == id) wificlient1.print(" selected");
+  wificlient1.print(">");
+  wificlient1.print(label);
+  wificlient1.println("</option>");
+}
+
+void sendSettingsPage(const String &message = "") {
+  send_ok_response();
+  send_html_header();
+  wificlient1.println("<body style=\"max-width:44em;margin:1em auto;padding:0 1em;text-align:left\">"
+                      "<h2>CellSol settings</h2><p>Changes are stored in flash and take effect after saving and restarting. "
+                      "PROG held at boot selects Bluetooth from standard AP mode, or a temporary recovery AP from any other mode.</p>"
+                      "<p>Anyone who knows this URL can change these values. Use on a trusted local network.</p>");
+  if (message.length()) {
+    wificlient1.print("<p><strong>");
+    wificlient1.print(htmlAttribute(message));
+    wificlient1.println("</strong></p>");
+  }
+  wificlient1.print("<form action=\"/");
+  wificlient1.print(SETTINGS_PAGE_PATH);
+  wificlient1.println("/save\" method=\"POST\" accept-charset=\"utf-8\">"
+                      "<fieldset><legend>Node identity</legend><p>The pylon owns IDs ending in 0; "
+                      "the final hex digit is reserved for attached WiFi, Bluetooth, and serial clients.</p>");
+  wificlient1.print("<p>Current pylon ID: <code>");
+  wificlient1.print(fourhex(derpme, spare_id_nibble));
+  wificlient1.println("</code></p>");
+  settingsField("Node ID (4 hex digits; last digit becomes 0; 0000 = automatic)",
+                "nodeid", settings.nodeID.length() ? settings.nodeID : "0000", 4);
+  wificlient1.println("<p>An ID change broadcasts <code>oldID:&gt;&gt;&gt;newID</code> "
+                      "over LoRa after restart. Manually chosen IDs do not use battery noise.</p>"
+                      "</fieldset><fieldset><legend>Local connection</legend>"
+                      "<p><label>Operating mode <select name=\"mode\">");
+  settingsModeOption(CELLSOL_AP, "WiFi AP (PROG button can select Bluetooth)");
+  settingsModeOption(CELLSOL_BT, "Bluetooth only (hold PROG at boot for recovery AP)");
+  settingsModeOption(CELLSOL_AP_BT, "WiFi AP + Bluetooth");
+  settingsModeOption(CELLSOL_STA_BT, "Upstream WiFi client + Bluetooth");
+  settingsModeOption(CELLSOL_AP_STA_BT, "WiFi AP + upstream WiFi client + Bluetooth");
+  wificlient1.println("</select></label></p>");
+  wificlient1.print("<p>Current local AP address: <code>");
+  wificlient1.print(AP_IP.toString());
+  wificlient1.println("</code></p>");
+  settingsField("Local AP third IPv4 octet (0-254; blank = automatic)",
+                "apoct", settings.apThirdOctet < 0 ? "" : String(settings.apThirdOctet), 3);
+  settingsField("AP/Bluetooth name prefix", "aproot", settings.apPrefix, 17);
+  settingsField("WiFi transmit power (0 to 11)", "power", String(settings.wifiPower), 2);
+  wificlient1.println("</fieldset><fieldset><legend>Upstream WiFi / router</legend>");
+  settingsField("Upstream SSID", "usssid", settings.upstreamSSID, 32);
+  settingsField("Upstream password (leave blank to keep current)", "uspass", "", 63, true);
+  settingsCheck("Clear stored upstream password", "clearpass", false);
+  settingsCheck("Use DHCP", "dhcp", settings.dhcp);
+  settingsField("Static client IPv4", "clientip", settings.clientIP, 15);
+  settingsField("Router / gateway IPv4", "gateway", settings.gatewayIP, 15);
+  settingsField("Subnet mask", "subnet", settings.subnet, 15);
+  wificlient1.println("</fieldset><fieldset><legend>IRC gateway</legend>");
+  settingsCheck("Enable IRC relay (upstream WiFi required)", "ircon", settings.ircEnabled);
+  settingsField("IRC server", "ircserver", settings.ircServer, 64);
+  settingsField("IRC port", "ircport", String(settings.ircPort), 5);
+  settingsField("IRC channel (without #)", "ircchan", settings.ircChannel, 48);
+  settingsField("IRC nick prefix", "ircnick", settings.ircNick, 20);
+  settingsField("Forward-to-radio prefix", "ircprefix", settings.ircPrefix, 16);
+  settingsCheck("Append node hex tag to IRC channel", "irctag", settings.ircChannelTag);
+  settingsCheck("Relay other CellSol IRC pylons without a text prefix", "ircpeer", settings.ircForwardPylons);
+  wificlient1.println("</fieldset><p><button type=\"submit\">Save settings and restart</button></p>"
+                      "</form><p><a href=\"/\">Back to chat</a></p></body></html>");
+}
+
+// Exact form key matching matters: 'irc' must not match 'ircon', etc.
+String formValue(const String &body, const char *key) {
+  String needle = String(key) + "=";
+  int start = 0;
+  while (start < (int)body.length()) {
+    int end = body.indexOf('&', start);
+    if (end < 0) end = body.length();
+    if (body.substring(start, start + needle.length()) == needle) {
+      String encoded = body.substring(start + needle.length(), end);
+      char decoded[MAX_SETTINGS_POST + 1];
+      encoded.toCharArray(decoded, sizeof(decoded));
+      decode_in_place(decoded);
+      return String(decoded);
+    }
+    start = end + 1;
+  }
+  return "";
+}
+
+bool invalidIRCName(const String &value) {
+  for (size_t i = 0; i < value.length(); i++) {
+    if ((uint8_t)value[i] <= 32 || value[i] == ',') return true;
+  }
+  return false;
+}
+
+bool readSettingsPostBody(const String &requestHeader, String &body) {
+  int at = requestHeader.indexOf("Content-Length:");
+  if (at < 0) return false;
+  int end = requestHeader.indexOf('\n', at);
+  String countText = requestHeader.substring(at + 15, end >= 0 ? end : requestHeader.length());
+  countText.trim();
+  long count = countText.toInt();
+  if (count <= 0 || count > MAX_SETTINGS_POST) return false;
+  body.reserve(count);
+  uint32_t started = millis();
+  while (body.length() < (size_t)count && (uint32_t)(millis() - started) < 3000) {
+    if (wificlient1.available()) {
+      body += char(wificlient1.read());
+      started = millis();
+    } else {
+      DoBasicSteps();
+      delay(1);
+    }
+    PetTheWatchdog();
+  }
+  return body.length() == (size_t)count;
+}
+
+String updateSettingsFromForm(const String &body) {
+  CellSolSettings next = settings;
+  String mode = formValue(body, "mode");
+  if (mode.length() != 1 || mode[0] < '0' || mode[0] > '4') return "Invalid mode";
+  next.mode = mode[0] - '0';
+  next.nodeID = formValue(body, "nodeid");
+  next.nodeID.trim();
+  if (next.nodeID.length()) {
+    uint8_t configuredOctet, configuredPrefix;
+    if (!ParsePylonNodeID(next.nodeID, configuredOctet, configuredPrefix))
+      return "Node ID must have four hexadecimal digits (or be blank for automatic)";
+    next.nodeID.toLowerCase();
+    next.nodeID.setCharAt(3, '0'); // mask the low nibble, do not reject it
+    if (next.nodeID == "0000") next.nodeID = ""; // revert to generated identity
+  }
+  String apOctet = formValue(body, "apoct");
+  apOctet.trim();
+  next.apThirdOctet = -1;
+  if (apOctet.length()) {
+    if (apOctet.length() > 3) return "Invalid local AP octet";
+    for (size_t i = 0; i < apOctet.length(); i++)
+      if (apOctet[i] < '0' || apOctet[i] > '9') return "Invalid local AP octet";
+    if (apOctet.toInt() > 254) return "Local AP octet must be between 0 and 254";
+    next.apThirdOctet = apOctet.toInt();
+  }
+  next.apPrefix = formValue(body, "aproot");
+  next.upstreamSSID = formValue(body, "usssid");
+  String password = formValue(body, "uspass");
+  if (formValue(body, "clearpass") == "1") next.upstreamPassword = "";
+  else if (password.length()) next.upstreamPassword = password;
+  next.dhcp = formValue(body, "dhcp") == "1";
+  next.clientIP = formValue(body, "clientip");
+  next.gatewayIP = formValue(body, "gateway");
+  next.subnet = formValue(body, "subnet");
+  String power = formValue(body, "power");
+  if (!power.length() || power.length() > 2) return "Invalid WiFi power";
+  for (size_t i = 0; i < power.length(); i++) if (power[i] < '0' || power[i] > '9') return "Invalid WiFi power";
+  if (power.toInt() > 11) return "WiFi power must be 0 to 11";
+  next.wifiPower = power.toInt();
+  next.ircEnabled = formValue(body, "ircon") == "1";
+  next.ircServer = formValue(body, "ircserver");
+  String port = formValue(body, "ircport");
+  if (!port.length() || port.length() > 5) return "Invalid IRC port";
+  for (size_t i = 0; i < port.length(); i++) if (port[i] < '0' || port[i] > '9') return "Invalid IRC port";
+  long portNum = port.toInt();
+  if (portNum < 1 || portNum > 65535) return "IRC port must be 1 to 65535";
+  next.ircPort = portNum;
+  next.ircChannel = formValue(body, "ircchan");
+  if (next.ircChannel.startsWith("#")) next.ircChannel.remove(0, 1);
+  next.ircNick = formValue(body, "ircnick");
+  next.ircPrefix = formValue(body, "ircprefix");
+  next.ircChannelTag = formValue(body, "irctag") == "1";
+  next.ircForwardPylons = formValue(body, "ircpeer") == "1";
+
+  const IPAddress nextAP(192, 168,
+                         next.apThirdOctet < 0 ? generatedAPOctet : next.apThirdOctet, 1);
+  if (!next.apPrefix.length() || next.apPrefix.length() + nextAP.toString().length() > 32 ||
+      next.upstreamSSID.length() > 32 || next.upstreamPassword.length() > 63 ||
+      next.ircServer.length() > 64 || next.ircChannel.length() > 48 ||
+      next.ircNick.length() > 20 || next.ircPrefix.length() > 16)
+    return "One or more values are too long (AP SSID including IP must fit 32 bytes)";
+  if (next.mode == CELLSOL_STA_BT || next.mode == CELLSOL_AP_STA_BT) {
+    if (!next.upstreamSSID.length()) return "Upstream WiFi SSID is required in client mode";
+  }
+  if (next.ircEnabled && (!next.ircServer.length() || !next.ircChannel.length() || !next.ircNick.length()))
+    return "IRC server, channel, and nickname are required";
+  if (invalidIRCName(next.ircServer) || invalidIRCName(next.ircChannel) ||
+      invalidIRCName(next.ircNick) || next.ircPrefix.indexOf('\r') >= 0 ||
+      next.ircPrefix.indexOf('\n') >= 0)
+    return "IRC server/channel/nick cannot contain whitespace or commas";
+  IPAddress addr;
+  if (!addr.fromString(next.clientIP) || !addr.fromString(next.gatewayIP) ||
+      !addr.fromString(next.subnet))
+    return "Invalid IPv4 address or subnet mask";
+  const String oldNodeID = fourhex(derpme, spare_id_nibble);
+  const String newNodeID = next.nodeID.length() ? next.nodeID : generatedNodeID;
+  const bool identityChanges = oldNodeID != newNodeID ||
+                               (settings.nodeID.length() && !next.nodeID.length());
+  if (!SaveCellSolSettings(next, identityChanges ? oldNodeID : ""))
+    return "Could not write NVS preferences";
+  settings = next;
+  return ""; // success
+}
+
 #ifdef SERVE_FAQ_PAGE
 void send_faq_page()
 {
@@ -2330,11 +2731,7 @@ void send_faq_page()
 #ifdef MODEFLIP
                        "<p>This pylon will turn on its WiFi once a minute to check for clients, and be a repeater the rest of the time, in order to save power."
 #else
-#ifdef BT_ENABLE_FOR_AP
-                       "<p>This pylon can be accessed both from WiFi and Bluetooth. Please note that this drains the battery fairly quickly."
-#else
-                       "<p>This pylon is in WiFi mode right now. You can switch to Bluetooth mode by pushing the PROG button right after a reset and keeping it pushed until the screen says Bluetooth."
-#endif
+                       "<p>Local connection and IRC gateway options can be configured by the pylon owner."
 #endif
                        "<p>The CellSol pylons (any version of them) will work on any 3.6 or 3.7v batteries, or any USB power banks, or anything that delivers 3.5 to 6 volts, really."
                        "<h2> About the Project</h2>"
@@ -2381,43 +2778,40 @@ bool LoginPageRequested(String url)
 
 void ServeWebPagesAsNecessary()
 {
-  dnsServer.processNextRequest();
+  if (HasLocalAP()) dnsServer.processNextRequest();
 
   // Do wifi things here
-  wificlient1 = server.available();   // Listen for incoming clients
+  wificlient1 = server.accept();   // NetworkServer 3.x API
 
-#ifdef WIFI_IS_CLIENT
-  if (wificlient1 == false)
+  if (UsesUpstreamWifi() && !wificlient1 && WiFi.status() != WL_CONNECTED)
   {
-    if (millis() > (LastReconnect + RECONNECT_EVERY))
+    if ((uint32_t)(millis() - LastReconnect) > RECONNECT_EVERY)
     {
+      LastReconnect = millis();
       ConnectToUpstreamWifi(100);
     }
   }
-#endif
   if (wificlient1) {
     //  Serial.print("2");
     currentlyserving = true;
     //      Serial.println(String(client)); // says 1
-#ifdef WIFI_IS_CLIENT
-    LastReconnect = millis();
-#endif
+    if (UsesUpstreamWifi()) LastReconnect = millis();
     unsigned long connect_timeout = millis() + 3000;
+    char c = 0, c1 = 0, c2 = 0;
     while (wificlient1.connected()) {            // loop while the client's connected
       // does not get this far outside lan for some reason
       if (wificlient1.available() == false)
       {
         //  Serial.print("3");
         DoBasicSteps();
-        dnsServer.processNextRequest();
-        if (millis() > connect_timeout)
+        if (HasLocalAP()) dnsServer.processNextRequest();
+        if ((int32_t)(millis() - connect_timeout) >= 0)
         {
           wificlient1.stop();
           break;
         }
 
       }
-      char c, c1, c2;
       if (wificlient1.available()) // if there's bytes to read from the client,
       {
         //  Serial.print("4");
@@ -2426,7 +2820,7 @@ void ServeWebPagesAsNecessary()
         c1 = c;
         c = wificlient1.read();
 
-        if (header.length() < (MAXPKTSIZEP + 30)) // prevent buffer overflows, and keeps strings a reasonable size.
+        if (header.length() < MAX_HTTP_REQUEST_SIZE)
           header += c;
 
         //        Serial.print(c1);
@@ -2440,11 +2834,22 @@ void ServeWebPagesAsNecessary()
 
           //Serial.print(header);
 
-          long derp = header.indexOf("Host: ");
-          hoststring = header.substring(derp + 6);
-          hoststring = hoststring.substring(0, hoststring.indexOf('\n') - 1) + "/";
+          int hostStart = header.indexOf("Host: ");
+          if (hostStart >= 0)
+          {
+            int hostEnd = header.indexOf('\n', hostStart);
+            hoststring = header.substring(hostStart + 6,
+                                          hostEnd >= 0 ? hostEnd : header.length());
+            hoststring.trim();
+            hoststring += "/";
+          }
+          else
+            hoststring = ipstring_a + "/";
 
-          String whattoget = header.substring(4, header.indexOf(" HTTP/"));
+          const int firstSpace = header.indexOf(' ');
+          const int secondSpace = header.indexOf(' ', firstSpace + 1);
+          String whattoget = (firstSpace >= 0 && secondSpace > firstSpace)
+            ? header.substring(firstSpace + 1, secondSpace) : "";
 
           //Serial.print(hoststring);
 
@@ -2476,6 +2881,31 @@ void ServeWebPagesAsNecessary()
           {
             wificlient1.println("HTTP/1.1 204 No Content\r\n");
             //                wificlient1.println();// we're not actually sending anything
+          }
+          else if (whattoget == String("/") + SETTINGS_PAGE_PATH && header.startsWith("GET "))
+          {
+            sendSettingsPage();
+          }
+          else if (whattoget == String("/") + SETTINGS_PAGE_PATH + "/save" && header.startsWith("POST "))
+          {
+            String body;
+            if (!readSettingsPostBody(header, body)) {
+              sendSettingsPage("Invalid or oversized settings request; nothing was saved");
+            } else {
+              String error = updateSettingsFromForm(body);
+              if (error.length()) {
+                sendSettingsPage(error + "; nothing was saved");
+              } else {
+                send_ok_response();
+                send_html_header();
+                wificlient1.println("<body><h2>Saved</h2><p>Restarting CellSol. "
+                                    "Reconnect to the configured WiFi address. "
+                                    "If upstream WiFi is unavailable, the local CellSol AP will return for recovery.</p></body></html>");
+                wificlient1.flush();
+                delay(1200);
+                ESP.restart();
+              }
+            }
           }
 #ifdef SERVE_FAQ_PAGE
           else if (whattoget.equals("/faq.html")) // can  be done for other emergency files here
@@ -2556,35 +2986,32 @@ void ServeWebPagesAsNecessary()
 #endif
           else if (whattoget.startsWith("/get"))
           {
-            // get header value for input1 which should be message
-            gotstring = header.substring(header.indexOf("input1="));
-            gotstring = gotstring.substring(0, gotstring.indexOf("HTTP/1.1"));
-            gotstring = gotstring.substring(7, gotstring.indexOf("&refresh="));//HTTP/1.1")); //input1= is 7 characters
-            if (gotstring.length() > (MAXPKTSIZE + 5)) // prevent intentional spam on arrival. the other input methods already do this
-            {
-              gotstring = "(>maxsize)" + gotstring.substring(0, 20) + "..."; // give a preview of what was sent, in case it's important and got thru even if it should not have
-            }
-            if (gotstring.length() > MAXPKTSIZEM) // prevent accidental spam // do not flood the lora
-            {
-              gotstring = gotstring.substring(0, MAXPKTSIZEM);
-            }
+            // Parse the URL's query, not the whole HTTP header. The old code
+            // expected &refresh= even though the JavaScript never sent it.
+            const int inputStart = whattoget.indexOf("input1=");
+            gotstring = (inputStart >= 0) ? whattoget.substring(inputStart + 7) : "";
+            const int ampersand = gotstring.indexOf('&');
+            if (ampersand >= 0)
+              gotstring = gotstring.substring(0, ampersand);
+            char tempme[MAX_HTTP_REQUEST_SIZE + 1];
+            gotstring.toCharArray(tempme, sizeof(tempme));
+            decode_in_place(tempme);
+            gotstring = String(tempme);
+            gotstring.trim();
+            if (gotstring.length() > MAXPKTSIZEM)
+              gotstring = "(>maxsize)" + gotstring.substring(0, 20) + "...";
             if (gotstring.length() > 1) // don't send empty strings or strings with just
             {
-              char tempme[MAXPKTSIZE]; // slightly more efficient
-              gotstring.toCharArray(tempme, MAXPKTSIZE);
-              decode_in_place(tempme);
-              gotstring = String(tempme);
-              gotstring.trim();
               String hextag_temp;
               last_web_caller = wificlient1.remoteIP()[3];
-#ifdef WIFI_IS_CLIENT
-              lwc = wificlient1.remoteIP();
-              hextag_temp = fourhex(lwc[0] ^ lwc[3], lwc[1] ^ lwc[2]); // should be unique enough, but mix it up so that we don't accidentally reveal someone's ip
-#else
-              if (last_web_caller < 16)
-                last_web_caller = last_web_caller + spare_id_nibble; // do SOMETHING with the third digit
-              hextag_temp = fourhex(derpme, last_web_caller);
-#endif
+              if (UsesUpstreamWifi() && !client_on_lan) {
+                lwc = wificlient1.remoteIP();
+                hextag_temp = fourhex(lwc[0] ^ lwc[3], lwc[1] ^ lwc[2]);
+              } else {
+                if (last_web_caller < 16)
+                  last_web_caller += spare_id_nibble;
+                hextag_temp = fourhex(derpme, last_web_caller);
+              }
               if (hextag_temp.charAt(3) == ('0'))
                 hextag_temp.setCharAt(3, '1'); // only actual nodes are allowed to end in 0
               lasttagimade = hextag_temp;
@@ -2598,9 +3025,7 @@ void ServeWebPagesAsNecessary()
               if (string_rx[0].equals(gotstring) == false) // prevents sending it out twice if it's the last thing that went out
               {
                 Serial.println(gotstring);
-#ifdef BT_ENABLE_FOR_AP
-                ESP_BT_println(gotstring);
-#endif
+                if (has_bluetooth_been_initialized) ESP_BT_println(gotstring);
 
 
                 //Send LoRa packet to receiver. Will need to make sure we don't send duplicates.
@@ -2701,11 +3126,11 @@ void ServeWebPagesAsNecessary()
                                 "  }\r\n</script>"
 
                                 "<script>function sendMsg(){\r\n"
-                                "getSend('\\get',document.getElementById('msgfield').value); document.getElementById('msgfield').value=\"\";\r\n"
+                                "getSend('/get',document.getElementById('msgfield').value); document.getElementById('msgfield').value=\"\";\r\n"
                                 "}\r\n"
                                 "function getSend(url, input1=null) {\r\n" // we default undefined so that we don't have to explicitly specify it; it just gets passed to the next function
                                 "var xhttp = new XMLHttpRequest();\r\n"
-                                "xhttp.open('GET', url+\"?input1=\" + input1, true); xhttp.send();" // we don't care about the response, we are just dumb sending.
+                                "xhttp.open('GET', url+\"?input1=\" + encodeURIComponent(input1 || ''), true); xhttp.send();"
                                 "}"
                                 "</script>"
                                 "<body>CellSol WiFi Pylon " VERSIONSTRING " at ");
@@ -2744,10 +3169,12 @@ void ServeWebPagesAsNecessary()
             wificlient1.print  ("<br><small>CellSol is a serverless relay chat between LoRa pylons. It is intended for enabling communication in case of cell phone network disruption.<br>"
                                 "Bluetooth terminal APK download (you may have to enter URL in browser manually): "
 #ifdef PROVIDE_APK
-                                "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo:(" PYLONMODEL ";"  PYLONTYPE " ");
+                                "<a href=\"http://" + hoststring + "btt.apk\" target=\"_blank\">http://" + hoststring + "btt.apk</a> , <a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo:(" PYLONMODEL ";");
 #else
-                                "<a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo:(" PYLONMODEL ";"  PYLONTYPE " ");
+                                "<a href=\"http://f3.to/btt.apk\" target=\"_blank\">http://f3.to/btt.apk</a><br>To help this project grow, you must construct additional pylons. <br>Sysinfo:(" PYLONMODEL ";");
 #endif
+            wificlient1.print(PylonTypeLabel());
+            wificlient1.print(" ");
             wificlient1.print(status_string());
 #ifdef PROVIDE_SOURCE_CODE
             wificlient1.print("The source code for all platforms is available <a href=\"http://" + hoststring + "src.zip\" target=\"_blank\">here.</a>");
@@ -2772,7 +3199,7 @@ void ServeWebPagesAsNecessary()
             {
               send_ok_response();
               send_html_header(0);
-              wificlient1.println("<body>CellSol WiFi Pylon " VERSIONSTRING " (" PYLONMODEL ";" PYLONTYPE" does not hold " + whattoget + "<br>Redirecting to main</body></html> ");
+              wificlient1.println(String("<body>CellSol WiFi Pylon " VERSIONSTRING " (" PYLONMODEL ";") + PylonTypeLabel() + " does not hold " + htmlAttribute(whattoget) + "<p>Redirecting to main</p></body></html>");
               wificlient1.println();
             }
           }
@@ -2799,34 +3226,34 @@ byte pongs_joins = 0;
 
 WiFiClient wificlient2;
 bool has_irc_been_initialized = false;
-IRCClient ircclient(IRC_SERVER, IRC_PORT, wificlient2);
+IRCClient *ircclient = nullptr;
 
 void DoIRCStuff()
 {
+  if (!settings.ircEnabled || !UsesUpstreamWifi() || WiFi.status() != WL_CONNECTED)
+    return;
   if (failed_irc_connections > IRC_FAILED_TRE)
     return;
 
   if (has_irc_been_initialized == false)
   {
     hextag_irc = fourhex(derpme, spare_id_nibble + 0);
-    IRC_NICK = IRC_NICK_ROOT + hextag_irc;
-#ifdef IRC_CHAN_HEXTAG
-    IRC_CHAN = String("#") + IRC_CHAN_ROOT + hextag_irc;
-#else
-    IRC_CHAN = String("#") + IRC_CHAN_ROOT;
-#endif
-#ifdef FWD_PREFIX
-    prefixlength = String(FWD_PREFIX).length();
-#endif
-    ircclient.setCallback(irc_callback);
-    ircclient.setSentCallback(debugSentCallback);
+    IRC_NICK = settings.ircNick + hextag_irc;
+    IRC_CHAN = String("#") + settings.ircChannel;
+    if (settings.ircChannelTag) IRC_CHAN += hextag_irc;
+    prefixlength = settings.ircPrefix.length();
+    if (ircclient == nullptr)
+      ircclient = new IRCClient(settings.ircServer.c_str(), settings.ircPort, wificlient2);
+    if (ircclient == nullptr) return;
+    ircclient->setCallback(irc_callback);
+    ircclient->setSentCallback(debugSentCallback);
     has_irc_been_initialized = true;
   }
-  if (!ircclient.connected())
+  if (!ircclient->connected())
   {
     Serial.println(":SYS:IRC_CONN");
     // Attempt to connect
-    if (ircclient.connect(IRC_NICK, IRC_NICK)) //IRC_NICKNAME, IRC_USER)) {
+    if (ircclient->connect(IRC_NICK, IRC_NICK))
     {
       Serial.println(":SYS:IRC_CONN_OK");
       failed_irc_connections = 0;
@@ -2842,30 +3269,31 @@ void DoIRCStuff()
     return;
   }
 
-  ircclient.loop();
+  ircclient->loop();
 
 }
 void irc_broadcast (String s)
 {
-  if (has_irc_been_initialized)
-    if (ircclient.connected())
-      ircclient.sendMessage(IRC_CHAN, s);
+  if (settings.ircEnabled && has_irc_been_initialized && ircclient != nullptr)
+    if (ircclient->connected())
+      ircclient->sendMessage(IRC_CHAN, s);
 }
 
 void irc_callback(IRCMessage ircMessage)
 {
   PetTheWatchdog();
   // PRIVMSG ignoring CTCP messages
-  if (ircMessage.command == "PRIVMSG" && ircMessage.text[0] != '\001')
+  if (ircMessage.command == "PRIVMSG" && ircMessage.text.length() && ircMessage.text[0] != '\001')
   {
-#ifdef FWD_PREFIX // forward if there's a valid prefix, or if there's another pylon that is using correct syntax.
-    bool validforward = ircMessage.text.startsWith(FWD_PREFIX);
+    bool validforward = ircMessage.text.startsWith(settings.ircPrefix);
     bool isotherpylon = false;
-#ifdef ALLOW_PYLON_FORWARD
-    if (validforward == false)
-      //      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 1))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
-      isotherpylon = ircMessage.nick.startsWith(IRC_NICK_ROOT) and (ircMessage.nick.charAt(ircMessage.nick.length()) == '0') and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3))) and (IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4)));
-#endif
+    if (validforward == false && settings.ircForwardPylons)
+      isotherpylon = ircMessage.nick.startsWith(settings.ircNick) &&
+                      ircMessage.nick.length() >= settings.ircNick.length() + 4 &&
+                      ircMessage.nick.charAt(ircMessage.nick.length() - 1) == '0' &&
+                      IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 2)) &&
+                      IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 3)) &&
+                      IsHex(ircMessage.nick.charAt(ircMessage.nick.length() - 4));
     validforward = validforward or isotherpylon;
     if (validforward)
     {
@@ -2880,17 +3308,10 @@ void irc_callback(IRCMessage ircMessage)
         gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(0, 6) + ">" + ircMessage.text.substring(prefixlength, MAXPKTSIZEM);
       }
       gotstring = gotstring.substring(0, MAXPKTSIZEP);
-#else
-    {
-      String gotstring = hextag_irc + TAG_END_SYMBOL + ircMessage.nick.substring(0, 6) + ">" + ircMessage.text;
-      gotstring = gotstring.substring(0, MAXPKTSIZEP);
-#endif
       Serial.println(gotstring);
 
-#ifdef BT_ENABLE_FOR_AP
       if (has_bluetooth_been_initialized)
         ESP_BT_println(gotstring);
-#endif
 
       LoraSendAndUpdate(gotstring);
       cyclestrings(gotstring);
@@ -2904,7 +3325,7 @@ void irc_callback(IRCMessage ircMessage)
     IRC_NICK = IRC_NICK + "_";
     if (IRC_NICK.endsWith("___"))
       IRC_NICK.replace("___", "");
-    ircclient.sendRaw("NICK " + IRC_NICK);
+    if (ircclient) ircclient->sendRaw("NICK " + IRC_NICK);
     //ircclient.sendRaw("USER " + IRC_USER + " 8 * :Arduino IRC Client");
     //Serial.println(IRC_NICK);
   }
@@ -2916,8 +3337,10 @@ void debugSentCallback(String data)
   PetTheWatchdog();
   if (data.startsWith("SENT: PONG") and (++pongs_joins < 3)) // if we are getting pings, we are in good shape as far as the irc server is concerned, so join the channel and start doing work.
   {
-    ircclient.sendRaw("JOIN " + IRC_CHAN); // if already joined, rejoin, not a problem
-    ircclient.sendRaw("TOPIC " + IRC_CHAN + " :" + IRC_TOPIC); // if already set, not a problem
+    if (ircclient) {
+      ircclient->sendRaw("JOIN " + IRC_CHAN); // if already joined, rejoin, not a problem
+      ircclient->sendRaw("TOPIC " + IRC_CHAN + " :CellSol relay channel. Prefix radio messages with " + settings.ircPrefix);
+    }
 
   }
   //Serial.print("debugSentCallback");
