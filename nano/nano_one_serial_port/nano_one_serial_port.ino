@@ -8,18 +8,25 @@
   This file is used for Atmel328-based boards (Arduino Uno, Mini, Nano, etc).
 *********/
 
-#define VERSIONSTRING "0.32"
+// General-purpose CellSol node
+#define DEVICETYPE_START 'a'
+#define VERSIONSTRING "0.37"
 
-// Actual running speed is 2Mhz. BE SURE TO SET THE SPEED CORRECTLY FOR YOUR ARDUINO WHEN PROGRAMMING THIS. Nothing bad happens if you get it wrong but you will waste power and the serial port will run at the wrong baud rate (4800 or 19200).
-//#define GO_A_LOT_SLOWER // if defined, operate at 0.5Mhz, and keeps serial port running at 2400bps, further slows down processing. Useful for drone-droppable pylons that need a small panel. not recommended for bluetooth use since the bluetooth module will make the power saving irrelevant anyway.
+// Default is 2 MHz / 9600 baud; with GO_A_LOT_SLOWER it is 2 MHz / 9600 baud. Compile/upload for the correct 8 or 16 MHz Nano oscillator.
+// #define GO_A_LOT_SLOWER // useful with a small solar panel; Bluetooth draws more power
 #define USE_BATTERY_NOISE_FOR_ID // if undefined, same id across powerups. if not, use the last 2 bits as noise.
-//#define USE_THIS_ID "edbd" // overrides above. useful for situations where e.g. there is a drone mounted repeater that should be very different from other devices
+//#define USE_THIS_ID "abcd" // Optional fixed node ID. Otherwise use UniqueID/EEPROM.
+//#define RSSI_TEST // for rssi test
+
+#define APPLICATION // enable simple local pin automation via serial commands
+#define BASICPINS
+#define LORA_TX_POWER 20 // dBm. Use 14 for a weaker transmitter / smaller power budget.
 
 #define RECALLSIZE 251 // how many bytes to save? (must be <256 sorry)
 #define RECALL_STRAY_CHARS // trim to packet, or keep last packet that went away?
 #define CONDENSE_TAGS // if it's the same person messaging more than once, condense messages in memory. A bit slow.
 
-#define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
+//#define SEND_TWICE // if defined, allow sending a packet twice after a pseudorandom delay, in case the first one got lost
 #define RSSI_TRE_LO -120 // if sendtwice is defined, below this (for the last 4 received packets), turn on sendtwice
 #define RSSI_TRE_HI -100 // if sendtwice is defined, above this (for the last 4 received packets), turn off sendtwice
 
@@ -27,7 +34,7 @@
 #define REBROADCAST_DISASTER_RADIO_PACKETS
 //#define DISPLAY_DISASTER_RADIO_PACKETS
 
-#define VOLTAGECUTOFF 3150 // if defined, system will go back to sleep if the system voltage is less than this.
+#define VOLTAGECUTOFF 3000//3150 // if defined, system will go back to sleep if the system voltage is less than this.
 
 //Libraries for LoRa
 #include <SPI.h>
@@ -36,6 +43,7 @@
 #include <LowPower.h>
 #include <avr/wdt.h>
 #include <ArduinoUniqueID.h>
+#include <EEPROM.h>
 
 //define the pins used by the LoRa transceiver module
 // it's pretty much how you wire the whole thing, too
@@ -46,23 +54,26 @@
 #define RST 7 // 8 and 9 are used by altsoftserial
 //#define DIO0 8 // not used right now?
 //#define ANNOUNCE // tell the world we are alive
-
-
 #define TAG_END_SYMBOL ':'
 //433E6 for Asia
 //866E6 for Europe
 //915E6 for North America
 #define BAND 9151E5 //Mhz just to stay away from center band
+// Existing 0.37d initializes LoRa *after* selecting SF9 / 62.5kHz, which
+// resets those registers. SF7 / 125kHz keeps compatibility with that on-air
+// behavior and with the current ESP32 CellSol firmware.
+#define CELLSOL_LORA_SF 7
+#define CELLSOL_LORA_BW_HZ 125000L
 #define REQUIRE_TAG_FOR_REBROADCAST // if defined, require xxxx: tag for rebroadcast.
 //#define REQUIRE_TAG_FOR_REBROADCAST_STRICT // on top of that, the first four characters must be hex digits.
 #define BAD_CHARACTERS_MAX_DIVIDER 10
 //#define SHOW_RSSI // if enabled, show RSSI for wireless packets coming in.
 
-// Repeat sending the last message until you hear it back. 
+// Repeat sending the last message until you hear it back.
 //#define REPEAT_UNTIL_ACK
 //#define REPEAT_DELAY 500 // delay in ms
 
-#ifdef REPEAT_UNTIL_ACK  
+#ifdef REPEAT_UNTIL_ACK
 boolean got_lora_ack = false;
 long last_repeat_time = millis();
 String message_to_repeat = "";
@@ -71,6 +82,8 @@ String message_to_repeat = "";
 //packet counter
 byte charcounter = 0;
 boolean readytosend = false;
+
+const char devicetype = DEVICETYPE_START;
 
 String LoRaData = ""; // god this is lazy. change to character array please
 String LastWeGot = ""; // god this is lazy. change to character array please
@@ -95,9 +108,14 @@ int rssi; // last packat received rss
 unsigned long pseudoseconds = 0;
 long UTC_Seconds = -1;
 
+#ifdef APPLICATION
+void RunApplication();
+bool HandleApplicationCommand(Stream &st, const char *command);
+#endif
+
 unsigned long psm = 0;
 void PetTheWatchdog() {
-  if (millis() > psm)
+  if ((int32_t)(millis() - psm) >= 0)
   {
     wdt_reset();
 #ifdef GO_A_LOT_SLOWER
@@ -106,6 +124,9 @@ void PetTheWatchdog() {
     psm = psm + 250; // 1000/4
 #endif
     pseudoseconds++;
+#ifdef APPLICATION
+    RunApplication();
+#endif
     //    Serial.println(pseudoseconds);
   }
 }
@@ -114,22 +135,25 @@ void PetTheWatchdog() {
 String hextag = "XXXX:"; // usually the last two IP octets; gives pseudonimity to sender
 String fourhex(int num)
 {
-
-  #ifdef USE_THIS_ID
-    return String(USE_THIS_ID);
-  #else
-  num = num | 4096;
-  /*
-  if (num < 10)
-    return "000" + String(num, HEX);
-  if (num < 100)
-    return "00" + String(num, HEX);
-  if (num < 1000)
-    return "0" + String(num, HEX);
-  return String((num+0x1000, HEX);
-  */
+#ifdef USE_THIS_ID
+  return String(USE_THIS_ID);
+#else
+  // Only honor a programmed EEPROM tag if all four bytes are hex digits.
+  // An uninitialized/partly written EEPROM must not produce an invalid ID.
+  String saved = "";
+  for (byte i = 3; i <= 6; i++) {
+    const char c = (char)EEPROM.read(i);
+    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+          (c >= 'A' && c <= 'F'))) {
+      saved = "";
+      break;
+    }
+    saved += c;
+  }
+  if (saved.length() == 4) return saved;
+  num = (num | 0x1000) & 0xFFFF;
   return String(num, HEX);
-  #endif
+#endif
 }
 
 
@@ -163,7 +187,7 @@ long readVcc() {
   uint8_t high = ADCH; // unlocks both
 
   long result = (high << 8) | low;
-
+  if (result == 0) return 0;
   result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
   return result; // Vcc in millivolts
 }
@@ -173,6 +197,14 @@ void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 
 void setup() {
+  MCUSR = 0;
+  wdt_disable();
+  delay(10);
+  // sort-of-fix for old arduino bootloader on cheapie pro minis etc.
+  // to flash if it doesn't want to: do not power from arduino plug, start flashing process,
+  // and turn the arduino on and off in time with flashing retries until it catches
+  // it has to be turned on/off: reset won't be sufficient
+
 
   LastWeGot.reserve(RECALLSIZE + 6);
   LoRaData.reserve(MAXPKTSIZE + 6);
@@ -185,7 +217,6 @@ void setup() {
   hextag = fourhex(UniqueID8[6] * 256 + UniqueID8[7]) + TAG_END_SYMBOL; // never changes, so run it at setup and leave it alone.
 #endif
 
-  
   if (hextag.charAt(3) == '0') // this unit is not set up to do service tasks, so don't end in 0
     hextag.setCharAt(3, '1');
 
@@ -195,16 +226,16 @@ void setup() {
 #if (F_CPU==16000000)
   setClockPrescaler(5); //0 == 16Mhz 1 == 8Mhz 2==4Mhz 3==2Mhz etc
   Serial.begin(76800); // actually 2400
-  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 16>0.5"));
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + devicetype + F("VER:" VERSIONSTRING " UPT:0 CLK:" " 16>0.5"));
 #else
   setClockPrescaler(4); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 2400
-  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" "8>0.5"));
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + devicetype + F("VER:" VERSIONSTRING " UPT:0 CLK:" "8>0.5"));
 #endif
 #else // assume 8Mhz
   setClockPrescaler(4); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 2400
-  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>0.5"));
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + devicetype + F("VER:" VERSIONSTRING " UPT:0 CLK:" " 8>0.5"));
 #endif
 #else
   // we want to run this at 2Mhz regardless if we are starting at 8 or 16.
@@ -212,28 +243,25 @@ void setup() {
 #if (F_CPU==16000000)
   setClockPrescaler(3); //0 == 16Mhz 1 == 8Mhz 2==4Mhz 3==2Mhz etc
   Serial.begin(76800); // actually 9600
-  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 16>2"));
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + devicetype + F("VER:" VERSIONSTRING " UPT:0 CLK:" " 16>2"));
 #else
   setClockPrescaler(2); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 9600
-  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + devicetype + F("VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
 #endif
 #else // assume 8Mhz
   setClockPrescaler(2); //0 == 8Mhz 1 == 4Mhz 2==2Mhz 3==1Mhz etc
   Serial.begin(38400); // actually 9600
-  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + F(" VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
+  Serial.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + devicetype + F("VER:" VERSIONSTRING " UPT:0 CLK:" " 8>2"));
 #endif
 #endif
 
-  SPI.setClockDivider(1); // spi abuse courtesy of the fact that we are running at 2Mhz anyway // SPI_CLOCK_DIV2
+  SPI.setClockDivider(SPI_CLOCK_DIV2); // use the named divider, not raw register bits
   //initialize Serial Monitor
   //SPI LoRa pins
   SPI.begin();//SCK, MISO, MOSI, SS);
   //setup LoRa transceiver module
   LoRa.setPins(SS, RST);//, DIO0);
-
-  LoRa.setSpreadingFactor(9); // default 7
-  LoRa.setSignalBandwidth(62.5E3); //default 125E3
   //  LoRa.crc(); // we would rather get a damaged packet than no packet at all; maybe some of it will be readable.
 
   wdt_enable(WDTO_8S); // note that this is independent of clock speed.
@@ -245,12 +273,10 @@ void setup() {
     mydelay(200);
     resetFunc(); //call reset
   }
-
-#ifdef GO_A_LOT_SLOWER
-  LoRa.setTxPower(14, 1 ); // tests show that this is necessary to run from a small panel, which is the only reason why you'd want to slow down anyway
-#else
-  LoRa.setTxPower(19, 1 ); // PABOOST; for RFO use 14,0
-#endif
+  // LoRa.begin() resets the SX127x registers. Configure radio AFTER begin.
+  LoRa.setSpreadingFactor(CELLSOL_LORA_SF);
+  LoRa.setSignalBandwidth(CELLSOL_LORA_BW_HZ);
+  LoRa.setTxPower(LORA_TX_POWER, PA_OUTPUT_PA_BOOST_PIN);
 
 #ifdef ANNOUNCE
 #ifdef GO_A_LOT_SLOWER
@@ -264,52 +290,98 @@ void setup() {
 
 bool recalldots = false;
 
-void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
+inline bool IsHex(char c);
+
+void PrintNodeStatus(Stream &st)
 {
-  while (st.available() > 0)
-  {
-    buf[cnt++] = st.read();
-    if (cnt > MAXPKTSIZE)
-    {
-      sendout = true;
-      return;
-    }
-    if ((cnt > 1 and buf[cnt - 1] == 13))
-    {
-      sendout = true;
-    }
-
-    // eat ascii 255s that that show up
-    if ((buf[0]<6 or buf[0]>127) and cnt == 1)
-      cnt = 0;
-
-    if (buf[0] == ',' and buf[2] == ',' and (buf[1] == ',' or buf[1] == '.') and (buf[3] == 13 or buf[3] == 10)) // special: send status string and memory
-    {
-      cnt = 0;
-      buf[0] = 0;
-      buf[1] = 0;
-      buf[2] = 0;
-      sendout = false;
-      st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") + String(pseudoseconds) + " MEM:"); // keep :SYS: TAG: same across hardware, or edit the bluetooth app to fit
-      if (LastWeGot.length() > 0)
-      {
-        if (recalldots)
-          st.print(F("....."));
-        st.println(LastWeGot);
-      }
-    }
-    if (buf[0] == 10 or buf[0] == 13) // eliminate stray RFs in case we get a CRLF, and don't send empty packets
-    {
-      cnt = 0;
-      buf[0] = 0;
-      buf[1] = 0;
-      sendout = false;
-    }
+  st.println(":SYS: TAG:" + hextag + " VCC:" + String(vcc) + " " + devicetype +
+             " VER:" VERSIONSTRING " UPT" + (broadcast_twice ? ";" : ":") +
+             String(pseudoseconds) + " MEM:");
+  if (LastWeGot.length() > 0) {
+    if (recalldots) st.print(F("....."));
+    st.println(LastWeGot);
   }
 }
 
-int LastToAddChk0 = 0;
-int LastToAddChk1 = 0;
+void SetNodeIDFromSerial(Stream &st, const char *newID)
+{
+#ifdef USE_THIS_ID
+  st.println(F(":SYS:ID_FIXED_IN_FIRMWARE"));
+#else
+  // The four-byte EEPROM tag at offsets 3..6 is a legacy protocol feature.
+  // Keep both the storage layout and the on-air change notice unchanged.
+  for (byte i = 0; i < 4; i++) {
+    if (!IsHex(newID[i])) {
+      st.println(F(":SYS:INVALID_ID"));
+      return;
+    }
+  }
+  if (newID[3] == '0') {
+    st.println(F(":SYS:ID_ENDING_0_RESERVED"));
+    return;
+  }
+  const String oldID = hextag;
+  for (byte i = 0; i < 4; i++) EEPROM.update(i + 3, newID[i]);
+  hextag = String(newID).substring(0, 4) + TAG_END_SYMBOL;
+  st.println(":SYS:TAG_CHANGED " + oldID + " -> " + hextag);
+  LoraSendAndUpdate(oldID + ">>>" + hextag.substring(0, 4));
+#endif
+}
+
+void ReadFromStream(Stream &st, char buf[], byte &cnt, bool &sendout)
+{
+  static bool droppingLongLine = false;
+  if (sendout) return; // finish pending LoRa transmission before reading more
+  while (st.available() > 0) {
+    const int incoming = st.read();
+    if (incoming < 0) break;
+    const char c = (char)incoming;
+    if (c == '\r' || c == '\n') {
+      if (droppingLongLine) {
+        droppingLongLine = false;
+        cnt = 0;
+        buf[0] = '\0';
+        continue;
+      }
+      if (cnt == 0) continue;
+      buf[cnt] = '\0';
+      const bool special = cnt >= 3 && buf[0] == ',' && buf[2] == ',' &&
+                           (buf[1] == ',' || buf[1] == '.');
+      if (special) {
+        if (cnt == 3) {
+          PrintNodeStatus(st);
+        } else if (cnt == 7 && IsHex(buf[3]) && IsHex(buf[4]) &&
+                   IsHex(buf[5]) && IsHex(buf[6])) {
+          SetNodeIDFromSerial(st, buf + 3);
+        } else {
+#ifdef APPLICATION
+          HandleApplicationCommand(st, buf + 3);
+#else
+          st.println(F(":SYS:UNKNOWN_COMMAND"));
+#endif
+        }
+        cnt = 0;
+        buf[0] = '\0';
+        continue;
+      }
+      sendout = true;
+      return;
+    }
+    if (droppingLongLine) continue;
+    if (cnt == 0 && (incoming < 6 || incoming > 127)) continue;
+    if (cnt >= MAXPKTSIZE - 1) {
+      droppingLongLine = true;
+      cnt = 0;
+      buf[0] = '\0';
+      st.println(F(":SYS:RX_TOO_LONG"));
+      continue;
+    }
+    buf[cnt++] = c;
+  }
+}
+
+long LastToAddChk0 = 0;
+long LastToAddChk1 = 0;
 String lasttag = "xxxx:";
 void AddToLastAndPrune(String st) { // warning: may modify st
   LastToAddChk1 = LastToAddChk0;
@@ -318,24 +390,35 @@ void AddToLastAndPrune(String st) { // warning: may modify st
     return;
   bool addenter = true;
 #ifdef CONDENSE_TAGS
-  if (st.startsWith(lasttag)) // condense tags
+  if (st.length() >= 5 && st.startsWith(lasttag)) // condense complete tags
   {
     st.remove(0, 5);
     addenter = false;
   }
   else
   {
-    lasttag = st.substring(0, 4);
+    lasttag = st.substring(0, 5);
   }
 #endif
 
+  const unsigned int incomingLength = st.length() + 2;
+  if (incomingLength > RECALLSIZE)
+    st = st.substring(incomingLength - RECALLSIZE);
   if ((LastWeGot.length() + st.length() + 2) > RECALLSIZE)
   {
-    LastWeGot.remove(0, st.length());
 #ifdef RECALL_STRAY_CHARS
+    const unsigned int toRemove = LastWeGot.length() + st.length() + 2 - RECALLSIZE;
+    LastWeGot.remove(0, toRemove);
     recalldots = true;
 #else
-    LastWeGot.remove(0, LastWeGot.indexOf('\n')); // uncomment me for
+    while (LastWeGot.length() + st.length() + 2 > RECALLSIZE) {
+      int newline = LastWeGot.indexOf('\n');
+      if (newline < 0) {
+        LastWeGot = "";
+        break;
+      }
+      LastWeGot.remove(0, newline + 1);
+    }
 #endif
   }
   if (addenter)
@@ -368,26 +451,61 @@ void SeeIfAnythingOnRadio() {
       broadcast_twice = false;
 #endif
 
-    //read packet
-    while (LoRa.available()) {
-      LoRaData = LoRa.readString();
-      LoRaData.trim();
-      if (FilterIncomingLoRa())//(LoRaData.length() > 1) and (LoRaData.substring(1).equals(LastThingISentViaLora_0.substring(1)) == false))
-      {
-
-#ifdef SHOW_RSSI
-        if (rssi < -99)
-          Serial.println(String(rssi) + ":" + LoRaData);
-        else
-          Serial.println(" " + String(rssi) + ":" + LoRaData);
-#else
-        Serial.println(LoRaData);
-#endif
-        if (LoRaData.startsWith(":SYS:") == false) // avoid spamming
-          LoraSendAndUpdate(LoRaData);
-        AddToLastAndPrune(LoRaData);
-      }
+    // Read bytes first. Disaster Radio datagrams are binary and can contain
+    // NULs, so String/trim() must never touch them before forwarding.
+    static uint8_t packet[255];
+    int len = 0;
+    while (LoRa.available() && len < (int)sizeof(packet)) {
+      const int c = LoRa.read();
+      if (c < 0) break;
+      packet[len++] = (uint8_t)c;
     }
+    if (len != packetSize) return;
+
+#ifdef REBROADCAST_DISASTER_RADIO_PACKETS
+    // TTL, length, sender/receiver, sequence, source, hopCount, metric, data.
+    if (len > 16 && packet[1] == len && packet[0] > packet[15]) {
+      packet[15]++; // leave the rest of the binary datagram unchanged
+      LoRa.beginPacket();
+      LoRa.write(packet, len);
+      LoRa.endPacket();
+#ifdef SEND_TWICE
+      if (broadcast_twice) {
+        mydelay(pseudoseconds & 7);
+        LoRa.beginPacket();
+        LoRa.write(packet, len);
+        LoRa.endPacket();
+      }
+#endif
+#ifdef DISPLAY_DISASTER_RADIO_PACKETS
+      String drstring = String("(DR):") + String(packet[2], HEX) + ":";
+      for (int i = 16; i < len && i < 80; i++)
+        if (packet[i] >= 32 && packet[i] < 127) drstring += (char)packet[i];
+      Serial.println(drstring);
+      AddToLastAndPrune(drstring);
+#endif
+      return;
+    }
+#endif
+
+    if (len >= MAXPKTSIZE) return; // text messages must fit the local buffer
+    LoRaData = "";
+    for (int i = 0; i < len; i++) {
+      if (packet[i] == 0) return; // not a text message
+      LoRaData += (char)packet[i];
+    }
+    LoRaData.trim();
+#ifdef REPEAT_UNTIL_ACK
+    if (LoRaData.equals(message_to_repeat)) got_lora_ack = true;
+#endif
+    if (!FilterIncomingLoRa()) return;
+#ifdef SHOW_RSSI
+    if (rssi < -99) Serial.print(String(rssi) + ":");
+    else Serial.print(" " + String(rssi) + ":");
+#endif
+    Serial.println(LoRaData);
+    if (LoRaData.indexOf(":SYS:") == -1) LoraSendAndUpdate(LoRaData);
+    AddToLastAndPrune(LoRaData);
   }
 }
 
@@ -400,26 +518,6 @@ inline bool IsHex(char i) {
 }
 bool FilterIncomingLoRa() {
   byte lenlen = LoRaData.length();
-
-#ifdef REBROADCAST_DISASTER_RADIO_PACKETS // what it says on the tin: do we also want to display it?
-  //Byte 0   Byte 1        Byte 2 - 5  Byte 6 - 9  Byte 10   Byte 11 - 14  Byte 15   Byte 16   Byte 17 - 255
-  //ttl      totalLength   sender      receiver    sequence  source        hopCount  metric    datagram
-  //https://github.com/sudomesh/disaster-radio/wiki/Protocol#packet-structure
-  if (lenlen == LoRaData.charAt(1) and (LoRaData.charAt(0) > LoRaData.charAt(15)) and (lenlen > 16))
-  {
-    LoRaData.setCharAt(15, (LoRaData.charAt(15) + 1) % 256); // increment the hop count
-    LoraSendAndUpdate(LoRaData); // send here, but don't cycle strings or output to serial(s)
-#ifdef DISPLAY_DISASTER_RADIO_PACKETS // only do this if we are rebroadcasting them, nobody likes a stalker
-    String drstring = "(DR)" + TAG_END_SYMBOL + LoRaData.substring(16, 176);
-    Serial.println(drstring);
-    AddToLastAndPrune(drstring);
-#endif
-    return false; // send here, but don't cycle strings or output to serial(s)
-  }
-#endif
-
-
-
 
 #ifdef REQUIRE_TAG_FOR_REBROADCAST
   if (lenlen < 5) // too short
@@ -513,11 +611,11 @@ void LoraSendAndUpdate(String whattosend)
     LoRa.print(whattosend);
     LoRa.endPacket();
   }
-  #ifdef REPEAT_UNTIL_ACK  
-  boolean got_lora_ack = false;
+#ifdef REPEAT_UNTIL_ACK
+  got_lora_ack = false;
   last_repeat_time = millis();
-  message_to_repeat = whattosend;  
-  #endif
+  message_to_repeat = whattosend;
+#endif
 }
 
 // important: this should be copy/pasted exactly between hardware types.
@@ -546,6 +644,8 @@ bool SendSerialIfReady()
     sendstr.replace('\r', ' ');
     sendstr.replace("  ", " ");
     sendstr.trim();
+    if (sendstr.length() > MAXPKTSIZE)
+      sendstr.remove(MAXPKTSIZE);
 
     LoraSendAndUpdate(sendstr);
     AddToLastAndPrune(sendstr);
@@ -561,6 +661,96 @@ bool SendSerialIfReady()
   return false;
 }
 
+#ifdef APPLICATION
+// Do not drive the UART pins (D0/D1), LoRa reset (D7), or SPI (D10-D13).
+bool SafeDigitalPin(byte pin) {
+  return (pin >= 2 && pin <= 6) || pin == 8 || pin == 9;
+}
+
+int GetAnalogPin(char digit) {
+  switch (digit) {
+    case '0': return A0;
+    case '1': return A1;
+    case '2': return A2;
+    case '3': return A3;
+    case '4': return A4;
+    case '5': return A5;
+#if (defined(NUM_ANALOG_INPUTS) && NUM_ANALOG_INPUTS > 6) || defined(A6)
+    case '6': return A6;
+#endif
+#if (defined(NUM_ANALOG_INPUTS) && NUM_ANALOG_INPUTS > 7) || defined(A7)
+    case '7': return A7;
+#endif
+    default: return -1;
+  }
+}
+
+char appReadKind = 0; // A: analog, R: digital, 0: no periodic read
+byte appReadPin = 0;
+char appReadLabel = '0';
+
+void RunApplication() {
+#ifdef BASICPINS
+  if (appReadKind == 'A') {
+    Serial.print(F(":SYS:APP:A"));
+    Serial.print(appReadLabel);
+    Serial.print(':');
+    Serial.println(analogRead(appReadPin));
+  } else if (appReadKind == 'R') {
+    Serial.print(F(":SYS:APP:R"));
+    Serial.print(appReadLabel);
+    Serial.print(':');
+    Serial.println(digitalRead(appReadPin));
+  }
+#endif
+}
+
+bool HandleApplicationCommand(Stream &st, const char *command) {
+#ifdef BASICPINS
+  const char operation = command[0];
+  const char digit = command[1];
+  const char value = command[2];
+  if ((operation == 'D' || operation == 'd') && digit && value && !command[3]) {
+    const int pin = digit - '0';
+    if (!SafeDigitalPin(pin) || (value != '0' && value != '1' && value != digit)) {
+      st.println(F(":SYS:APP:INVALID_DIGITAL_COMMAND"));
+      return true;
+    }
+    const bool high = value == '1' || value == digit; // accept legacy D22 = D2 HIGH
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, high ? HIGH : LOW);
+    st.print(F(":SYS:APP:D"));
+    st.print(pin);
+    st.println(high ? F(":1") : F(":0"));
+    return true;
+  }
+  if ((operation == 'A' || operation == 'a' || operation == 'R' || operation == 'r') &&
+      digit && !value) {
+    const int pin = digit - '0';
+    const bool analog = operation == 'A' || operation == 'a';
+    const int actualPin = analog ? GetAnalogPin(digit) : pin;
+    if (actualPin < 0 || (!analog && !SafeDigitalPin(pin))) {
+      st.println(F(":SYS:APP:INVALID_READ_PIN"));
+      return true;
+    }
+    appReadKind = analog ? 'A' : 'R';
+    appReadPin = actualPin;
+    appReadLabel = digit;
+    // Reading an output must not silently reconfigure it as an input.
+    RunApplication(); // one immediate reading, then once per pseudo-second
+    return true;
+  }
+  if ((operation == 'X' || operation == 'x') && !digit) {
+    appReadKind = 0;
+    st.println(F(":SYS:APP:READ_STOPPED"));
+    return true;
+  }
+#endif
+  st.println(F(":SYS:APP:UNKNOWN_COMMAND"));
+  return true;
+}
+#endif
+
 int numloops = 9999;
 
 /*
@@ -574,24 +764,27 @@ int numloops = 9999;
     return size;
   }
 */
+
+#ifdef RSSI_TEST
+unsigned int rssi_test_timer_a;
+unsigned int rssi_test_timer_b;
+#endif
+
 void loop() {
   //Serial.println(availableMemory());
   PetTheWatchdog();
   SeeIfAnythingOnRadio();
-  #ifdef REPEAT_UNTIL_ACK
-    if(LoRaData.length() >= 1) // if no packet, don't change ack state, just broadcast again.
+#ifdef REPEAT_UNTIL_ACK
+  if (!got_lora_ack)
+  {
+    if ((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
     {
-      got_lora_ack = (LoRaData.equals(message_to_repeat));
+      LoraSendAndUpdate(message_to_repeat);
     }
-    if(!got_lora_ack)
-    {       
-      if((millis() - last_repeat_time) > REPEAT_DELAY and message_to_repeat.length() > 1)
-      {
-        LoraSendAndUpdate(message_to_repeat);
-      }
-    }    
-  #endif
-  
+  }
+#endif
+
+
   ReadFromStream(Serial, receivedChars, charcounter, readytosend); // add other streams as needed.
   if (SendSerialIfReady())
   {
@@ -617,4 +810,19 @@ void loop() {
   {
     mydelay(4); // actually 16
   }
+
+#ifdef RSSI_TEST
+  if (pseudoseconds > rssi_test_timer_a)
+  {
+    pinMode(A6, INPUT_PULLUP);
+    rssi_test_timer_a = pseudoseconds + 4;
+    Serial.println(analogRead(A6));
+    if (analogRead(A6) > 2)
+    {
+      LoraSendAndUpdate(hextag + "Hello from tester " + String(rssi_test_timer_b++));
+    }
+  }
+#endif
+
+
 }
